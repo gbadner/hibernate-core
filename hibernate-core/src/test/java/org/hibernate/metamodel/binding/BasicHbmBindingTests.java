@@ -50,9 +50,35 @@ public class BasicHbmBindingTests extends AbstractBasicBindingTests {
 	public EntityBinding buildSimpleVersionedEntityBinding() {
 		Metadata metadata = new Metadata();
 
-		XmlDocument xmlDocument = readResource( "/org/hibernate/metamodel/binding/SimpleVersionedEntity.hbm.xml" );
-		metadata.getHibernateXmlBinder().bindRoot( xmlDocument );
-		return metadata.getEntityBinding( SimpleVersionedEntity.class.getName() );
+		//XmlDocument xmlDocument = readResource( "/org/hibernate/metamodel/binding/SimpleVersionedEntity.hbm.xml" );
+		//metadata.getHibernateXmlBinder().bindRoot( xmlDocument );
+		//return metadata.getEntityBinding( SimpleVersionedEntity.class.getName() );
+			AttributeBinding nameBinding = entityBinding.getAttributeBinding( "name" );
+			assertNotNull( nameBinding );
+			assertNotNull( nameBinding.getAttribute() );
+			assertNotNull( nameBinding.getValue() );
+		}
+		{
+			XmlDocument xmlDocument = readResource( "/org/hibernate/metamodel/binding/EntityWithCollection.hbm.xml" );
+			metadata.getHibernateXmlBinder().bindRoot( xmlDocument );
+			EntityBinding entityBinding = metadata.getEntityBinding( EntityWithCollection.class.getName() );
+			assertNotNull( entityBinding );
+			assertNotNull( entityBinding.getEntityIdentifier() );
+			assertNotNull( entityBinding.getEntityIdentifier().getValueBinding() );
+			assertNull( entityBinding.getVersioningValueBinding() );
+
+			AttributeBinding idAttributeBinding = entityBinding.getAttributeBinding( "id" );
+			assertNotNull( idAttributeBinding );
+			assertSame( idAttributeBinding, entityBinding.getEntityIdentifier().getValueBinding() );
+			assertNotNull( idAttributeBinding.getAttribute() );
+			assertNotNull( idAttributeBinding.getValue() );
+			assertTrue( idAttributeBinding.getValue() instanceof Column );
+
+			AttributeBinding nameBinding = entityBinding.getAttributeBinding( "name" );
+			assertNotNull( nameBinding );
+			assertNotNull( nameBinding.getAttribute() );
+			assertNotNull( nameBinding.getValue() );
+		}
 	}
 
 	private XmlDocument readResource(final String name) {
