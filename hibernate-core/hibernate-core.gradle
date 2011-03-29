@@ -9,6 +9,7 @@ dependencies {
         transitive = false
     }
     compile( libraries.commons_annotations )
+    compile( libraries.jandex )
     compile( libraries.jpa )
     compile( libraries.javassist )
     antlr( libraries.antlr )
