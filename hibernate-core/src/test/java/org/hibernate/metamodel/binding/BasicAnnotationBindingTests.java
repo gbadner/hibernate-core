@@ -58,6 +58,12 @@ public class BasicAnnotationBindingTests extends AbstractBasicBindingTests {
 		super.testSimpleVersionedEntityMapping();
 	}
 
+	@FailureExpected(jiraKey = "HHH-5672", message = "Work in progress")
+	@Test
+	public void testEntityWithElementCollection() {
+		super.testEntityWithElementCollection();
+	}
+
 	public EntityBinding buildSimpleEntityBinding() {
 		AnnotationIndex index = indexForClass( SimpleEntity.class );
 		Metadata metadata = new Metadata();
@@ -76,6 +82,10 @@ public class BasicAnnotationBindingTests extends AbstractBasicBindingTests {
 		);
 
 		return metadata.getEntityBinding( SimpleVersionedEntity.class.getSimpleName() );
+	}
+
+	public EntityBinding buildEntityWithElementCollectionBinding() {
+		return null;
 	}
 
 	private AnnotationIndex indexForClass(Class<?>... classes) {
