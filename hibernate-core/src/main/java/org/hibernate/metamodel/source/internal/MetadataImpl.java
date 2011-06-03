@@ -37,15 +37,22 @@ import org.jboss.jandex.Indexer;
 import org.jboss.logging.Logger;
 
 import org.hibernate.DuplicateMappingException;
+import org.hibernate.EmptyInterceptor;
 import org.hibernate.HibernateException;
+import org.hibernate.Interceptor;
+import org.hibernate.MappingException;
 import org.hibernate.SessionFactory;
+import org.hibernate.dialect.function.SQLFunction;
+import org.hibernate.engine.ResultSetMappingDefinition;
 import org.hibernate.engine.spi.FilterDefinition;
 import org.hibernate.engine.spi.NamedQueryDefinition;
 import org.hibernate.engine.spi.NamedSQLQueryDefinition;
 import org.hibernate.id.factory.DefaultIdentifierGeneratorFactory;
+import org.hibernate.id.factory.IdentifierGeneratorFactory;
 import org.hibernate.internal.CoreMessageLogger;
 import org.hibernate.metamodel.MetadataSources;
 import org.hibernate.metamodel.SourceProcessingOrder;
+import org.hibernate.metamodel.binding.AttributeBinding;
 import org.hibernate.metamodel.binding.EntityBinding;
 import org.hibernate.metamodel.binding.FetchProfile;
 import org.hibernate.metamodel.binding.IdGenerator;
@@ -60,8 +67,10 @@ import org.hibernate.metamodel.source.annotations.xml.OrmXmlParser;
 import org.hibernate.metamodel.source.hbm.HbmBinder;
 import org.hibernate.metamodel.source.hbm.xml.mapping.XMLHibernateMapping;
 import org.hibernate.metamodel.source.spi.MetadataImplementor;
+import org.hibernate.proxy.EntityNotFoundDelegate;
 import org.hibernate.service.BasicServiceRegistry;
 import org.hibernate.service.classloading.spi.ClassLoaderService;
+import org.hibernate.type.Type;
 import org.hibernate.type.TypeResolver;
 
 /**
@@ -151,6 +160,38 @@ public class MetadataImpl implements MetadataImplementor, Serializable {
 	@Override
 	public void addAuxiliaryDatabaseObject(AuxiliaryDatabaseObject auxiliaryDatabaseObject) {
 		auxiliaryDatabaseObjects.add( auxiliaryDatabaseObject );
+	}
+
+	@Override
+	public Map<String, NamedQueryDefinition> getNamedQueries() {
+		return Collections.unmodifiableMap( namedQueryDefs );
+	}
+
+	@Override
+	public Map<String, NamedSQLQueryDefinition> getNamedSqlQueries() {
+		return Collections.unmodifiableMap( namedNativeQueryDefs );
+	}
+
+	@Override
+	public Map<String, ResultSetMappingDefinition> getSqlResultSetMappings() {
+		// TODO: implement
+		return Collections.emptyMap();
+	}
+
+	@Override
+	public Map<String, SQLFunction> getSqlFunctions() {
+		// TODO: implement
+		return Collections.emptyMap();
+	}
+
+	@Override
+	public Interceptor getInterceptor() {
+		return EmptyInterceptor.INSTANCE;
+	}
+
+	@Override
+	public EntityNotFoundDelegate getEntityNotFoundDelegate() {
+		return null;
 	}
 
 	public void addNamedNativeQuery(String name, NamedSQLQueryDefinition def) {
@@ -324,11 +365,58 @@ public class MetadataImpl implements MetadataImplementor, Serializable {
 		}
 	}
 
+	@Override
+	public Map<String, String> getImports() {
+		return Collections.unmodifiableMap( imports );
+	}
+
 	public Iterable<FetchProfile> getFetchProfiles() {
 		return fetchProfiles.values();
 	}
 
 	public TypeResolver getTypeResolver() {
 		return typeResolver;
+	}
+
+	@Override
+	public IdentifierGeneratorFactory getIdentifierGeneratorFactory() {
+		return identifierGeneratorFactory;
+	}
+
+	@Override
+	public Type getIdentifierType(String entityName) throws MappingException {
+		EntityBinding entityBinding = getEntityBinding( entityName );
+		if ( entityBinding == null ) {
+			throw new MappingException( "Entity binding not known: " + entityName );
+		}
+		return entityBinding
+				.getEntityIdentifier()
+				.getValueBinding()
+				.getHibernateTypeDescriptor()
+				.getExplicitType();
+	}
+
+	@Override
+	public String getIdentifierPropertyName(String entityName) throws MappingException {
+		EntityBinding entityBinding = getEntityBinding( entityName );
+		if ( entityBinding == null ) {
+			throw new MappingException( "Entity binding not known: " + entityName );
+		}
+		AttributeBinding idBinding = entityBinding.getEntityIdentifier().getValueBinding();
+		return idBinding == null ? null : idBinding.getAttribute().getName();
+	}
+
+	@Override
+	public Type getReferencedPropertyType(String entityName, String propertyName) throws MappingException {
+		EntityBinding entityBinding = getEntityBinding( entityName );
+		if ( entityBinding == null ) {
+			throw new MappingException( "Entity binding not known: " + entityName );
+		}
+		// TODO: should this call EntityBinding.getReferencedAttributeBindingString), which does not exist yet?
+		AttributeBinding attributeBinding = entityBinding.getAttributeBinding( propertyName );
+		if ( attributeBinding == null ) {
+			throw new MappingException( "unknown property: " + entityName + '.' + propertyName );
+		}
+		return attributeBinding.getHibernateTypeDescriptor().getExplicitType();
 	}
 }

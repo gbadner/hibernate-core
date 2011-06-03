@@ -113,6 +113,7 @@ import org.hibernate.mapping.PersistentClass;
 import org.hibernate.mapping.RootClass;
 import org.hibernate.metadata.ClassMetadata;
 import org.hibernate.metadata.CollectionMetadata;
+import org.hibernate.metamodel.binding.Caching;
 import org.hibernate.metamodel.binding.EntityBinding;
 import org.hibernate.metamodel.source.spi.MetadataImplementor;
 import org.hibernate.persister.collection.CollectionPersister;
@@ -509,52 +510,44 @@ public final class SessionFactoryImpl
 
 	public SessionFactoryImpl(
 			MetadataImplementor metadata,
-	        Mapping mapping,
 			ServiceRegistry serviceRegistry,
+			Settings settings,
 			SessionFactoryObserver observer) throws HibernateException {
         LOG.debug( "Building session factory" );
 
 		// TODO: remove initialization of final variables; just setting to null to make compiler happy
 		this.name = null;
 		this.uuid = null;
-		this.entityPersisters = null;
-		this.classMetadata = null;
 		this.collectionPersisters = null;
 		this.collectionMetadata = null;
 		this.collectionRolesByEntityParticipant = null;
-		this.identifierGenerators = null;
 		this.namedQueries = null;
 		this.namedSqlQueries = null;
 		this.sqlResultSetMappings = null;
 		this.fetchProfiles = null;
 		this.imports = null;
-		this.interceptor = null;
 		this.queryCache = null;
 		this.updateTimestampsCache = null;
 		this.queryCaches = null;
 		this.currentSessionContext = null;
 		this.entityNotFoundDelegate = null;
-		this.sqlFunctionRegistry = null;
-		this.queryPlanCache = null;
 		this.transactionEnvironment = null;
 
+		this.settings = settings;
+		this.interceptor = metadata.getInterceptor();
+
 		ConfigurationService configurationService = serviceRegistry.getService( ConfigurationService.class );
-		this.settings = null;
+		this.properties = new Properties();
+		this.properties.putAll( configurationService.getSettings() );
 
 		this.serviceRegistry = serviceRegistry.getService( SessionFactoryServiceRegistryFactory.class ).buildServiceRegistry(
 				this,
 				metadata
 		);
 
-		// TODO: get Interceptor from ConfurationService
-		//this.interceptor = cfg.getInterceptor();
+		Dialect dialect = serviceRegistry.getService( JdbcServices.class ).getDialect();
 
-		// TODO: find references to properties and make sure everything needed is available to services via
-		//       ConfigurationService
-		this.properties = null;
-
-		// TODO: should this be build along w/ metadata? seems like it should so app has more control over it...
-		//this.sqlFunctionRegistry = new SQLFunctionRegistry( getDialect(), metadata.getSqlFunctions() );
+		this.sqlFunctionRegistry = new SQLFunctionRegistry( dialect, metadata.getSqlFunctions() );
 		if ( observer != null ) {
 			this.observer.addObserver( observer );
 		}
@@ -568,10 +561,92 @@ public final class SessionFactoryImpl
 		}
 
         LOG.debugf("Session factory constructed with filter configurations : %s", filters);
-        LOG.debugf("Instantiating session factory with properties: %s", configurationService.getSettings() );
+        LOG.debugf("Instantiating session factory with properties: %s", properties );
+
+		// Caches
+		settings.getRegionFactory().start( settings, properties );
+		this.queryPlanCache = new QueryPlanCache( this );
+
+
+		class IntegratorObserver implements SessionFactoryObserver {
+			private ArrayList<Integrator> integrators = new ArrayList<Integrator>();
+
+			@Override
+			public void sessionFactoryCreated(SessionFactory factory) {
+			}
+
+			@Override
+			public void sessionFactoryClosed(SessionFactory factory) {
+				for ( Integrator integrator : integrators ) {
+					integrator.disintegrate( SessionFactoryImpl.this, SessionFactoryImpl.this.serviceRegistry );
+				}
+			}
+		}
 
 		// TODO: implement
 
+		final IntegratorObserver integratorObserver = new IntegratorObserver();
+		this.observer.addObserver( integratorObserver );
+		for ( Integrator integrator : serviceRegistry.getService( IntegratorService.class ).getIntegrators() ) {
+			// TODO: add Integrator.integrate(MetadataImplementor, ...)
+			// integrator.integrate( cfg, this, this.serviceRegistry );
+			integratorObserver.integrators.add( integrator );
+		}
+
+
+		//Generators:
+
+		identifierGenerators = new HashMap();
+		for ( EntityBinding entityBinding : metadata.getEntityBindings() ) {
+			if ( entityBinding.isRoot() ) {
+				// TODO: create the IdentifierGenerator while the metadata is being build, then simply
+				//       use EntityBinding.getIdentifierGenerator() (also remove getIdentifierGeneratorFactory from Mappings)
+				IdentifierGenerator generator = entityBinding.getEntityIdentifier().createIdentifierGenerator(
+						metadata.getIdentifierGeneratorFactory()
+				);
+				identifierGenerators.put( entityBinding.getEntity().getName(), generator );
+			}
+		}
+
+		///////////////////////////////////////////////////////////////////////
+		// Prepare persisters and link them up with their cache
+		// region/access-strategy
+
+		final String cacheRegionPrefix = settings.getCacheRegionPrefix() == null ? "" : settings.getCacheRegionPrefix() + ".";
+
+		entityPersisters = new HashMap();
+		Map entityAccessStrategies = new HashMap();
+		Map<String,ClassMetadata> classMeta = new HashMap<String,ClassMetadata>();
+		for ( EntityBinding model : metadata.getEntityBindings() ) {
+			// TODO: should temp table prep happen when metadata is being built?
+			//model.prepareTemporaryTables( metadata, getDialect() );
+			// cache region is defined by the root-class in the hierarchy...
+			EntityRegionAccessStrategy accessStrategy = null;
+			if ( settings.isSecondLevelCacheEnabled() &&
+					model.getRootEntityBinding().getCaching() != null &&
+					model.getCaching() != null &&
+					model.getCaching().getAccessType() != null ) {
+				final String cacheRegionName = cacheRegionPrefix + model.getRootEntityBinding().getCacheRegionName();
+				accessStrategy = ( EntityRegionAccessStrategy ) entityAccessStrategies.get( cacheRegionName );
+				if ( accessStrategy == null ) {
+					final AccessType accessType = model.getCaching().getAccessType();
+					LOG.trace("Building cache for entity data [" + model.getEntity().getName() + "]");
+					EntityRegion entityRegion = settings.getRegionFactory().buildEntityRegion( cacheRegionName, properties, CacheDataDescriptionImpl.decode( model ) );
+					accessStrategy = entityRegion.buildAccessStrategy( accessType );
+					entityAccessStrategies.put( cacheRegionName, accessStrategy );
+					allCacheRegions.put( cacheRegionName, entityRegion );
+				}
+			}
+			EntityPersister cp = serviceRegistry.getService( PersisterFactory.class ).createEntityPersister(
+					model,
+					accessStrategy,
+					this,
+					metadata
+			);
+			entityPersisters.put( model.getEntity().getName(), cp );
+			classMeta.put( model.getEntity().getName(), cp.getClassMetadata() );
+		}
+		this.classMetadata = Collections.unmodifiableMap(classMeta);
 	}
 
 	public Session openSession() throws HibernateException {
