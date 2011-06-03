@@ -71,14 +71,13 @@ import org.hibernate.cache.spi.CollectionRegion;
 import org.hibernate.cache.spi.EntityRegion;
 import org.hibernate.cache.spi.QueryCache;
 import org.hibernate.cache.spi.Region;
+import org.hibernate.cache.spi.RegionFactory;
 import org.hibernate.cache.spi.UpdateTimestampsCache;
 import org.hibernate.cache.spi.access.AccessType;
 import org.hibernate.cache.spi.access.CollectionRegionAccessStrategy;
 import org.hibernate.cache.spi.access.EntityRegionAccessStrategy;
-import org.hibernate.cfg.AvailableSettings;
 import org.hibernate.cfg.Configuration;
 import org.hibernate.cfg.Environment;
-import org.hibernate.cfg.Settings;
 import org.hibernate.context.internal.ThreadLocalSessionContext;
 import org.hibernate.context.spi.CurrentSessionContext;
 import org.hibernate.context.internal.JTASessionContext;
@@ -174,7 +173,7 @@ public final class SessionFactoryImpl
 	private final String name;
 	private final String uuid;
 
-	private final transient Map entityPersisters;
+	private final transient Map<String,EntityPersister> entityPersisters;
 	private final transient Map<String,ClassMetadata> classMetadata;
 	private final transient Map collectionPersisters;
 	private final transient Map collectionMetadata;
@@ -188,7 +187,7 @@ public final class SessionFactoryImpl
 	private final transient Map imports;
 	private final transient Interceptor interceptor;
 	private final transient SessionFactoryServiceRegistry serviceRegistry;
-	private final transient Settings settings;
+	private final transient SessionFactory.Settings settings;
 	private final transient Properties properties;
 	private transient SchemaExport schemaExport;
 	private final transient QueryCache queryCache;
@@ -212,7 +211,7 @@ public final class SessionFactoryImpl
 			Configuration cfg,
 	        Mapping mapping,
 			ServiceRegistry serviceRegistry,
-	        Settings settings,
+	        org.hibernate.cfg.Settings settings,
 			SessionFactoryObserver observer) throws HibernateException {
         LOG.debug( "Building session factory" );
 
@@ -293,7 +292,7 @@ public final class SessionFactoryImpl
 
 		final String cacheRegionPrefix = settings.getCacheRegionPrefix() == null ? "" : settings.getCacheRegionPrefix() + ".";
 
-		entityPersisters = new HashMap();
+		entityPersisters = new HashMap<String,EntityPersister>();
 		Map entityAccessStrategies = new HashMap();
 		Map<String,ClassMetadata> classMeta = new HashMap<String,ClassMetadata>();
 		classes = cfg.getClassMappings();
@@ -509,16 +508,13 @@ public final class SessionFactoryImpl
 
 	public SessionFactoryImpl(
 			MetadataImplementor metadata,
-	        Mapping mapping,
-			ServiceRegistry serviceRegistry,
+			SessionFactory.Settings settings,
 			SessionFactoryObserver observer) throws HibernateException {
         LOG.debug( "Building session factory" );
 
 		// TODO: remove initialization of final variables; just setting to null to make compiler happy
 		this.name = null;
 		this.uuid = null;
-		this.entityPersisters = null;
-		this.classMetadata = null;
 		this.collectionPersisters = null;
 		this.collectionMetadata = null;
 		this.collectionRolesByEntityParticipant = null;
@@ -535,23 +531,20 @@ public final class SessionFactoryImpl
 		this.currentSessionContext = null;
 		this.entityNotFoundDelegate = null;
 		this.sqlFunctionRegistry = null;
-		this.queryPlanCache = null;
 		this.transactionEnvironment = null;
 
-		ConfigurationService configurationService = serviceRegistry.getService( ConfigurationService.class );
-		this.settings = null;
+		this.settings = settings;
 
-		this.serviceRegistry = serviceRegistry.getService( SessionFactoryServiceRegistryFactory.class ).buildServiceRegistry(
-				this,
-				metadata
-		);
+		this.serviceRegistry =
+				metadata.getServiceRegistry()
+						.getService( SessionFactoryServiceRegistryFactory.class )
+						.buildServiceRegistry( this, metadata );
 
 		// TODO: get Interceptor from ConfurationService
 		//this.interceptor = cfg.getInterceptor();
 
-		// TODO: find references to properties and make sure everything needed is available to services via
-		//       ConfigurationService
-		this.properties = null;
+		this.properties = new Properties();
+		properties.putAll( serviceRegistry.getService( ConfigurationService.class ).getSettings() );
 
 		// TODO: should this be build along w/ metadata? seems like it should so app has more control over it...
 		//this.sqlFunctionRegistry = new SQLFunctionRegistry( getDialect(), metadata.getSqlFunctions() );
@@ -568,10 +561,63 @@ public final class SessionFactoryImpl
 		}
 
         LOG.debugf("Session factory constructed with filter configurations : %s", filters);
-        LOG.debugf("Instantiating session factory with properties: %s", configurationService.getSettings() );
+        LOG.debugf("Instantiating session factory with properties: %s", properties );
 
-		// TODO: implement
+		serviceRegistry.getService( RegionFactory.class ).start( settings, properties );
+		this.queryPlanCache = new QueryPlanCache( this );
 
+		///////////////////////////////////////////////////////////////////////
+		// Prepare persisters and link them up with their cache
+		// region/access-strategy
+
+		String cacheRegionPrefix = settings.getCacheRegionPrefix();
+
+		entityPersisters = new HashMap<String,EntityPersister>();
+		Map entityAccessStrategies = new HashMap();
+		Map<String,ClassMetadata> classMeta = new HashMap<String,ClassMetadata>();
+		for ( EntityBinding entityBinding : metadata.getEntityBindings() ) {
+			//TODO: when should temp tables be prepared?
+			//entityBinding.prepareTemporaryTables( mapping, getDialect() );
+			//TODO: need a way to get to root class
+			// final String cacheRegionName = cacheRegionPrefix + entityBinding.getRootClass().getCacheRegionName();
+			// cache region is defined by the root-class in the hierarchy...
+			//TODO: what happens if the EntityBinding is not a root class?
+
+			EntityRegionAccessStrategy accessStrategy = null;
+			if ( entityBinding.getCaching() != null ) {
+				final String cacheRegionName = cacheRegionPrefix + entityBinding.getCaching().getRegion();
+				accessStrategy = ( EntityRegionAccessStrategy ) entityAccessStrategies.get( cacheRegionName );
+				if ( accessStrategy == null && settings.isSecondLevelCacheEnabled() ) {
+					final AccessType accessType = entityBinding.getCaching().getAccessType();
+					if ( accessType != null ) {
+						LOG.trace("BcacheRegionPrefixuilding cache for entity data [" + entityBinding.getEntity().getName() + "]");
+						EntityRegion entityRegion =
+								serviceRegistry.getService( RegionFactory.class )
+										.buildEntityRegion(
+												cacheRegionName,
+												properties,
+												CacheDataDescriptionImpl.decode( entityBinding )
+										);
+						accessStrategy = entityRegion.buildAccessStrategy( accessType );
+						entityAccessStrategies.put( cacheRegionName, accessStrategy );
+						allCacheRegions.put( cacheRegionName, entityRegion );
+					}
+				}
+			}
+			EntityPersister cp = serviceRegistry.getService( PersisterFactory.class ).createEntityPersister(
+					entityBinding,
+					accessStrategy,
+					this,
+					metadata
+			);
+			entityPersisters.put( entityBinding.getEntity().getName(), cp );
+			classMeta.put( entityBinding.getEntity().getName(), cp.getClassMetadata() );
+		}
+		this.classMetadata = Collections.unmodifiableMap(classMeta);
+	}
+
+	public SessionFactory.Settings getOptions() {
+		return settings;
 	}
 
 	public Session openSession() throws HibernateException {
@@ -757,7 +803,7 @@ public final class SessionFactoryImpl
 		return result;
 	}
 
-	public Settings getSettings() {
+	public SessionFactory.Settings getSettings() {
 		return settings;
 	}
 
@@ -1011,9 +1057,9 @@ public final class SessionFactoryImpl
 			updateTimestampsCache.destroy();
 		}
 
-		settings.getRegionFactory().stop();
+		serviceRegistry.getService( RegionFactory.class ).stop();
 
-		if ( settings.isAutoDropSchema() ) {
+		if ( settings.isAutoDropSchemaEnabled() ) {
 			schemaExport.drop( false, true );
 		}
 
@@ -1381,7 +1427,7 @@ public final class SessionFactoryImpl
 
 		SessionBuilderImpl(SessionFactoryImpl sessionFactory) {
 			this.sessionFactory = sessionFactory;
-			final Settings settings = sessionFactory.settings;
+			final SessionFactory.Settings settings = sessionFactory.settings;
 
 			// set up default builder values...
 			this.interceptor = sessionFactory.getInterceptor();
@@ -1402,7 +1448,7 @@ public final class SessionFactoryImpl
 					sessionFactory,
 					getTransactionCoordinator(),
 					autoJoinTransactions,
-					sessionFactory.settings.getRegionFactory().nextTimestamp(),
+					sessionFactory.getServiceRegistry().getService( RegionFactory.class ).nextTimestamp(),
 					interceptor,
 					entityMode,
 					flushBeforeCompletion,

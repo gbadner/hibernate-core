@@ -25,9 +25,9 @@ package org.hibernate.cache.spi;
 
 import java.util.Properties;
 
+import org.hibernate.SessionFactory;
 import org.hibernate.cache.CacheException;
 import org.hibernate.cache.spi.access.AccessType;
-import org.hibernate.cfg.Settings;
 import org.hibernate.service.Service;
 
 /**
@@ -38,7 +38,7 @@ import org.hibernate.service.Service;
  * <li>MyRegionFactoryImpl()</li>
  * </ul>
  * Use the first when we need to read config properties prior to
- * {@link #start(Settings, Properties)} being called.  For an example, have a look at
+ * {@link #start(SessionFactory.Settings, Properties)} being called.  For an example, have a look at
  * {@link org.hibernate.cache.internal.bridge.RegionFactoryCacheProviderBridge}
  * where we need the properties in order to determine which legacy
  * {@link CacheProvider} to use so that we can answer the
@@ -61,7 +61,7 @@ public interface RegionFactory extends Service {
 	 * considered as a sign to stop {@link org.hibernate.SessionFactory}
 	 * building.
 	 */
-	public void start(Settings settings, Properties properties) throws CacheException;
+	public void start(SessionFactory.Settings settings, Properties properties) throws CacheException;
 
 	/**
 	 * Lifecycle callback to perform any necessary cleanup of the underlying

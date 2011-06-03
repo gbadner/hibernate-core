@@ -25,6 +25,7 @@ package org.hibernate.cache.internal.bridge;
 
 import org.jboss.logging.Logger;
 
+import org.hibernate.SessionFactory;
 import org.hibernate.cache.CacheException;
 import org.hibernate.cache.spi.Cache;
 import org.hibernate.cache.spi.CacheConcurrencyStrategy;
@@ -37,7 +38,6 @@ import org.hibernate.cache.spi.ReadWriteCache;
 import org.hibernate.cache.spi.TransactionalCache;
 import org.hibernate.cache.spi.access.AccessType;
 import org.hibernate.cache.spi.access.CollectionRegionAccessStrategy;
-import org.hibernate.cfg.Settings;
 import org.hibernate.internal.CoreMessageLogger;
 
 /**
@@ -50,8 +50,15 @@ public class CollectionRegionAdapter extends BaseTransactionalDataRegionAdapter 
     private static final CoreMessageLogger LOG = Logger.getMessageLogger(CoreMessageLogger.class,
                                                                        CollectionRegionAdapter.class.getName());
 
-	public CollectionRegionAdapter(Cache underlyingCache, Settings settings, CacheDataDescription metadata) {
+	public CollectionRegionAdapter(Cache underlyingCache, org.hibernate.cfg.Settings settings, CacheDataDescription metadata) {
 		super( underlyingCache, settings, metadata );
+		if ( underlyingCache instanceof OptimisticCache ) {
+			( ( OptimisticCache ) underlyingCache ).setSource( new OptimisticCacheSourceAdapter( metadata ) );
+		}
+	}
+
+	public CollectionRegionAdapter(Cache underlyingCache, SessionFactory.Settings options, CacheDataDescription metadata) {
+		super( underlyingCache, options, metadata );
 		if ( underlyingCache instanceof OptimisticCache ) {
 			( ( OptimisticCache ) underlyingCache ).setSource( new OptimisticCacheSourceAdapter( metadata ) );
 		}
@@ -76,6 +83,16 @@ public class CollectionRegionAdapter extends BaseTransactionalDataRegionAdapter 
 			throw new IllegalArgumentException( "unrecognized access strategy type [" + accessType + "]" );
 		}
 		ccs.setCache( underlyingCache );
-		return new CollectionAccessStrategyAdapter( this, ccs, settings );
+		if ( getOptions() != null ) {
+			return new CollectionAccessStrategyAdapter( this, ccs, getOptions() );
+		}
+		else if ( settings != null ) {
+			return new CollectionAccessStrategyAdapter( this, ccs, settings );
+		}
+		else {
+			throw new IllegalStateException(
+					"Attempt to build collection access strategy with options and settings set to null."
+			);
+		}
 	}
 }

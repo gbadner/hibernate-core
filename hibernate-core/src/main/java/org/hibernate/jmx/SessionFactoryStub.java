@@ -89,6 +89,11 @@ public class SessionFactoryStub implements SessionFactory {
 	}
 
 	@Override
+	public Settings getOptions() {
+		return getImpl().getOptions();
+	}
+
+	@Override
 	public SessionBuilder withOptions() {
 		return getImpl().withOptions();
 	}

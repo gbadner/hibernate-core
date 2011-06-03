@@ -38,6 +38,7 @@ import org.hibernate.cache.CacheException;
 import org.hibernate.cache.spi.QueryCache;
 import org.hibernate.cache.spi.QueryKey;
 import org.hibernate.cache.spi.QueryResultsRegion;
+import org.hibernate.cache.spi.RegionFactory;
 import org.hibernate.cache.spi.UpdateTimestampsCache;
 import org.hibernate.cfg.Settings;
 import org.hibernate.engine.spi.SessionImplementor;
@@ -91,7 +92,7 @@ public class StandardQueryCache implements QueryCache {
 			boolean isNaturalKeyLookup,
 			SessionImplementor session) throws HibernateException {
         if (isNaturalKeyLookup && result.size() == 0) return false;
-        Long ts = new Long(session.getFactory().getSettings().getRegionFactory().nextTimestamp());
+        Long ts = new Long(session.getFactory().getServiceRegistry().getService( RegionFactory.class ).nextTimestamp());
 
         LOG.debugf("Caching query results in region: %s; timestamp=%s", cacheRegion.getName(), ts);
 

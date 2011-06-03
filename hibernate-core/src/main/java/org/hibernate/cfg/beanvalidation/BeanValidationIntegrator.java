@@ -204,7 +204,7 @@ public class BeanValidationIntegrator implements Integrator {
 		// de-activate not-null tracking at the core level when Bean Validation is present unless the user explicitly
 		// asks for it
 		if ( configuration.getProperty( Environment.CHECK_NULLABILITY ) == null ) {
-			sessionFactory.getSettings().setCheckNullability( false );
+			sessionFactory.getSettings().overrideCheckNullability( false );
 		}
 
 		if ( ! ( modes.contains( ValidationMode.CALLBACK ) || modes.contains( ValidationMode.AUTO ) ) ) {

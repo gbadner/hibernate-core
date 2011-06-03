@@ -25,6 +25,7 @@ package org.hibernate.cache.internal;
 
 import java.util.Properties;
 
+import org.hibernate.SessionFactory;
 import org.hibernate.cache.CacheException;
 import org.hibernate.cache.spi.CacheDataDescription;
 import org.hibernate.cache.spi.CollectionRegion;
@@ -33,7 +34,6 @@ import org.hibernate.cache.spi.QueryResultsRegion;
 import org.hibernate.cache.spi.RegionFactory;
 import org.hibernate.cache.spi.TimestampsRegion;
 import org.hibernate.cache.spi.access.AccessType;
-import org.hibernate.cfg.Settings;
 
 /**
  * Abstract class that will delegate all calls to org.hibernate.cache.spi.RegionFactory to the instance it wraps.
@@ -55,8 +55,15 @@ class AbstractEhCacheRegionFactory implements RegionFactory {
 	/**
 	 * {@inheritDoc}
 	 */
-	public final void start(final Settings settings, final Properties properties) throws CacheException {
+	public final void start(final org.hibernate.cfg.Settings settings, final Properties properties) throws CacheException {
 		underlyingRegionFactory.start(settings, properties);
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	public final void start(final SessionFactory.Settings options, final Properties properties) throws CacheException {
+		underlyingRegionFactory.start(options, properties);
 	}
 
 	/**

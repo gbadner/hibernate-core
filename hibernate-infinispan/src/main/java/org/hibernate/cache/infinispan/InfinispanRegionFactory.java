@@ -8,6 +8,8 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import javax.transaction.TransactionManager;
+
+import org.hibernate.SessionFactory;
 import org.hibernate.cache.spi.CacheDataDescription;
 import org.hibernate.cache.CacheException;
 import org.hibernate.cache.spi.CollectionRegion;
@@ -25,8 +27,10 @@ import org.hibernate.cache.infinispan.timestamp.TimestampsRegionImpl;
 import org.hibernate.cache.infinispan.tm.HibernateTransactionManagerLookup;
 import org.hibernate.cache.infinispan.util.CacheAdapter;
 import org.hibernate.cache.infinispan.util.CacheAdapterImpl;
-import org.hibernate.cfg.Settings;
 import org.hibernate.internal.util.config.ConfigurationHelper;
+import org.hibernate.service.jta.platform.spi.JtaPlatform;
+import org.hibernate.service.spi.InjectService;
+
 import org.infinispan.AdvancedCache;
 import org.infinispan.Cache;
 import org.infinispan.config.Configuration;
@@ -141,6 +145,8 @@ public class InfinispanRegionFactory implements RegionFactory {
 
    private TransactionManager transactionManager;
 
+	private JtaPlatform jtaPlatform;
+
    /**
     * Create a new instance using the default configuration.
     */
@@ -155,6 +161,11 @@ public class InfinispanRegionFactory implements RegionFactory {
     */
    public InfinispanRegionFactory(Properties props) {
    }
+
+	@InjectService
+	public void setJtaPlatform(JtaPlatform jtaPlatform) {
+		this.jtaPlatform = jtaPlatform;
+	}
 
    /** {@inheritDoc} */
    public CollectionRegion buildCollectionRegion(String regionName, Properties properties, CacheDataDescription metadata) throws CacheException {
@@ -245,7 +256,7 @@ public class InfinispanRegionFactory implements RegionFactory {
    /**
     * {@inheritDoc}
     */
-   public void start(Settings settings, Properties properties) throws CacheException {
+   public void start(org.hibernate.cfg.Settings settings, Properties properties) throws CacheException {
       log.debug("Starting Infinispan region factory");
       try {
          transactionManagerlookup = new HibernateTransactionManagerLookup(settings, properties);
@@ -260,13 +271,39 @@ public class InfinispanRegionFactory implements RegionFactory {
                dissectProperty(prefixLoc, key, properties);
             }
          }
-         defineGenericDataTypeCacheConfigurations(settings, properties);
+         defineGenericDataTypeCacheConfigurations(properties);
       } catch (CacheException ce) {
          throw ce;
       } catch (Throwable t) {
           throw new CacheException("Unable to start region factory", t);
       }
    }
+
+	/**
+	 * {@inheritDoc}
+	 */
+	public void start(SessionFactory.Settings options, Properties properties) throws CacheException {
+	   log.debug("Starting Infinispan region factory");
+	   try {
+		  transactionManagerlookup = new HibernateTransactionManagerLookup(jtaPlatform);
+		  transactionManager = transactionManagerlookup.getTransactionManager();
+		  manager = createCacheManager(properties);
+		  initGenericDataTypeOverrides();
+		  Enumeration keys = properties.propertyNames();
+		  while (keys.hasMoreElements()) {
+			 String key = (String) keys.nextElement();
+			 int prefixLoc = -1;
+			 if ((prefixLoc = key.indexOf(PREFIX)) != -1) {
+				dissectProperty(prefixLoc, key, properties);
+			 }
+		  }
+		  defineGenericDataTypeCacheConfigurations(properties);
+	   } catch (CacheException ce) {
+		  throw ce;
+	   } catch (Throwable t) {
+		   throw new CacheException("Unable to start region factory", t);
+	   }
+	}
 
    /**
     * {@inheritDoc}
@@ -359,7 +396,7 @@ public class InfinispanRegionFactory implements RegionFactory {
       return cfgOverride;
    }
 
-   private void defineGenericDataTypeCacheConfigurations(Settings settings, Properties properties) throws CacheException {
+   private void defineGenericDataTypeCacheConfigurations(Properties properties) throws CacheException {
       String[] defaultGenericDataTypes = new String[]{ENTITY_KEY, COLLECTION_KEY, TIMESTAMPS_KEY, QUERY_KEY};
       for (String type : defaultGenericDataTypes) {
          TypeOverrides override = overrideStatisticsIfPresent(typeOverrides.get(type), properties);

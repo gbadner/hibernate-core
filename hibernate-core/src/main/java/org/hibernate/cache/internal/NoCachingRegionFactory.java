@@ -25,6 +25,7 @@ package org.hibernate.cache.internal;
 
 import java.util.Properties;
 
+import org.hibernate.SessionFactory;
 import org.hibernate.cache.CacheException;
 import org.hibernate.cache.NoCachingEnabledException;
 import org.hibernate.cache.spi.CacheDataDescription;
@@ -34,7 +35,6 @@ import org.hibernate.cache.spi.QueryResultsRegion;
 import org.hibernate.cache.spi.RegionFactory;
 import org.hibernate.cache.spi.TimestampsRegion;
 import org.hibernate.cache.spi.access.AccessType;
-import org.hibernate.cfg.Settings;
 
 /**
  * Factory used if no caching enabled in config...
@@ -45,7 +45,10 @@ public class NoCachingRegionFactory implements RegionFactory {
 	public NoCachingRegionFactory() {
 	}
 
-	public void start(Settings settings, Properties properties) throws CacheException {
+	public void start(org.hibernate.cfg.Settings settings, Properties properties) throws CacheException {
+	}
+
+	public void start(SessionFactory.Settings options, Properties properties) throws CacheException {
 	}
 
 	public void stop() {

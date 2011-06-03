@@ -394,7 +394,7 @@ public class DefaultMergeEventListener extends AbstractSaveEventListener
 	}
 
 	private boolean isNullabilityCheckedGlobal(EventSource source) {
-		return source.getFactory().getSettings().isCheckNullability();
+		return source.getFactory().getSettings().isCheckNullabilityEnabled();
 	}
 
 	private void saveTransientEntity(
@@ -406,9 +406,9 @@ public class DefaultMergeEventListener extends AbstractSaveEventListener
 			boolean isNullabilityChecked) {
 
 		boolean isNullabilityCheckedOrig =
-			source.getFactory().getSettings().isCheckNullability();
+			source.getFactory().getSettings().isCheckNullabilityEnabled();
 		try {
-			source.getFactory().getSettings().setCheckNullability( isNullabilityChecked );
+			source.getFactory().getSettings().overrideCheckNullability( isNullabilityChecked );
 			//this bit is only *really* absolutely necessary for handling
 			//requestedId, but is also good if we merge multiple object
 			//graphs, since it helps ensure uniqueness
@@ -420,7 +420,7 @@ public class DefaultMergeEventListener extends AbstractSaveEventListener
 			}
 		}
 		finally {
-			source.getFactory().getSettings().setCheckNullability( isNullabilityCheckedOrig );
+			source.getFactory().getSettings().overrideCheckNullability( isNullabilityCheckedOrig );
 		}
 	}
 	protected void entityIsDetached(MergeEvent event, Map copyCache) {

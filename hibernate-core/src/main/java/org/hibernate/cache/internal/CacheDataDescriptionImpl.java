@@ -28,6 +28,8 @@ import java.util.Comparator;
 import org.hibernate.cache.spi.CacheDataDescription;
 import org.hibernate.mapping.Collection;
 import org.hibernate.mapping.PersistentClass;
+import org.hibernate.metamodel.binding.EntityBinding;
+import org.hibernate.type.Type;
 import org.hibernate.type.VersionType;
 
 /**
@@ -63,6 +65,20 @@ public class CacheDataDescriptionImpl implements CacheDataDescription {
 				model.isMutable(),
 				model.isVersioned(),
 				model.isVersioned() ? ( ( VersionType ) model.getVersion().getType() ).getComparator() : null
+		);
+	}
+
+	public static CacheDataDescriptionImpl decode(EntityBinding entityBinding) {
+		Type versionType =
+				entityBinding.isVersioned() ?
+						entityBinding.getVersioningValueBinding().getHibernateTypeDescriptor().getExplicitType() :
+						null;
+		return new CacheDataDescriptionImpl(
+				entityBinding.isMutable(),
+				entityBinding.isVersioned(),
+				versionType == null ?
+						null :
+						( ( VersionType ) versionType ).getComparator()
 		);
 	}
 

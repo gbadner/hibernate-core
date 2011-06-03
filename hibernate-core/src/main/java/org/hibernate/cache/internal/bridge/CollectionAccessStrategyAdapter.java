@@ -23,12 +23,12 @@
  */
 package org.hibernate.cache.internal.bridge;
 
+import org.hibernate.SessionFactory;
 import org.hibernate.cache.CacheException;
 import org.hibernate.cache.spi.CacheConcurrencyStrategy;
 import org.hibernate.cache.spi.CollectionRegion;
 import org.hibernate.cache.spi.access.CollectionRegionAccessStrategy;
 import org.hibernate.cache.spi.access.SoftLock;
-import org.hibernate.cfg.Settings;
 
 /**
  * Adapter specifically bridging {@link CollectionRegionAccessStrategy} to {@link CacheConcurrencyStrategy}.
@@ -38,9 +38,9 @@ import org.hibernate.cfg.Settings;
 public class CollectionAccessStrategyAdapter implements CollectionRegionAccessStrategy {
 	private final CollectionRegion region;
 	private final CacheConcurrencyStrategy ccs;
-	private final Settings settings;
+	private final SessionFactory.Settings settings;
 
-	public CollectionAccessStrategyAdapter(CollectionRegion region, CacheConcurrencyStrategy ccs, Settings settings) {
+	public CollectionAccessStrategyAdapter(CollectionRegion region, CacheConcurrencyStrategy ccs, SessionFactory.Settings settings) {
 		this.region = region;
 		this.ccs = ccs;
 		this.settings = settings;

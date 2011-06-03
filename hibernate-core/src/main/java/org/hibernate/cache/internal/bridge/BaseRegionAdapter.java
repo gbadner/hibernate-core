@@ -25,10 +25,10 @@ package org.hibernate.cache.internal.bridge;
 
 import java.util.Map;
 
+import org.hibernate.SessionFactory;
 import org.hibernate.cache.CacheException;
 import org.hibernate.cache.spi.Cache;
 import org.hibernate.cache.spi.Region;
-import org.hibernate.cfg.Settings;
 
 /**
  * Basic adapter bridging between {@link Region} and {@link Cache}.
@@ -37,9 +37,9 @@ import org.hibernate.cfg.Settings;
  */
 public abstract class BaseRegionAdapter implements Region {
 	protected final Cache underlyingCache;
-	protected final Settings settings;
+	private final SessionFactory.Settings settings;
 
-	protected BaseRegionAdapter(Cache underlyingCache, Settings settings) {
+	protected BaseRegionAdapter(Cache underlyingCache, SessionFactory.Settings settings) {
 		this.underlyingCache = underlyingCache;
 		this.settings = settings;
 	}

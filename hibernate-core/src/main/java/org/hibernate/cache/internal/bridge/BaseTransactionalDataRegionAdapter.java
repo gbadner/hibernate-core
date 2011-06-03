@@ -23,11 +23,11 @@
  */
 package org.hibernate.cache.internal.bridge;
 
+import org.hibernate.SessionFactory;
 import org.hibernate.cache.spi.Cache;
 import org.hibernate.cache.spi.CacheDataDescription;
 import org.hibernate.cache.spi.TransactionAwareCache;
 import org.hibernate.cache.spi.TransactionalDataRegion;
-import org.hibernate.cfg.Settings;
 
 /**
  * {@inheritDoc}
@@ -40,8 +40,13 @@ public abstract class BaseTransactionalDataRegionAdapter
 
 	protected final CacheDataDescription metadata;
 
-	protected BaseTransactionalDataRegionAdapter(Cache underlyingCache, Settings settings, CacheDataDescription metadata) {
+	protected BaseTransactionalDataRegionAdapter(Cache underlyingCache, org.hibernate.cfg.Settings settings, CacheDataDescription metadata) {
 		super( underlyingCache, settings );
+		this.metadata = metadata;
+	}
+
+	protected BaseTransactionalDataRegionAdapter(Cache underlyingCache, SessionFactory.Settings options, CacheDataDescription metadata) {
+		super( underlyingCache, options );
 		this.metadata = metadata;
 	}
 

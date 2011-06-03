@@ -38,14 +38,17 @@ import org.jboss.logging.Logger;
 
 import org.hibernate.DuplicateMappingException;
 import org.hibernate.HibernateException;
+import org.hibernate.MappingException;
 import org.hibernate.SessionFactory;
 import org.hibernate.engine.spi.FilterDefinition;
 import org.hibernate.engine.spi.NamedQueryDefinition;
 import org.hibernate.engine.spi.NamedSQLQueryDefinition;
 import org.hibernate.id.factory.DefaultIdentifierGeneratorFactory;
+import org.hibernate.id.factory.IdentifierGeneratorFactory;
 import org.hibernate.internal.CoreMessageLogger;
 import org.hibernate.metamodel.MetadataSources;
 import org.hibernate.metamodel.SourceProcessingOrder;
+import org.hibernate.metamodel.binding.AttributeBinding;
 import org.hibernate.metamodel.binding.EntityBinding;
 import org.hibernate.metamodel.binding.FetchProfile;
 import org.hibernate.metamodel.binding.IdGenerator;
@@ -61,6 +64,7 @@ import org.hibernate.metamodel.source.hbm.xml.mapping.XMLHibernateMapping;
 import org.hibernate.metamodel.source.spi.MetadataImplementor;
 import org.hibernate.service.BasicServiceRegistry;
 import org.hibernate.service.classloading.spi.ClassLoaderService;
+import org.hibernate.type.Type;
 import org.hibernate.type.TypeResolver;
 
 /**
@@ -318,5 +322,50 @@ public class MetadataImpl implements MetadataImplementor, Serializable {
 
 	public TypeResolver getTypeResolver() {
 		return typeResolver;
+	}
+
+	@Override
+	public IdentifierGeneratorFactory getIdentifierGeneratorFactory() {
+		return identifierGeneratorFactory;
+	}
+
+	/**
+	 * Returns the identifier type of a mapped class
+	 */
+	@Override
+	public Type getIdentifierType(String entityName) throws MappingException {
+		EntityBinding entityBinding = entityBindingMap.get( entityName );
+		if ( entityBinding == null ) {
+			throw new MappingException( "Entity binding not known: " + entityName );
+		}
+		return entityBinding.getEntityIdentifier().getValueBinding().getHibernateTypeDescriptor().getExplicitType();
+	}
+
+	@Override
+	public String getIdentifierPropertyName(String entityName) throws MappingException {
+		final EntityBinding entityBinding = entityBindingMap.get( entityName );
+		if ( entityBinding == null ) {
+			throw new MappingException( "Entity binding not known: " + entityName );
+		}
+		if ( entityBinding.getEntityIdentifier().getValueBinding() == null ) {
+			return null;
+		}
+		return entityBinding.getEntityIdentifier().getValueBinding().getAttribute().getName();
+	}
+
+	@Override
+	public Type getReferencedPropertyType(String entityName, String propertyName) throws MappingException {
+		final EntityBinding entityBinding = entityBindingMap.get( entityName );
+		if ( entityBinding == null ) {
+			throw new MappingException( "Entity binding not known: " + entityName );
+		}
+		AttributeBinding prop = entityBinding.getAttributeBinding( propertyName );
+		if ( prop == null ) {
+			throw new MappingException(
+					"property not known: " +
+					entityName + '.' + propertyName
+			);
+		}
+		return prop.getHibernateTypeDescriptor().getExplicitType();
 	}
 }

@@ -25,6 +25,7 @@ package org.hibernate.cache.internal.bridge;
 
 import org.jboss.logging.Logger;
 
+import org.hibernate.SessionFactory;
 import org.hibernate.cache.CacheException;
 import org.hibernate.cache.spi.Cache;
 import org.hibernate.cache.spi.CacheConcurrencyStrategy;
@@ -37,7 +38,6 @@ import org.hibernate.cache.spi.ReadWriteCache;
 import org.hibernate.cache.spi.TransactionalCache;
 import org.hibernate.cache.spi.access.AccessType;
 import org.hibernate.cache.spi.access.EntityRegionAccessStrategy;
-import org.hibernate.cfg.Settings;
 import org.hibernate.internal.CoreMessageLogger;
 
 /**
@@ -49,8 +49,15 @@ public class EntityRegionAdapter extends BaseTransactionalDataRegionAdapter impl
 
     private static final CoreMessageLogger LOG = Logger.getMessageLogger(CoreMessageLogger.class, EntityRegionAdapter.class.getName());
 
-	public EntityRegionAdapter(Cache underlyingCache, Settings settings, CacheDataDescription metadata) {
+	public EntityRegionAdapter(Cache underlyingCache, org.hibernate.cfg.Settings settings, CacheDataDescription metadata) {
 		super( underlyingCache, settings, metadata );
+		if ( underlyingCache instanceof OptimisticCache ) {
+			( (OptimisticCache) underlyingCache ).setSource( new OptimisticCacheSourceAdapter( metadata ) );
+		}
+	}
+
+	public EntityRegionAdapter(Cache underlyingCache, SessionFactory.Settings options, CacheDataDescription metadata) {
+		super( underlyingCache, options, metadata );
 		if ( underlyingCache instanceof OptimisticCache ) {
 			( (OptimisticCache) underlyingCache ).setSource( new OptimisticCacheSourceAdapter( metadata ) );
 		}
@@ -75,6 +82,16 @@ public class EntityRegionAdapter extends BaseTransactionalDataRegionAdapter impl
 			throw new IllegalArgumentException( "unrecognized access strategy type [" + accessType + "]" );
 		}
 		ccs.setCache( underlyingCache );
-		return new EntityAccessStrategyAdapter( this, ccs, settings );
+		if ( getOptions() != null ) {
+			return new EntityAccessStrategyAdapter( this, ccs, getOptions() );
+		}
+		else if ( settings != null ) {
+			return new EntityAccessStrategyAdapter( this, ccs, settings );
+		}
+		else {
+			throw new IllegalStateException(
+					"Attempt to build entity region access factory with options and settings both set to null."
+			);
+		}
 	}
 }

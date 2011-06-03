@@ -207,7 +207,7 @@ public interface SessionFactoryImplementor extends Mapping, SessionFactory {
 	 */
     public SqlExceptionHelper getSQLExceptionHelper();
 
-	public Settings getSettings();
+	public SessionFactory.Settings getSettings();
 
 	/**
 	 * Get a nontransactional "current" session for Hibernate EntityManager

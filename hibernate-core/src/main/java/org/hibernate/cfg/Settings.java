@@ -26,7 +26,9 @@ package org.hibernate.cfg;
 import java.util.Map;
 import org.hibernate.ConnectionReleaseMode;
 import org.hibernate.EntityMode;
+import org.hibernate.Interceptor;
 import org.hibernate.MultiTenancyStrategy;
+import org.hibernate.SessionFactory;
 import org.hibernate.cache.spi.QueryCacheFactory;
 import org.hibernate.cache.spi.RegionFactory;
 import org.hibernate.hql.spi.QueryTranslatorFactory;
@@ -38,7 +40,7 @@ import org.hibernate.tuple.entity.EntityTuplizerFactory;
  *
  * @author Gavin King
  */
-public final class Settings {
+public final class Settings implements SessionFactory.Settings {
 
 	private Integer maximumFetchDepth;
 	private Map querySubstitutions;
@@ -146,14 +148,23 @@ public final class Settings {
 		return sessionFactoryName;
 	}
 
+	/**
+	 * @deprecated Use {@link org.hibernate.cfg.Settings#isAutoCreateSchemaEnabled()}
+	 */
 	public boolean isAutoCreateSchema() {
 		return autoCreateSchema;
 	}
 
+	/**
+	 * @deprecated Use {@link org.hibernate.cfg.Settings#isAutoDropSchemaEnabled()}
+	 */
 	public boolean isAutoDropSchema() {
 		return autoDropSchema;
 	}
 
+	/**
+	 * @deprecated Use {@link org.hibernate.cfg.Settings#isAutoUpdateSchemaEnabled()}
+	 */
 	public boolean isAutoUpdateSchema() {
 		return autoUpdateSchema;
 	}
@@ -168,6 +179,31 @@ public final class Settings {
 
 	public boolean isQueryCacheEnabled() {
 		return queryCacheEnabled;
+	}
+
+	@Override
+	public boolean isAutoCreateSchemaEnabled() {
+		return autoCreateSchema;
+	}
+
+	@Override
+	public boolean isAutoDropSchemaEnabled() {
+		return autoDropSchema;
+	}
+
+	@Override
+	public boolean isAutoUpdateSchemaEnabled() {
+		return autoUpdateSchema;
+	}
+
+	@Override
+	public boolean isAutoValidateSchemaEnabled() {
+		return autoValidateSchema;
+	}
+
+	@Override
+	public Interceptor getInterceptor() {
+		return null;  //To change body of implemented methods use File | Settings | File Templates.
 	}
 
 	public boolean isCommentsEnabled() {
@@ -230,6 +266,9 @@ public final class Settings {
 		return defaultEntityMode;
 	}
 
+	/**
+	 * @deprecated Use {@link org.hibernate.cfg.Settings#isAutoValidateSchemaEnabled()}
+	 */
 	public boolean isAutoValidateSchema() {
 		return autoValidateSchema;
 	}
@@ -412,12 +451,28 @@ public final class Settings {
 		this.entityTuplizerFactory = entityTuplizerFactory;
 	}
 
+	/**
+	 * @deprecated Use {@link org.hibernate.cfg.Settings#isCheckNullabilityEnabled()}
+	 */
 	public boolean isCheckNullability() {
 		return checkNullability;
 	}
 
+	@Override
+	public boolean isCheckNullabilityEnabled() {
+		return checkNullability;
+	}
+
+	/**
+	 * @deprecated Use {@link org.hibernate.cfg.Settings#overrideCheckNullability(boolean)}
+	 */
 	public void setCheckNullability(boolean checkNullability) {
 		this.checkNullability = checkNullability;
+	}
+
+	@Override
+	public void overrideCheckNullability(boolean enabled) {
+		this.checkNullability = enabled;
 	}
 
 	//	void setComponentTuplizerFactory(ComponentTuplizerFactory componentTuplizerFactory) {

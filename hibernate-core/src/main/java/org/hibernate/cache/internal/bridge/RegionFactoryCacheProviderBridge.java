@@ -27,6 +27,7 @@ import java.util.Properties;
 
 import org.jboss.logging.Logger;
 
+import org.hibernate.SessionFactory;
 import org.hibernate.cache.CacheException;
 import org.hibernate.cache.internal.NoCacheProvider;
 import org.hibernate.cache.spi.CacheDataDescription;
@@ -38,7 +39,6 @@ import org.hibernate.cache.spi.RegionFactory;
 import org.hibernate.cache.spi.TimestampsRegion;
 import org.hibernate.cache.spi.access.AccessType;
 import org.hibernate.cfg.Environment;
-import org.hibernate.cfg.Settings;
 import org.hibernate.internal.CoreMessageLogger;
 import org.hibernate.internal.util.ReflectHelper;
 import org.hibernate.internal.util.config.ConfigurationHelper;
@@ -56,7 +56,7 @@ public class RegionFactoryCacheProviderBridge implements RegionFactory {
                                                                        RegionFactoryCacheProviderBridge.class.getName());
 
 	private CacheProvider cacheProvider;
-	private Settings settings;
+	private SessionFactory.Settings settings;
 
 	public RegionFactoryCacheProviderBridge(Properties properties) {
 		String providerClassName = ConfigurationHelper.getString( Environment.CACHE_PROVIDER, properties, DEF_PROVIDER );
@@ -69,7 +69,7 @@ public class RegionFactoryCacheProviderBridge implements RegionFactory {
 		}
 	}
 
-	public void start(Settings settings, Properties properties) throws CacheException {
+	public void start(SessionFactory.Settings settings, Properties properties) throws CacheException {
 		this.settings = settings;
 		cacheProvider.start( properties );
 	}
@@ -120,6 +120,4 @@ public class RegionFactoryCacheProviderBridge implements RegionFactory {
 	public TimestampsRegion buildTimestampsRegion(String regionName, Properties properties) throws CacheException {
 		return new TimestampsRegionAdapter( cacheProvider.buildCache( regionName, properties ), settings );
 	}
-
-
 }

@@ -26,6 +26,7 @@ package org.hibernate.cache.spi;
 import java.util.Properties;
 
 import org.hibernate.HibernateException;
+import org.hibernate.SessionFactory;
 import org.hibernate.cfg.Settings;
 
 /**
@@ -38,6 +39,6 @@ public interface QueryCacheFactory {
 	public QueryCache getQueryCache(
 	        String regionName,
 	        UpdateTimestampsCache updateTimestampsCache,
-			Settings settings,
+			SessionFactory.Settings settings,
 	        Properties props) throws HibernateException;
 }

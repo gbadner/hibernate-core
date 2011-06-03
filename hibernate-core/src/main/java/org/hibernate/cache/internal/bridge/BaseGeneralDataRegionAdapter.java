@@ -23,10 +23,10 @@
  */
 package org.hibernate.cache.internal.bridge;
 
+import org.hibernate.SessionFactory;
 import org.hibernate.cache.CacheException;
 import org.hibernate.cache.spi.Cache;
 import org.hibernate.cache.spi.GeneralDataRegion;
-import org.hibernate.cfg.Settings;
 
 /**
  * {@inheritDoc}
@@ -35,8 +35,12 @@ import org.hibernate.cfg.Settings;
  */
 public abstract class BaseGeneralDataRegionAdapter extends BaseRegionAdapter implements GeneralDataRegion {
 
-	protected BaseGeneralDataRegionAdapter(Cache underlyingCache, Settings settings) {
+	protected BaseGeneralDataRegionAdapter(Cache underlyingCache, org.hibernate.cfg.Settings settings) {
 		super( underlyingCache, settings );
+	}
+
+	protected BaseGeneralDataRegionAdapter(Cache underlyingCache, SessionFactory.Settings options) {
+		super( underlyingCache, options );
 	}
 
 	public Object get(Object key) throws CacheException {

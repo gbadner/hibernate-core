@@ -29,6 +29,7 @@ import java.sql.Connection;
 import java.util.Map;
 import java.util.Set;
 
+import org.hibernate.cache.spi.QueryCacheFactory;
 import org.hibernate.engine.spi.FilterDefinition;
 import org.hibernate.metadata.ClassMetadata;
 import org.hibernate.metadata.CollectionMetadata;
@@ -51,6 +52,32 @@ import org.hibernate.stat.Statistics;
  * @author Steve Ebersole
  */
 public interface SessionFactory extends Referenceable, Serializable {
+
+	/**
+	 * Exposes the options used to produce a {@link SessionFactory} instance.
+	 */
+	public static interface Settings {
+		String getCacheRegionPrefix();
+		boolean isMinimalPutsEnabled();
+		boolean isSecondLevelCacheEnabled();
+		boolean isQueryCacheEnabled();
+		boolean isAutoCreateSchemaEnabled();
+		boolean isAutoDropSchemaEnabled();
+		boolean isAutoUpdateSchemaEnabled();
+		boolean isAutoValidateSchemaEnabled();
+		Interceptor getInterceptor();
+		ConnectionReleaseMode getConnectionReleaseMode();
+		EntityMode getDefaultEntityMode();
+		boolean isAutoCloseSessionEnabled();
+		boolean isFlushBeforeCompletionEnabled();
+		QueryCacheFactory getQueryCacheFactory();
+		boolean isCheckNullabilityEnabled();
+		// TODO: how to get around having to do this???
+		void overrideCheckNullability(boolean enabled);
+	}
+
+	public Settings getOptions();
+
 	/**
 	 * Obtain a {@link Session} builder.
 	 *

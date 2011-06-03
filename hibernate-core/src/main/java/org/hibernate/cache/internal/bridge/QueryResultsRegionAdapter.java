@@ -23,9 +23,9 @@
  */
 package org.hibernate.cache.internal.bridge;
 
+import org.hibernate.SessionFactory;
 import org.hibernate.cache.spi.Cache;
 import org.hibernate.cache.spi.QueryResultsRegion;
-import org.hibernate.cfg.Settings;
 
 /**
  * Adapter specifically briding {@link org.hibernate.cache.spi.QueryResultsRegion} to {@link Cache}.
@@ -33,7 +33,12 @@ import org.hibernate.cfg.Settings;
 * @author Steve Ebersole
  */
 public class QueryResultsRegionAdapter extends BaseGeneralDataRegionAdapter implements QueryResultsRegion {
-	protected QueryResultsRegionAdapter(Cache underlyingCache, Settings settings) {
+	protected QueryResultsRegionAdapter(Cache underlyingCache, org.hibernate.cfg.Settings settings) {
 		super( underlyingCache, settings );
 	}
+
+	protected QueryResultsRegionAdapter(Cache underlyingCache, SessionFactory.Settings options) {
+		super( underlyingCache, options );
+	}
+
 }

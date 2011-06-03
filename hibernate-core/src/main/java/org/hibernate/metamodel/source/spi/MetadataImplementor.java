@@ -24,6 +24,7 @@
 package org.hibernate.metamodel.source.spi;
 
 import org.hibernate.engine.spi.FilterDefinition;
+import org.hibernate.engine.spi.Mapping;
 import org.hibernate.metamodel.Metadata;
 import org.hibernate.metamodel.binding.EntityBinding;
 import org.hibernate.metamodel.binding.FetchProfile;
@@ -37,7 +38,7 @@ import org.hibernate.type.TypeResolver;
 /**
  * @author Steve Ebersole
  */
-public interface MetadataImplementor extends Metadata {
+public interface MetadataImplementor extends Metadata, Mapping {
 	public BasicServiceRegistry getServiceRegistry();
 
 	public Database getDatabase();
