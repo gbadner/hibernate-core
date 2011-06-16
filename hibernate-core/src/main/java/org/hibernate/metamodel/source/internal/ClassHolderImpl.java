@@ -31,6 +31,7 @@ import com.fasterxml.classmate.ResolvedTypeWithMembers;
 import com.fasterxml.classmate.members.ResolvedField;
 
 import org.hibernate.MappingException;
+import org.hibernate.metamodel.source.annotations.util.ReflectionHelper;
 import org.hibernate.metamodel.source.spi.ClassHolder;
 import org.hibernate.metamodel.source.spi.FieldClassHolder;
 import org.hibernate.service.classloading.spi.ClassLoadingException;
