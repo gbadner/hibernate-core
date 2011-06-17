@@ -34,6 +34,7 @@ import org.hibernate.metamodel.binding.state.EntityBindingState;
 import org.hibernate.metamodel.domain.Entity;
 import org.hibernate.metamodel.relational.Column;
 import org.hibernate.metamodel.relational.TableSpecification;
+import org.hibernate.metamodel.source.spi.ClassHolder;
 import org.hibernate.metamodel.source.spi.MetaAttributeContext;
 
 /**
@@ -77,7 +78,7 @@ public class EntityBinding {
 	private boolean hasSubselectLoadableCollections;
 	private int optimisticLockMode;
 
-	private Class entityPersisterClass;
+	private ClassHolder entityPersisterClassHolder;
 	private Boolean isAbstract;
 
 	private CustomSQL customInsert;
@@ -102,7 +103,7 @@ public class EntityBinding {
 		this.batchSize = state.getBatchSize();
 		this.selectBeforeUpdate = state.isSelectBeforeUpdate();
 		this.optimisticLockMode = state.getOptimisticLockMode();
-		this.entityPersisterClass = state.getEntityPersisterClass();
+		this.entityPersisterClassHolder = state.getEntityPersisterClassHolder();
 		this.isAbstract = state.isAbstract();
 		this.customInsert = state.getCustomInsert();
 		this.customUpdate = state.getCustomUpdate();
@@ -308,8 +309,8 @@ public class EntityBinding {
 		return optimisticLockMode;
 	}
 
-	public Class getEntityPersisterClass() {
-		return entityPersisterClass;
+	public ClassHolder getEntityPersisterClassHolder() {
+		return entityPersisterClassHolder;
 	}
 
 	public Boolean isAbstract() {

@@ -26,11 +26,15 @@ package org.hibernate.metamodel.source.internal;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
+import com.fasterxml.classmate.ResolvedType;
 import org.jboss.logging.Logger;
 
+import org.hibernate.AssertionFailure;
 import org.hibernate.DuplicateMappingException;
 import org.hibernate.MappingException;
 import org.hibernate.SessionFactory;
@@ -56,6 +60,7 @@ import org.hibernate.metamodel.relational.Database;
 import org.hibernate.metamodel.source.annotations.AnnotationBinder;
 import org.hibernate.metamodel.source.hbm.HbmBinder;
 import org.hibernate.metamodel.source.spi.Binder;
+import org.hibernate.metamodel.source.spi.ClassHolder;
 import org.hibernate.metamodel.source.spi.MappingDefaults;
 import org.hibernate.metamodel.source.spi.MetaAttributeContext;
 import org.hibernate.metamodel.source.spi.MetadataImplementor;
@@ -106,6 +111,8 @@ public class MetadataImpl implements MetadataImplementor, Serializable {
 	private Map<String, NamedSQLQueryDefinition> namedNativeQueryDefs = new HashMap<String, NamedSQLQueryDefinition>();
 	private Map<String, ResultSetMappingDefinition> resultSetMappings = new HashMap<String, ResultSetMappingDefinition>();
 	private Map<String, FilterDefinition> filterDefs = new HashMap<String, FilterDefinition>();
+
+	private Map<String, ClassHolder> classHoldersByName = new HashMap<String, ClassHolder>();
 
 	// todo : keep as part of Database?
 	private List<AuxiliaryDatabaseObject> auxiliaryDatabaseObjects = new ArrayList<AuxiliaryDatabaseObject>();
@@ -209,7 +216,7 @@ public class MetadataImpl implements MetadataImplementor, Serializable {
 	}
 	@Override
 	public void registerIdentifierGenerator(String name, String generatorClassName) {
-		 identifierGeneratorFactory.register( name, classLoaderService().classForName( generatorClassName ) );
+		 identifierGeneratorFactory.register( name, getClassForName( generatorClassName ) );
 	}
 
 	@Override
@@ -298,6 +305,10 @@ public class MetadataImpl implements MetadataImplementor, Serializable {
 			classLoaderService = serviceRegistry.getService( ClassLoaderService.class );
 		}
 		return classLoaderService;
+	}
+
+	private Class getClassForName(String className) {
+		return classLoaderService().classForName( className );
 	}
 
 	@Override
@@ -425,6 +436,43 @@ public class MetadataImpl implements MetadataImplementor, Serializable {
 	@Override
 	public MetadataImplementor getMetadataImplementor() {
 		return this;
+	}
+
+	@Override
+	public ClassHolder getClassHolder(String className) {
+		ClassHolder classHolder = classHoldersByName.get( className );
+		if ( classHolder == null ) {
+			classHolder = ClassHolderImpl.createDeferredClassHolder( className, this );
+			classHoldersByName.put( className, classHolder );
+		}
+		return classHolder;
+	}
+
+	@Override
+	public ClassHolder getLoadedClassHolder(Class clazz) {
+		return getLoadedClassHolder( ReflectionHelper.resolveType( clazz ) );
+	}
+
+	@Override
+	public ClassHolder getLoadedClassHolder(ResolvedType resolvedType) {
+		ClassHolder classHolder = classHoldersByName.get( resolvedType.getErasedType().getName() );
+		if ( classHolder == null ) {
+			classHolder = ClassHolderImpl.createLoadedClassHolder( resolvedType, this );
+			classHoldersByName.put( resolvedType.getErasedType().getName(), classHolder );
+		}
+		else if ( ! classHolder.isClassResolved() ) {
+			// found the ClassHolder, but the class is not resolved; force resolution.
+			Class loadedClass = classHolder.getLoadedClass();
+			if ( resolvedType.getErasedType() != loadedClass ) {
+				throw new AssertionFailure( "Class resolved from ClassHolder is different from the clazz in ResolvedType." );
+			}
+		}
+		return classHolder;
+	}
+
+	/* package-protected */
+	ResolvedType getResolvedType(String className) {
+		 return ReflectionHelper.resolveType( getClassForName( className ) );
 	}
 
 	private static final String DEFAULT_IDENTIFIER_COLUMN_NAME = "id";

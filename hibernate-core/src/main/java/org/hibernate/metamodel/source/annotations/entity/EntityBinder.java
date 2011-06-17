@@ -69,7 +69,6 @@ import org.hibernate.metamodel.source.annotations.entity.state.relational.TupleR
 import org.hibernate.metamodel.source.annotations.global.IdGeneratorBinder;
 import org.hibernate.metamodel.source.annotations.util.JandexHelper;
 import org.hibernate.metamodel.source.spi.MetadataImplementor;
-import org.hibernate.service.classloading.spi.ClassLoaderService;
 
 /**
  * Creates the domain and relational metamodel for a configured class and <i>binds</i> them together.
@@ -104,6 +103,10 @@ public class EntityBinder {
 		bindJpaCaching( entityBindingState );
 		bindHibernateCaching( entityBindingState );
 		bindProxy( entityBindingState );
+
+		// TODO: cannot currently bind POJO representation until proxy is bound; should be fixed
+		bindPojoRepresentation( entityBinding );
+
 		bindSynchronize( entityBindingState );
 		bindCustomSQL( entityBindingState );
 		bindRowId( entityBindingState );
@@ -265,6 +268,28 @@ public class EntityBinder {
 
 		entityBindingState.setLazy( lazy );
 		entityBindingState.setProxyInterfaceName( proxyInterfaceClass );
+	}
+
+	private void bindPojoRepresentation(EntityBinding entityBinding) {
+		Class clazz = configuredClass.getClass();
+		String proxyName = entityBinding.getProxyInterfaceName();
+
+		entityBinding.getEntity().getPojoEntitySpecifics().setClassHolder(
+			meta.getLoadedClassHolder( clazz )
+		);
+
+		if ( proxyName != null ) {
+			entityBinding.getEntity().getPojoEntitySpecifics().setProxyInterfaceName( proxyName );
+			entityBinding.setLazy( true );
+		}
+		else if ( entityBinding.isLazy() ) {
+			entityBinding.getEntity().getPojoEntitySpecifics().setProxyInterfaceName( clazz.getName() );
+		}
+
+		// TODO: locate tuplizer
+		//if ( tuplizer != null ) {
+		//	entityBinding.getEntity().getPojoEntitySpecifics().setTuplizerClassName( tuplizer.getClazz() );
+		//}
 	}
 
 	private void bindSynchronize(EntityBindingStateImpl entityBindingState) {
@@ -623,10 +648,7 @@ public class EntityBinder {
 
 			if ( hibernateEntityAnnotation.value( "persister" ) != null ) {
 				String persister = ( hibernateEntityAnnotation.value( "persister" ).toString() );
-				ClassLoaderService classLoaderService = meta.getServiceRegistry()
-						.getService( ClassLoaderService.class );
-				Class<?> persisterClass = classLoaderService.classForName( persister );
-				entityBindingState.setPersisterClass( persisterClass );
+				entityBindingState.setPersisterClassHolder( meta.getClassHolder( persister ) );
 			}
 		}
 

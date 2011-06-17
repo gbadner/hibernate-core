@@ -47,4 +47,8 @@ public class BasicHbmBindingTests extends AbstractBasicBindingTests {
 		sources.addResource( "org/hibernate/metamodel/binding/SimpleEntity.hbm.xml" );
 		return (MetadataImpl) sources.buildMetadata();
 	}
+
+	public boolean isEntityClassLoaded() {
+		return false;
+	}
 }

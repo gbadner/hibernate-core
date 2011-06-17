@@ -124,13 +124,15 @@ abstract class AbstractEntityBinder {
 			EntityBinding entityBinding,
 			Hierarchical superType) {
 		entityBinding.setEntity( new Entity( bindingContext.extractEntityName( entityClazz ), superType ) );
-		entityBinding.initialize( new HbmEntityBindingState( isRoot(), getInheritanceType(), bindingContext, entityClazz ) );
 
 		// TODO: move this stuff out
 		// transfer an explicitly defined lazy attribute
+		// entity mode representations need to be bound before initializing the EntityBinding
 		bindPojoRepresentation( entityClazz, entityBinding );
 		bindDom4jRepresentation( entityClazz, entityBinding );
 		bindMapRepresentation( entityClazz, entityBinding );
+
+		entityBinding.initialize( new HbmEntityBindingState( isRoot(), getInheritanceType(), bindingContext, entityClazz ) );
 
 		final String entityName = entityBinding.getEntity().getName();
 
@@ -155,7 +157,11 @@ abstract class AbstractEntityBinder {
 		String className = bindingContext.getClassName( entityClazz.getName() );
 		String proxyName = entityBinding.getProxyInterfaceName();
 
-		entityBinding.getEntity().getPojoEntitySpecifics().setClassName( className );
+		if ( className != null ) {
+			entityBinding.getEntity().getPojoEntitySpecifics().setClassHolder(
+					bindingContext.getClassHolder( className )
+			);
+		}
 
 		if ( proxyName != null ) {
 			entityBinding.getEntity().getPojoEntitySpecifics().setProxyInterfaceName( proxyName );
@@ -423,7 +429,7 @@ PrimitiveArray
 			XMLPropertyElement property,
 			EntityBinding entityBinding) {
 		SimpleAttributeBindingState bindingState = new HbmSimpleAttributeBindingState(
-				entityBinding.getEntity().getPojoEntitySpecifics().getClassName(),
+				entityBinding.getEntity().getPojoEntitySpecifics().getClassHolder().getClassName(),
 				bindingContext,
 				entityBinding.getMetaAttributeContext(),
 				property
@@ -462,7 +468,7 @@ PrimitiveArray
 
 		PluralAttributeBindingState bindingState =
 				new HbmPluralAttributeBindingState(
-						entityBinding.getEntity().getPojoEntitySpecifics().getClassName(),
+						entityBinding.getEntity().getPojoEntitySpecifics().getClassHolder().getClassName(),
 						bindingContext,
 						entityBinding.getMetaAttributeContext(),
 						collection
@@ -502,7 +508,7 @@ PrimitiveArray
 							   EntityBinding entityBinding) {
 		ManyToOneAttributeBindingState bindingState =
 				new HbmManyToOneAttributeBindingState(
-						entityBinding.getEntity().getPojoEntitySpecifics().getClassName(),
+						entityBinding.getEntity().getPojoEntitySpecifics().getClassHolder().getClassName(),
 						bindingContext,
 						entityBinding.getMetaAttributeContext(),
 						manyToOne

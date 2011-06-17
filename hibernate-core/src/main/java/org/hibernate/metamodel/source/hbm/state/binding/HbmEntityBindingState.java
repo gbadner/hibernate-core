@@ -42,6 +42,7 @@ import org.hibernate.metamodel.source.hbm.xml.mapping.XMLSqlDeleteElement;
 import org.hibernate.metamodel.source.hbm.xml.mapping.XMLSqlInsertElement;
 import org.hibernate.metamodel.source.hbm.xml.mapping.XMLSqlUpdateElement;
 import org.hibernate.metamodel.source.hbm.xml.mapping.XMLSynchronizeElement;
+import org.hibernate.metamodel.source.spi.ClassHolder;
 import org.hibernate.metamodel.source.spi.MetaAttributeContext;
 
 /**
@@ -67,7 +68,7 @@ public class HbmEntityBindingState implements EntityBindingState {
 	private final boolean selectBeforeUpdate;
 	private final int optimisticLockMode;
 
-	private final Class entityPersisterClass;
+	private final ClassHolder entityPersisterClassHolder;
 	private final Boolean isAbstract;
 
 	private final CustomSQL customInsert;
@@ -107,10 +108,10 @@ public class HbmEntityBindingState implements EntityBindingState {
 		optimisticLockMode = getOptimisticLockMode();
 
 		// PERSISTER
-		entityPersisterClass =
+		entityPersisterClassHolder =
 				entityClazz.getPersister() == null ?
 						null :
-						MappingHelper.classForName( entityClazz.getPersister(), bindingContext.getServiceRegistry() );
+						bindingContext.getClassHolder( entityClazz.getPersister() );
 
 		// CUSTOM SQL
 		XMLSqlInsertElement sqlInsert = entityClazz.getSqlInsert();
@@ -270,8 +271,8 @@ public class HbmEntityBindingState implements EntityBindingState {
 	}
 
 	@Override
-	public Class getEntityPersisterClass() {
-		return entityPersisterClass;
+	public ClassHolder getEntityPersisterClassHolder() {
+		return entityPersisterClassHolder;
 	}
 
 	@Override

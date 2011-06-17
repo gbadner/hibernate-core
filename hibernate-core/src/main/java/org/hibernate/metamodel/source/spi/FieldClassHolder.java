@@ -21,59 +21,13 @@
  * 51 Franklin Street, Fifth Floor
  * Boston, MA  02110-1301  USA
  */
-package org.hibernate.metamodel.binding.state;
+package org.hibernate.metamodel.source.spi;
 
-import java.util.Set;
-
-import org.hibernate.metamodel.binding.Caching;
-import org.hibernate.metamodel.binding.CustomSQL;
-import org.hibernate.metamodel.binding.InheritanceType;
-import org.hibernate.metamodel.source.spi.ClassHolder;
-import org.hibernate.metamodel.source.spi.MetaAttributeContext;
+import java.lang.reflect.Field;
 
 /**
  * @author Gail Badner
  */
-public interface EntityBindingState {
-	boolean isRoot();
-
-	InheritanceType getEntityInheritanceType();
-
-	Caching getCaching();
-
-	MetaAttributeContext getMetaAttributeContext();
-
-	String getProxyInterfaceName();
-
-	boolean isLazy();
-
-	boolean isMutable();
-
-	boolean isExplicitPolymorphism();
-
-	String getWhereFilter();
-
-	String getRowId();
-
-	boolean isDynamicUpdate();
-
-	boolean isDynamicInsert();
-
-	int getBatchSize();
-
-	boolean isSelectBeforeUpdate();
-
-	int getOptimisticLockMode();
-
-	ClassHolder getEntityPersisterClassHolder();
-
-	Boolean isAbstract();
-
-	CustomSQL getCustomInsert();
-
-	CustomSQL getCustomUpdate();
-
-	CustomSQL getCustomDelete();
-
-	Set<String> getSynchronizedTableNames();
+public interface FieldClassHolder extends ClassHolder {
+	public String getFieldName();
 }

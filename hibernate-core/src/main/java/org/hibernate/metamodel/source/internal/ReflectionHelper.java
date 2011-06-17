@@ -1,4 +1,4 @@
-package org.hibernate.metamodel.source.annotations.util;
+package org.hibernate.metamodel.source.internal;
 
 import java.beans.Introspector;
 import java.lang.reflect.Field;
@@ -50,6 +50,10 @@ public class ReflectionHelper {
 			}
 		}
 		return name;
+	}
+
+	public static ResolvedType resolveType(Class<?> clazz) {
+		return typeResolver.resolve( clazz );
 	}
 
 	public static ResolvedTypeWithMembers resolveMemberTypes(Class<?> clazz) {

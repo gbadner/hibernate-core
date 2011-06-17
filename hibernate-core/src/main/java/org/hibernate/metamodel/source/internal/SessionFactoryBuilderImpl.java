@@ -40,10 +40,10 @@ import org.hibernate.proxy.EntityNotFoundDelegate;
 public class SessionFactoryBuilderImpl implements SessionFactoryBuilder {
 	SessionFactoryOptionsImpl options;
 
-	private final MetadataImplementor metadata;
+	private final MetadataImpl metadata;
 
 	/* package-protected */
-	SessionFactoryBuilderImpl(MetadataImplementor metadata) {
+	SessionFactoryBuilderImpl(MetadataImpl metadata) {
 		this.metadata = metadata;
 		options = new SessionFactoryOptionsImpl();
 	}

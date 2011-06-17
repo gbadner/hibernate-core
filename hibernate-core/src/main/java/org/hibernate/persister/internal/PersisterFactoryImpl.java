@@ -34,6 +34,7 @@ import org.hibernate.mapping.Collection;
 import org.hibernate.mapping.PersistentClass;
 import org.hibernate.metamodel.binding.EntityBinding;
 import org.hibernate.metamodel.binding.PluralAttributeBinding;
+import org.hibernate.metamodel.source.spi.ClassHolder;
 import org.hibernate.metamodel.source.spi.MetadataImplementor;
 import org.hibernate.persister.collection.CollectionPersister;
 import org.hibernate.persister.entity.EntityPersister;
@@ -136,11 +137,21 @@ public final class PersisterFactoryImpl implements PersisterFactory, ServiceRegi
 												 EntityRegionAccessStrategy cacheAccessStrategy,
 												 SessionFactoryImplementor factory,
 												 Mapping cfg) {
-		Class<? extends EntityPersister> persisterClass = metadata.getEntityPersisterClass();
+		Class<? extends EntityPersister> persisterClass =
+				metadata.getEntityPersisterClassHolder() == null ?
+						null :
+						metadata.getEntityPersisterClassHolder().getLoadedClass();
 		if ( persisterClass == null ) {
 			persisterClass = serviceRegistry.getService( PersisterClassResolver.class ).getEntityPersisterClass( metadata );
 		}
-		return create( persisterClass, ENTITY_PERSISTER_CONSTRUCTOR_ARGS_NEW, metadata, cacheAccessStrategy, factory, cfg );
+		return create(
+				persisterClass,
+				ENTITY_PERSISTER_CONSTRUCTOR_ARGS_NEW,
+				metadata,
+				cacheAccessStrategy,
+				factory,
+				cfg
+		);
 	}
 
 	// TODO: change metadata arg type to EntityBinding when new metadata is integrated

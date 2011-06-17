@@ -32,6 +32,7 @@ import org.hibernate.metamodel.binding.CustomSQL;
 import org.hibernate.metamodel.binding.InheritanceType;
 import org.hibernate.metamodel.binding.state.EntityBindingState;
 import org.hibernate.metamodel.source.annotations.entity.ConfiguredClass;
+import org.hibernate.metamodel.source.spi.ClassHolder;
 import org.hibernate.metamodel.source.spi.MetaAttributeContext;
 
 /**
@@ -57,7 +58,7 @@ public class EntityBindingStateImpl implements EntityBindingState {
 	private boolean selectBeforeUpdate;
 	private OptimisticLockType optimisticLock;
 
-	private Class<?> persisterClass;
+	private ClassHolder persisterClassHolder;
 
 	private boolean lazy;
 	private String proxyInterfaceName;
@@ -115,8 +116,8 @@ public class EntityBindingStateImpl implements EntityBindingState {
 		this.optimisticLock = optimisticLock;
 	}
 
-	public void setPersisterClass(Class<?> persisterClass) {
-		this.persisterClass = persisterClass;
+	public void setPersisterClassHolder(ClassHolder persisterClassHolder) {
+		this.persisterClassHolder = persisterClassHolder;
 	}
 
 	public void setLazy(boolean lazy) {
@@ -229,8 +230,8 @@ public class EntityBindingStateImpl implements EntityBindingState {
 	}
 
 	@Override
-	public Class getEntityPersisterClass() {
-		return persisterClass;
+	public ClassHolder getEntityPersisterClassHolder() {
+		return persisterClassHolder;
 	}
 
 	@Override

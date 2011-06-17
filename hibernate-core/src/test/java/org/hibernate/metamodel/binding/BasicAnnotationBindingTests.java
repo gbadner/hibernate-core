@@ -25,6 +25,7 @@ package org.hibernate.metamodel.binding;
 
 import org.hibernate.metamodel.MetadataSources;
 import org.hibernate.metamodel.source.internal.MetadataImpl;
+import org.hibernate.metamodel.source.spi.ClassHolder;
 
 /**
  * Basic tests of annotation based binding code
@@ -46,5 +47,9 @@ public class BasicAnnotationBindingTests extends AbstractBasicBindingTests {
 		sources.addAnnotatedClass( ManyToOneEntity.class );
 		sources.addAnnotatedClass( SimpleEntity.class );
 		return (MetadataImpl) sources.buildMetadata();
+	}
+
+	public boolean isEntityClassLoaded() {
+		return true;
 	}
 }

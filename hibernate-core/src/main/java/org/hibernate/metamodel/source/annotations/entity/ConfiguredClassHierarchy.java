@@ -38,7 +38,7 @@ import org.hibernate.AnnotationException;
 import org.hibernate.metamodel.binding.InheritanceType;
 import org.hibernate.metamodel.source.annotations.JPADotNames;
 import org.hibernate.metamodel.source.annotations.util.JandexHelper;
-import org.hibernate.metamodel.source.annotations.util.ReflectionHelper;
+import org.hibernate.metamodel.source.internal.ReflectionHelper;
 import org.hibernate.service.ServiceRegistry;
 import org.hibernate.service.classloading.spi.ClassLoaderService;
 

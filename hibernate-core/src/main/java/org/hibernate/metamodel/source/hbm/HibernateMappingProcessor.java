@@ -29,6 +29,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.fasterxml.classmate.ResolvedType;
+
 import org.hibernate.cfg.NamingStrategy;
 import org.hibernate.engine.spi.FilterDefinition;
 import org.hibernate.internal.util.StringHelper;
@@ -48,6 +50,7 @@ import org.hibernate.metamodel.source.hbm.xml.mapping.XMLSubclassElement;
 import org.hibernate.metamodel.source.hbm.xml.mapping.XMLUnionSubclassElement;
 import org.hibernate.metamodel.source.internal.JaxbRoot;
 import org.hibernate.metamodel.source.internal.OverriddenMappingDefaults;
+import org.hibernate.metamodel.source.spi.ClassHolder;
 import org.hibernate.metamodel.source.spi.MappingDefaults;
 import org.hibernate.metamodel.source.spi.MetaAttributeContext;
 import org.hibernate.metamodel.source.spi.MetadataImplementor;
@@ -135,6 +138,20 @@ public class HibernateMappingProcessor implements HbmBindingContext {
 	@Override
 	public MetadataImplementor getMetadataImplementor() {
 		return metadata;
+	}
+
+	@Override
+	public ClassHolder getClassHolder(String className) {
+		return metadata.getClassHolder( className );
+	}
+
+	@Override
+	public ClassHolder getLoadedClassHolder(Class clazz) {
+		return metadata.getLoadedClassHolder( clazz );
+	}
+
+	public ClassHolder getLoadedClassHolder(ResolvedType resolvedType) {
+		return metadata.getLoadedClassHolder( resolvedType );
 	}
 
 	public void bindIndependentMetadata() {

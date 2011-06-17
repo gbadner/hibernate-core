@@ -23,6 +23,8 @@
  */
 package org.hibernate.metamodel.source.spi;
 
+import com.fasterxml.classmate.ResolvedType;
+
 import org.hibernate.cfg.NamingStrategy;
 import org.hibernate.service.ServiceRegistry;
 
@@ -39,4 +41,11 @@ public interface BindingContext {
 	public MetaAttributeContext getMetaAttributeContext();
 
 	public MetadataImplementor getMetadataImplementor();
+
+	public ClassHolder getClassHolder(String className);
+
+	public ClassHolder getLoadedClassHolder(Class clazz);
+
+	public ClassHolder getLoadedClassHolder(ResolvedType resolvedType);
+
 }
