@@ -45,8 +45,8 @@ public class ClassHolderImplTest extends BaseUnitTestCase {
 
 	@Test
 	public void testLoadedClass() {
-		ClassHolder classHolder = ClassHolderImpl.createLoadedClassHolder( SimpleEntity.class, getMetadataImpl() );
-		assertTrue( classHolder.isClassResolved() );
+		ClassHolder classHolder = ClassHolderImpl.createLoadedClassHolder( SimpleEntity.class );
+		assertTrue( classHolder.hasLoadedClass() );
 		assertEquals( SimpleEntity.class.getName(), classHolder.getClassName() );
 		assertSame( SimpleEntity.class, classHolder.getLoadedClass() );
 	}
@@ -54,8 +54,12 @@ public class ClassHolderImplTest extends BaseUnitTestCase {
 	@Test
 	public void testDeferredClass() {
 		final String className = "org.hibernate.metamodel.source.internal.Foo";
-		ClassHolder classHolder = ClassHolderImpl.createDeferredClassHolder( className, getMetadataImpl()  );
-		assertFalse( classHolder.isClassResolved() );
+		ClassHolder classHolder =
+				ClassHolderImpl.createDeferredClassHolder(
+						className,
+						getMetadataImpl().getServiceRegistry().getService( ClassLoaderService.class )
+				);
+		assertFalse( classHolder.hasLoadedClass() );
 		assertEquals( className, classHolder.getClassName() );
 		Class fooClass = classHolder.getLoadedClass();
 		assertNotNull( fooClass );
@@ -66,15 +70,18 @@ public class ClassHolderImplTest extends BaseUnitTestCase {
 	public void testDeferredClassLoadedExternally() {
 		MetadataImpl metadata = getMetadataImpl();
 		final String className = "org.hibernate.metamodel.source.internal.Foo";
-		ClassHolder classHolder = ClassHolderImpl.createDeferredClassHolder( className, metadata  );
+		ClassHolder classHolder = ClassHolderImpl.createDeferredClassHolder(
+				className,
+				getMetadataImpl().getServiceRegistry().getService( ClassLoaderService.class )
+		);
 		assertEquals( className, classHolder.getClassName() );
-		assertFalse( classHolder.isClassResolved() );
+		assertFalse( classHolder.hasLoadedClass() );
 
 		ClassLoaderService classLoaderService = metadata.getServiceRegistry().getService( ClassLoaderService.class );
 		Class fooClass = classLoaderService.classForName( className );
 
 		// classHolder doesn't know that it was loaded externally
-		assertFalse( classHolder.isClassResolved() );
+		assertFalse( classHolder.hasLoadedClass() );
 
 		// ensure that the loaded class in classHolder is the same as fooClass
 		assertSame( fooClass, classHolder.getLoadedClass() );
@@ -83,8 +90,11 @@ public class ClassHolderImplTest extends BaseUnitTestCase {
 	@Test
 	public void testNonExistingDeferredClass() {
 		final String className = "AFakeClass";
-		ClassHolder classHolder = ClassHolderImpl.createDeferredClassHolder( className, getMetadataImpl() );
-		assertFalse( classHolder.isClassResolved() );
+		ClassHolder classHolder = ClassHolderImpl.createDeferredClassHolder(
+				className,
+				getMetadataImpl().getServiceRegistry().getService( ClassLoaderService.class )
+		);
+		assertFalse( classHolder.hasLoadedClass() );
 		assertEquals( className, classHolder.getClassName() );
 		try {
 			classHolder.getLoadedClass();

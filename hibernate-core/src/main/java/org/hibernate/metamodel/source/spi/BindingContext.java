@@ -42,10 +42,7 @@ public interface BindingContext {
 
 	public MetadataImplementor getMetadataImplementor();
 
-	public ClassHolder getClassHolder(String className);
+	public ClassHolder getOrCreateClassHolder(String className);
 
-	public ClassHolder getLoadedClassHolder(Class clazz);
-
-	public ClassHolder getLoadedClassHolder(ResolvedType resolvedType);
-
+	public ClassHolder getOrCreateLoadedClassHolder(Class clazz);
 }

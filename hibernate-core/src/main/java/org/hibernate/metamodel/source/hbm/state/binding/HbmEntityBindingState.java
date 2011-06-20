@@ -111,7 +111,7 @@ public class HbmEntityBindingState implements EntityBindingState {
 		entityPersisterClassHolder =
 				entityClazz.getPersister() == null ?
 						null :
-						bindingContext.getClassHolder( entityClazz.getPersister() );
+						bindingContext.getOrCreateClassHolder( entityClazz.getPersister() );
 
 		// CUSTOM SQL
 		XMLSqlInsertElement sqlInsert = entityClazz.getSqlInsert();

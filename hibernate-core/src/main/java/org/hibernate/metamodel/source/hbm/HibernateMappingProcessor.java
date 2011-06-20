@@ -29,8 +29,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import com.fasterxml.classmate.ResolvedType;
-
 import org.hibernate.cfg.NamingStrategy;
 import org.hibernate.engine.spi.FilterDefinition;
 import org.hibernate.internal.util.StringHelper;
@@ -141,17 +139,13 @@ public class HibernateMappingProcessor implements HbmBindingContext {
 	}
 
 	@Override
-	public ClassHolder getClassHolder(String className) {
-		return metadata.getClassHolder( className );
+	public ClassHolder getOrCreateClassHolder(String className) {
+		return metadata.getOrCreateClassHolder( className );
 	}
 
 	@Override
-	public ClassHolder getLoadedClassHolder(Class clazz) {
-		return metadata.getLoadedClassHolder( clazz );
-	}
-
-	public ClassHolder getLoadedClassHolder(ResolvedType resolvedType) {
-		return metadata.getLoadedClassHolder( resolvedType );
+	public ClassHolder getOrCreateLoadedClassHolder(Class clazz) {
+		return metadata.getOrCreateLoadedClassHolder( clazz );
 	}
 
 	public void bindIndependentMetadata() {

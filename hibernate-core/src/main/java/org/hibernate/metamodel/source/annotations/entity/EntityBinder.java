@@ -315,7 +315,7 @@ public class EntityBinder {
 		String proxyName = entityBinding.getProxyInterfaceName();
 
 		entityBinding.getEntity().getPojoEntitySpecifics().setClassHolder(
-			meta.getLoadedClassHolder( clazz )
+			meta.getOrCreateLoadedClassHolder( clazz )
 		);
 
 		if ( proxyName != null ) {
@@ -688,7 +688,7 @@ public class EntityBinder {
 
 			if ( hibernateEntityAnnotation.value( "persister" ) != null ) {
 				String persister = ( hibernateEntityAnnotation.value( "persister" ).toString() );
-				entityBindingState.setPersisterClassHolder( meta.getClassHolder( persister ) );
+				entityBindingState.setPersisterClassHolder( meta.getOrCreateClassHolder( persister ) );
 			}
 		}
 

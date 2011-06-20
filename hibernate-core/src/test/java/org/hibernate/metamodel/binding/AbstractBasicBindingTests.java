@@ -150,10 +150,10 @@ public abstract class AbstractBasicBindingTests extends BaseUnitTestCase {
 
 	protected void assertEntityClassHolder( ClassHolder classHolder ) {
 		if ( isEntityClassLoaded() ) {
-			assertTrue( classHolder.isClassResolved() );
+			assertTrue( classHolder.hasLoadedClass() );
 		}
 		else {
-			assertFalse( classHolder.isClassResolved() );
+			assertFalse( classHolder.hasLoadedClass() );
 		}
 	}
 }

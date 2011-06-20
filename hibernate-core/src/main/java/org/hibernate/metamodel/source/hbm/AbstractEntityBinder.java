@@ -159,7 +159,7 @@ abstract class AbstractEntityBinder {
 
 		if ( className != null ) {
 			entityBinding.getEntity().getPojoEntitySpecifics().setClassHolder(
-					bindingContext.getClassHolder( className )
+					bindingContext.getOrCreateClassHolder( className )
 			);
 		}
 

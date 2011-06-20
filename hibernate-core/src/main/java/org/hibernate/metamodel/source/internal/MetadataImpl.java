@@ -29,7 +29,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.fasterxml.classmate.ResolvedType;
 import org.jboss.logging.Logger;
 
 import org.hibernate.AssertionFailure;
@@ -56,7 +55,6 @@ import org.hibernate.metamodel.binding.TypeDef;
 import org.hibernate.metamodel.relational.AuxiliaryDatabaseObject;
 import org.hibernate.metamodel.relational.Database;
 import org.hibernate.metamodel.source.annotations.AnnotationBinder;
-import org.hibernate.metamodel.source.annotations.util.ReflectionHelper;
 import org.hibernate.metamodel.source.hbm.HbmBinder;
 import org.hibernate.metamodel.source.spi.Binder;
 import org.hibernate.metamodel.source.spi.ClassHolder;
@@ -215,7 +213,7 @@ public class MetadataImpl implements MetadataImplementor, Serializable {
 	}
 	@Override
 	public void registerIdentifierGenerator(String name, String generatorClassName) {
-		 identifierGeneratorFactory.register( name, getClassForName( generatorClassName ) );
+		 identifierGeneratorFactory.register( name, classLoaderService().classForName( generatorClassName ) );
 	}
 
 	@Override
@@ -304,10 +302,6 @@ public class MetadataImpl implements MetadataImplementor, Serializable {
 			classLoaderService = serviceRegistry.getService( ClassLoaderService.class );
 		}
 		return classLoaderService;
-	}
-
-	private Class getClassForName(String className) {
-		return classLoaderService().classForName( className );
 	}
 
 	@Override
@@ -438,40 +432,30 @@ public class MetadataImpl implements MetadataImplementor, Serializable {
 	}
 
 	@Override
-	public ClassHolder getClassHolder(String className) {
+	public ClassHolder getOrCreateClassHolder(String className) {
 		ClassHolder classHolder = classHoldersByName.get( className );
 		if ( classHolder == null ) {
-			classHolder = ClassHolderImpl.createDeferredClassHolder( className, this );
+			classHolder = ClassHolderImpl.createDeferredClassHolder( className, classLoaderService() );
 			classHoldersByName.put( className, classHolder );
 		}
 		return classHolder;
 	}
 
 	@Override
-	public ClassHolder getLoadedClassHolder(Class clazz) {
-		return getLoadedClassHolder( ReflectionHelper.resolveType( clazz ) );
-	}
-
-	@Override
-	public ClassHolder getLoadedClassHolder(ResolvedType resolvedType) {
-		ClassHolder classHolder = classHoldersByName.get( resolvedType.getErasedType().getName() );
+	public ClassHolder getOrCreateLoadedClassHolder(Class clazz) {
+		ClassHolder classHolder = classHoldersByName.get( clazz.getName() );
 		if ( classHolder == null ) {
-			classHolder = ClassHolderImpl.createLoadedClassHolder( resolvedType, this );
-			classHoldersByName.put( resolvedType.getErasedType().getName(), classHolder );
+			classHolder = ClassHolderImpl.createLoadedClassHolder( clazz );
+			classHoldersByName.put( clazz.getName(), classHolder );
 		}
-		else if ( ! classHolder.isClassResolved() ) {
+		else if ( ! classHolder.hasLoadedClass() ) {
 			// found the ClassHolder, but the class is not resolved; force resolution.
 			Class loadedClass = classHolder.getLoadedClass();
-			if ( resolvedType.getErasedType() != loadedClass ) {
+			if ( clazz != loadedClass ) {
 				throw new AssertionFailure( "Class resolved from ClassHolder is different from the clazz in ResolvedType." );
 			}
 		}
 		return classHolder;
-	}
-
-	/* package-protected */
-	ResolvedType getResolvedType(String className) {
-		 return ReflectionHelper.resolveType( getClassForName( className ) );
 	}
 
 	private static final String DEFAULT_IDENTIFIER_COLUMN_NAME = "id";
