@@ -24,6 +24,8 @@
 package org.hibernate.engine.internal;
 
 import java.io.Serializable;
+import java.util.*;
+import java.util.Collections;
 
 import org.hibernate.EntityMode;
 import org.hibernate.HibernateException;
@@ -31,6 +33,7 @@ import org.hibernate.TransientObjectException;
 import org.hibernate.bytecode.instrumentation.spi.LazyPropertyInitializer;
 import org.hibernate.engine.spi.EntityEntry;
 import org.hibernate.engine.spi.SessionImplementor;
+import org.hibernate.internal.util.collections.IdentitySet;
 import org.hibernate.persister.entity.EntityPersister;
 import org.hibernate.proxy.HibernateProxy;
 import org.hibernate.proxy.LazyInitializer;
@@ -72,7 +75,7 @@ public final class ForeignKeys {
 				values[i] = nullifyTransientReferences( values[i], types[i] );
 			}
 		}
-	
+
 		/**
 		 * Return null if the argument is an "unsaved" entity (ie. 
 		 * one with no existing database row), or the input argument 
@@ -169,7 +172,49 @@ public final class ForeignKeys {
 			}
 	
 		}
-		
+
+		/**
+		 * Return all transient entity references that are non-nullable.
+		 * @return The set of transient entity referernces that are non-nullable.
+		 *
+		 * TODO: this doesn't really belong in Nullifier; instead, stuff should be refactored
+		 * into a visitor pattern...
+		 */
+		public Set<Object> findNonNullableTransientEntities( Object[] values, final Type[] types, boolean[] nullability) {
+			Set<Object> nonNullableTransientEntities = new IdentitySet();
+			for ( int i = 0; i < types.length; i++ ) {
+				collectNonNullableTransientEntities( values[i], types[i], nullability[i], nonNullableTransientEntities );
+			}
+			return nonNullableTransientEntities;
+		}
+		private void collectNonNullableTransientEntities(Object value, Type type, boolean isNullable,  Set<Object> nonNullableTransientEntities ) {
+			if ( value == null ) {
+				return;
+			}
+			else if ( type.isEntityType() && ! isNullable ) {
+				EntityType entityType = (EntityType) type;
+				if ( ! entityType.isOneToOne() &&
+						isNullifiable(entityType.getAssociatedEntityName(), value) ) {
+					nonNullableTransientEntities.add( value );
+				}
+			}
+			else if ( type.isAnyType() && ! isNullable ) {
+				if ( isNullifiable(null, value) ) {
+					nonNullableTransientEntities.add( value );
+				}
+			}
+			else if ( type.isComponentType() ) {
+				CompositeType actype = (CompositeType) type;
+				boolean[] subValueNullability = actype.getPropertyNullability();
+				if ( subValueNullability != null ) {
+					Object[] subvalues = actype.getPropertyValues(value, session);
+					Type[] subtypes = actype.getSubtypes();
+					for ( int i = 0; i < subvalues.length; i++ ) {
+						collectNonNullableTransientEntities( subvalues[i], subtypes[i], subValueNullability[i], nonNullableTransientEntities );
+					}
+				}
+			}
+		}
 	}
 	
 	/**

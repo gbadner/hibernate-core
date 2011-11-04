@@ -32,12 +32,14 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.jboss.logging.Logger;
 
 import org.hibernate.AssertionFailure;
 import org.hibernate.HibernateException;
+import org.hibernate.action.internal.AbstractEntityInsertAction;
 import org.hibernate.action.internal.BulkOperationCleanupAction;
 import org.hibernate.action.internal.CollectionAction;
 import org.hibernate.action.internal.CollectionRecreateAction;
@@ -53,6 +55,8 @@ import org.hibernate.action.spi.BeforeTransactionCompletionProcess;
 import org.hibernate.action.spi.Executable;
 import org.hibernate.cache.CacheException;
 import org.hibernate.internal.CoreMessageLogger;
+import org.hibernate.internal.util.collections.IdentityMap;
+import org.hibernate.internal.util.collections.IdentitySet;
 import org.hibernate.type.Type;
 
 /**
@@ -77,6 +81,7 @@ public class ActionQueue {
 	private ArrayList insertions;
 	private ArrayList deletions;
 	private ArrayList updates;
+	private DelayedEntityInsertActions delayedInserts;
 	// Actually the semantics of the next three are really "Bag"
 	// Note that, unlike objects, collection insertions, updates,
 	// deletions are not really remembered between flushes. We
@@ -103,6 +108,8 @@ public class ActionQueue {
 		deletions = new ArrayList( INIT_QUEUE_LIST_SIZE );
 		updates = new ArrayList( INIT_QUEUE_LIST_SIZE );
 
+		delayedInserts = new DelayedEntityInsertActions();
+
 		collectionCreations = new ArrayList( INIT_QUEUE_LIST_SIZE );
 		collectionRemovals = new ArrayList( INIT_QUEUE_LIST_SIZE );
 		collectionUpdates = new ArrayList( INIT_QUEUE_LIST_SIZE );
@@ -123,7 +130,7 @@ public class ActionQueue {
 
 	@SuppressWarnings({ "unchecked" })
 	public void addAction(EntityInsertAction action) {
-		insertions.add( action );
+		this.addInsertAction( action );
 	}
 
 	@SuppressWarnings({ "unchecked" })
@@ -153,7 +160,28 @@ public class ActionQueue {
 
 	@SuppressWarnings({ "unchecked" })
 	public void addAction(EntityIdentityInsertAction insert) {
+		this.addInsertAction( insert );
+	}
+
+	@SuppressWarnings({ "unchecked" })
+	private void addInsertAction(AbstractEntityInsertAction insert) {
+		if ( ! insert.hasNonNullableTransientEntities() ) {
+			scheduleAction( insert );
+			delayedInserts.resolveDependentActionsAndScheduleIfPossible( insert.getInstance() );
+		}
+		else {
+			delayedInserts.add( insert );
+		}
+	}
+
+	@SuppressWarnings({ "unchecked" })
+	private void scheduleAction(AbstractEntityInsertAction insert) {
+		insert.prepare();
 		insertions.add( insert );
+	}
+
+	public void scheduleDelayedActions() {
+		delayedInserts.scheduleDelayedActions();
 	}
 
 	public void addAction(BulkOperationCleanupAction cleanupAction) {
@@ -436,6 +464,8 @@ public class ActionQueue {
 			oos.writeObject( updates.get( i ) );
 		}
 
+		// TODO: deal with serializing delayedInserts
+
 		queueSize = collectionUpdates.size();
 		LOG.tracev( "Starting serialization of [{0}] collectionUpdates entries", queueSize );
 		oos.writeInt( queueSize );
@@ -503,6 +533,8 @@ public class ActionQueue {
 			action.afterDeserialize( session );
 			rtn.updates.add( action );
 		}
+
+		// TODO: deal with deserializing delayedInserts
 
 		queueSize = ois.readInt();
 		LOG.tracev( "Starting deserialization of [{0}] collectionUpdates entries", queueSize );
@@ -739,6 +771,61 @@ public class ActionQueue {
 			}
 			actions.add( action );
 		}
+	}
 
+	@SuppressWarnings({ "unchecked" })
+	private class DelayedEntityInsertActions {
+		private Set<AbstractEntityInsertAction> delayedActions = new IdentitySet( INIT_QUEUE_LIST_SIZE );
+		private Map<Object,Set<AbstractEntityInsertAction>> dependentActionsByTransientEntity = IdentityMap.instantiate( INIT_QUEUE_LIST_SIZE );
+
+		private void add(AbstractEntityInsertAction insert) {
+			if ( ! insert.hasNonNullableTransientEntities() ) {
+				throw new IllegalStateException( "Attempt to delay an insert action that has no non-nullable transient entities." );
+			}
+			delayedActions.add( insert );
+			for ( Object transientEntity : insert.getNonNullableTransientEntities() ) {
+				Set<AbstractEntityInsertAction> dependentActions = dependentActionsByTransientEntity.get( transientEntity );
+				if ( dependentActions == null ) {
+					dependentActions = new IdentitySet( INIT_QUEUE_LIST_SIZE );
+					dependentActions.add( insert );
+					dependentActionsByTransientEntity.put( transientEntity, dependentActions );
+				}
+				else {
+					dependentActions.add( insert );
+				}
+			}
+		}
+
+		/**
+		 * R
+		 * @param entity
+		 * @return
+		 */
+		private void resolveDependentActionsAndScheduleIfPossible(Object entity) {
+			// Find out if there are any delayed insertions that are waiting for the
+			// specified entity to be resolved.
+			Set<AbstractEntityInsertAction> dependentActions = dependentActionsByTransientEntity.remove( entity );
+			if ( dependentActions == null ) {
+				// Nothing waiting
+				return;  //NOTE EARLY EXIT!
+			}
+			for ( AbstractEntityInsertAction dependentAction : dependentActions ) {
+				dependentAction.resolveNonNullableTransientEntity( entity );
+				if ( ! dependentAction.hasNonNullableTransientEntities() ) {
+					if ( ! delayedActions.remove( dependentAction ) ) {
+						throw new IllegalStateException( "Dependent action was not delayed." );
+					}
+					scheduleAction( dependentAction );
+				}
+			}
+		}
+
+		private void scheduleDelayedActions() {
+			for (AbstractEntityInsertAction delayedAction : delayedActions ) {
+				scheduleAction( delayedAction );
+			}
+			delayedActions.clear();
+			dependentActionsByTransientEntity.clear();
+		}
 	}
 }

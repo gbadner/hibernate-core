@@ -37,7 +37,6 @@ import org.hibernate.bytecode.instrumentation.spi.FieldInterceptor;
 import org.hibernate.classic.Lifecycle;
 import org.hibernate.engine.internal.Cascade;
 import org.hibernate.engine.internal.ForeignKeys;
-import org.hibernate.engine.internal.Nullability;
 import org.hibernate.engine.internal.Versioning;
 import org.hibernate.engine.spi.CascadingAction;
 import org.hibernate.engine.spi.EntityEntry;
@@ -291,46 +290,26 @@ public abstract class AbstractSaveEventListener extends AbstractReassociateEvent
 				source
 		);
 
-		new ForeignKeys.Nullifier( entity, false, useIdentityColumn, source )
-				.nullifyTransientReferences( values, types );
-		new Nullability( source ).checkNullability( values, persister, false );
-
 		if ( useIdentityColumn ) {
 			EntityIdentityInsertAction insert = new EntityIdentityInsertAction(
-					values, entity, persister, source, shouldDelayIdentityInserts
+					values, entity, persister, isVersionIncrementDisabled(), source
 			);
 			if ( !shouldDelayIdentityInserts ) {
+				// TODO: need to be able to delay if insert.hasNonNullableTransientEntities() == true
 				LOG.debugf( "Executing identity-insert immediately" );
+				insert.prepare();
 				source.getActionQueue().execute( insert );
 				id = insert.getGeneratedId();
-				key = source.generateEntityKey( id, persister );
-				source.getPersistenceContext().checkUniqueness( key, entity );
 			}
 			else {
 				LOG.debugf( "Delaying identity-insert due to no transaction in progress" );
 				source.getActionQueue().addAction( insert );
-				key = insert.getDelayedEntityKey();
 			}
 		}
-
-		Object version = Versioning.getVersion( values, persister );
-		source.getPersistenceContext().addEntity(
-				entity,
-				( persister.isMutable() ? Status.MANAGED : Status.READ_ONLY ),
-				values,
-				key,
-				version,
-				LockMode.WRITE,
-				useIdentityColumn,
-				persister,
-				isVersionIncrementDisabled(),
-				false
-		);
-		//source.getPersistenceContext().removeNonExist( new EntityKey( id, persister, source.getEntityMode() ) );
-
-		if ( !useIdentityColumn ) {
+		else {
+			Object version = Versioning.getVersion( values, persister );
 			source.getActionQueue().addAction(
-					new EntityInsertAction( id, values, entity, version, persister, source )
+					new EntityInsertAction( id, values, entity, version, persister, isVersionIncrementDisabled(), source )
 			);
 		}
 

@@ -1412,6 +1412,8 @@ public class StatefulPersistenceContext implements PersistenceContext {
 		parentsByChild.clear();
 
 		final EntityKey newKey = session.generateEntityKey( generatedId, oldEntry.getPersister() );
+		session.getPersistenceContext().checkUniqueness( newKey, entity );
+
 		addEntity( newKey, entity );
 		addEntry(
 				entity,
