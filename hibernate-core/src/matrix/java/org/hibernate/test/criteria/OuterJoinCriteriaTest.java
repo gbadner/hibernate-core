@@ -91,6 +91,50 @@ public class OuterJoinCriteriaTest extends BaseCoreFunctionalTestCase {
 	}
 
 	@Test
+	/** Test that left outer joins do not filter children, even if there are intermediate levels without any restrictions */
+	public void testMultiLevelSubcriteriaWithNonNullRestrictions() {
+		Session s = openSession();
+		s.getTransaction().begin();
+
+		Criteria rootCriteria = s.createCriteria( Order.class );
+		Criteria firstLevelSubCriteria = rootCriteria.createCriteria( "orderLines", JoinFragment.LEFT_OUTER_JOIN );
+		Criteria secondLevelSubCriteria = firstLevelSubCriteria.createCriteria(
+				"subLines",
+				JoinFragment.LEFT_OUTER_JOIN
+		);
+		assertNotSame( rootCriteria, firstLevelSubCriteria );
+		assertNotSame( rootCriteria, secondLevelSubCriteria );
+		assertNotSame( firstLevelSubCriteria, secondLevelSubCriteria );
+
+		// Leaving first level sub criteria without restrictions
+		// add restrictions to second level sub criteria
+		assertSame( secondLevelSubCriteria, secondLevelSubCriteria.add( Restrictions.eq( "subProperty", "bbb" ) ) );
+
+		List orders = rootCriteria.list();
+
+		// order1 should be returned because it has subline "bbb"
+		// It should have its full collections
+		assertEquals( 1, orders.size() );
+		Order o = (Order) orders.iterator().next();
+		assertEquals( order1.getOrderId(), o.getOrderId() );
+		assertEquals( order1.getLines().size(), o.getLines().size() );
+		for ( Iterator it = order1.getLines().iterator(); it.hasNext(); ) {
+			OrderLine line = (OrderLine) it.next();
+			if ( "1000".equals( line.getArticleId() ) ) {
+				assertEquals( 2, line.getSubLines().size() ); // Sub lines have not been filtered
+			}
+			else if ( "3000".equals( line.getArticleId() ) ) {
+				assertEquals( 0, line.getSubLines().size() ); // There are no sub lines
+			}
+			else {
+				fail( "unknown line" );
+			}
+		}
+		s.getTransaction().commit();
+		s.close();
+	}
+
+	@Test
 	public void testSubcriteriaWithNonNullRestrictionsAliasToEntityMap() {
 		Session s = openSession();
 		s.getTransaction().begin();
@@ -390,6 +434,13 @@ public class OuterJoinCriteriaTest extends BaseCoreFunctionalTestCase {
 		OrderLine line = new OrderLine();
 		line.setArticleId( "1000" );
 		order1.addLine( line );
+		SubLine subLine = new SubLine();
+		subLine.setSubProperty("aaa");
+		line.addSubLine(subLine);
+		subLine = new SubLine();
+		subLine.setSubProperty("bbb");
+		line.addSubLine(subLine);
+
 		line = new OrderLine();
 		line.setArticleId( "3000" );
 		order1.addLine( line );
@@ -413,6 +464,8 @@ public class OuterJoinCriteriaTest extends BaseCoreFunctionalTestCase {
 	protected void cleanupTest() {
 		Session s = openSession();
 		s.getTransaction().begin();
+
+		s.createQuery( "delete from SubLine" ).executeUpdate();
 
 		s.createQuery( "delete from OrderLine" ).executeUpdate();
 
