@@ -35,8 +35,7 @@ import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.internal.util.ReflectHelper;
 import org.hibernate.mapping.Component;
 import org.hibernate.mapping.Property;
-import org.hibernate.metamodel.spi.binding.AttributeBinding;
-import org.hibernate.metamodel.spi.binding.CompositeAttributeBinding;
+import org.hibernate.metamodel.spi.binding.ComponentAttributeBinding;
 import org.hibernate.property.BackrefPropertyAccessor;
 import org.hibernate.property.Getter;
 import org.hibernate.property.PropertyAccessor;
@@ -44,7 +43,6 @@ import org.hibernate.property.PropertyAccessorFactory;
 import org.hibernate.property.Setter;
 import org.hibernate.tuple.Instantiator;
 import org.hibernate.tuple.PojoInstantiator;
-import org.hibernate.tuple.PropertyFactory;
 
 /**
  * A {@link ComponentTuplizer} specific to the pojo entity mode.
@@ -95,7 +93,7 @@ public class PojoComponentTuplizer extends AbstractComponentTuplizer {
 		}
 	}
 
-	public PojoComponentTuplizer(CompositeAttributeBinding component) {
+	public PojoComponentTuplizer(ComponentAttributeBinding component) {
 		super( component );
 
 		this.componentClass = component.getClassReference();
@@ -200,7 +198,7 @@ public class PojoComponentTuplizer extends AbstractComponentTuplizer {
 		return prop.getSetter( component.getComponentClass() );
 	}
 
-	protected Instantiator buildInstantiator(CompositeAttributeBinding component) {
+	protected Instantiator buildInstantiator(ComponentAttributeBinding component) {
 		if ( component.getAttribute().isSynthetic() && ReflectHelper.isAbstractClass( component.getClassReference() ) ) {
 			return new ProxiedInstantiator( component );
 		}
@@ -230,7 +228,7 @@ public class PojoComponentTuplizer extends AbstractComponentTuplizer {
 			}
 		}
 
-		public ProxiedInstantiator(CompositeAttributeBinding component) {
+		public ProxiedInstantiator(ComponentAttributeBinding component) {
 			proxiedClass = component.getClassReference();
 			if ( proxiedClass.isInterface() ) {
 				factory = Environment.getBytecodeProvider()

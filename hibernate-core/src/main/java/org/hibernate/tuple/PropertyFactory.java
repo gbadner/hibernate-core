@@ -133,7 +133,7 @@ public class PropertyFactory {
 			// this is a virtual id property...
 			return new IdentifierProperty(
 			        type,
-					mappedEntity.getHierarchyDetails().getEntityIdentifier().isEmbedded(),
+					mappedEntity.getHierarchyDetails().getEntityIdentifier().isComposite(),
 					mappedEntity.getHierarchyDetails().getEntityIdentifier().isIdentifierMapper(),
 					unsavedValue,
 					generator
@@ -144,7 +144,7 @@ public class PropertyFactory {
 					property.getAttribute().getName(),
 					null,
 					type,
-					mappedEntity.getHierarchyDetails().getEntityIdentifier().isEmbedded(),
+					mappedEntity.getHierarchyDetails().getEntityIdentifier().isComposite(),
 					unsavedValue,
 					generator
 				);

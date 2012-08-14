@@ -33,7 +33,7 @@ import org.hibernate.HibernateException;
 import org.hibernate.mapping.Component;
 import org.hibernate.mapping.Property;
 import org.hibernate.metamodel.spi.binding.AttributeBinding;
-import org.hibernate.metamodel.spi.binding.CompositeAttributeBinding;
+import org.hibernate.metamodel.spi.binding.ComponentAttributeBinding;
 import org.hibernate.tuple.PropertyFactory;
 import org.hibernate.tuple.StandardProperty;
 
@@ -83,7 +83,7 @@ public class ComponentMetamodel implements Serializable {
 		) : componentTuplizerFactory.constructTuplizer( tuplizerClassName, component );
 	}
 
-	public ComponentMetamodel(CompositeAttributeBinding component, boolean isIdentifierAttributeBinding) {
+	public ComponentMetamodel(ComponentAttributeBinding component, boolean isIdentifierAttributeBinding) {
 		this.isKey = isIdentifierAttributeBinding;
 		propertySpan = component.attributeBindingSpan();
 		properties = new StandardProperty[propertySpan];

@@ -321,7 +321,7 @@ public class PojoEntityTuplizer extends AbstractEntityTuplizer {
 					proxyInterfaces,
 					proxyGetIdentifierMethod,
 					proxySetIdentifierMethod,
-					entityBinding.getHierarchyDetails().getEntityIdentifier().isEmbedded()
+					entityBinding.getHierarchyDetails().getEntityIdentifier().isComposite()
 							? ( CompositeType ) entityBinding.getHierarchyDetails()
 									.getEntityIdentifier()
 									.getAttributeBinding()

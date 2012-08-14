@@ -509,7 +509,7 @@ public class EntityBinding implements AttributeBindingContainer {
 	}
 
 	@Override
-	public CompositeAttributeBinding makeComponentAttributeBinding(
+	public ComponentAttributeBinding makeComponentAttributeBinding(
 			SingularAttribute attribute,
 			SingularAttribute parentReferenceAttribute,
 			String propertyAccessorName,
@@ -517,7 +517,7 @@ public class EntityBinding implements AttributeBindingContainer {
 			boolean lazy,
 			SingularAttributeBinding.NaturalIdMutability naturalIdMutability,
 			MetaAttributeContext metaAttributeContext) {
-		final CompositeAttributeBinding binding = new CompositeAttributeBinding(
+		final ComponentAttributeBinding binding = new ComponentAttributeBinding(
 				this,
 				attribute,
 				propertyAccessorName,
@@ -531,26 +531,26 @@ public class EntityBinding implements AttributeBindingContainer {
 		return binding;
 	}
 
-	public CompositeAttributeBinding makeVirtualComponentAttributeBinding(
-			SingularAttribute syntheticAttribute,
-			List<SingularAttributeBinding> subAttributeBindings,
-			MetaAttributeContext metaAttributeContext) {
-		if ( !syntheticAttribute.isSynthetic() ) {
-			throw new AssertionFailure(
-					"Illegal attempt to create synthetic attribute binding from non-synthetic attribute reference"
-			);
-		}
-		final CompositeAttributeBinding binding = new CompositeAttributeBinding(
-				this,
-				syntheticAttribute,
-				PropertyAccessorFactory.EMBEDDED_ACCESSOR_NAME,
-				SingularAttributeBinding.NaturalIdMutability.NOT_NATURAL_ID,
-				metaAttributeContext,
-				subAttributeBindings
-		);
-		registerAttributeBinding( syntheticAttribute.getName(), binding );
-		return binding;
-	}
+	//public ComponentAttributeBinding makeVirtualComponentAttributeBinding(
+	//		SingularAttribute syntheticAttribute,
+	//		CompositeBinding compositeBinding,
+	//		MetaAttributeContext metaAttributeContext) {
+	//	if ( !syntheticAttribute.isSynthetic() ) {
+	//		throw new AssertionFailure(
+	//				"Illegal attempt to create synthetic attribute binding from non-synthetic attribute reference"
+	//		);
+	//	}
+	//	final ComponentAttributeBinding binding = new ComponentAttributeBinding(
+	//			this,
+	//			syntheticAttribute,
+	//			PropertyAccessorFactory.EMBEDDED_ACCESSOR_NAME,
+	//			SingularAttributeBinding.NaturalIdMutability.NOT_NATURAL_ID,
+	//			metaAttributeContext,
+	//			compositeBinding
+	//	);
+	//	registerAttributeBinding( syntheticAttribute.getName(), binding );
+	//	return binding;
+	//}
 
 	public BackRefAttributeBinding makeBackRefAttributeBinding(
 			SingularAttribute syntheticAttribute, PluralAttributeBinding pluralAttributeBinding) {

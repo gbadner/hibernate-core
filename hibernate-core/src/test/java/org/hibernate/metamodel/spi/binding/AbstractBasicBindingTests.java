@@ -24,7 +24,6 @@
 package org.hibernate.metamodel.spi.binding;
 
 import java.sql.Types;
-import java.util.Iterator;
 import java.util.List;
 
 import org.hibernate.FetchMode;
@@ -247,7 +246,7 @@ public abstract class AbstractBasicBindingTests extends BaseUnitTestCase {
 		assertRoot( metadata, entityBinding );
 		assertIdAndSimpleProperty( entityBinding );
 
-		CompositeAttributeBinding compositeAttributeBinding = (CompositeAttributeBinding) entityBinding.locateAttributeBinding( "simpleComponent" );
+		ComponentAttributeBinding compositeAttributeBinding = (ComponentAttributeBinding) entityBinding.locateAttributeBinding( "simpleComponent" );
 		assertNotNull( compositeAttributeBinding );
 		assertSame( compositeAttributeBinding.getAttribute().getSingularAttributeType(), compositeAttributeBinding.getAttributeContainer() );
 		assertEquals( SimpleEntityWithSimpleComponent.class.getName() + ".simpleComponent", compositeAttributeBinding.getPathBase() );

@@ -23,13 +23,19 @@
  */
 package org.hibernate.metamodel.spi.binding;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Properties;
 
 import org.hibernate.AssertionFailure;
+import org.hibernate.MappingException;
+import org.hibernate.cfg.NotYetImplementedException;
 import org.hibernate.id.EntityIdentifierNature;
 import org.hibernate.id.IdentifierGenerator;
 import org.hibernate.id.factory.IdentifierGeneratorFactory;
 import org.hibernate.metamodel.spi.relational.Column;
+import org.hibernate.metamodel.spi.source.MetaAttributeContext;
 
 import static org.hibernate.id.EntityIdentifierNature.AGGREGATED_COMPOSITE;
 import static org.hibernate.id.EntityIdentifierNature.COMPOSITE;
@@ -46,17 +52,8 @@ import static org.hibernate.id.EntityIdentifierNature.SIMPLE;
  */
 public class EntityIdentifier {
 	private final EntityBinding entityBinding;
-	private EntityIdentifierNature nature;
-
-	private SingularNonAssociationAttributeBinding identifierAttributeBinding;
-
-	private IdGenerator idGenerator;
-	private String unsavedValue;
-
-	private Class idClassClass; // the class named in @IdClass
-
+	private EntityIdentifierBinding entityIdentifierBinding;
 	private IdentifierGenerator identifierGenerator;
-	private int columnCount;
 
 	/**
 	 * Create an identifier
@@ -65,6 +62,10 @@ public class EntityIdentifier {
 	 */
 	public EntityIdentifier(EntityBinding entityBinding) {
 		this.entityBinding = entityBinding;
+	}
+
+	public EntityBinding getEntityBinding() {
+		return entityBinding;
 	}
 
 	public void prepareAsSimpleIdentifier(
@@ -87,103 +88,81 @@ public class EntityIdentifier {
 			IdGenerator idGenerator,
 			String unsavedValue) {
 		ensureNotBound();
-
-		this.nature = nature;
-		this.identifierAttributeBinding = attributeBinding;
-		this.idGenerator = idGenerator;
-		this.unsavedValue = unsavedValue;
-		this.columnCount = attributeBinding.getRelationalValueBindings().size();
-
-		// Configure primary key in relational model
-		for ( final RelationalValueBinding valueBinding : attributeBinding.getRelationalValueBindings() ) {
-			entityBinding.getPrimaryTable().getPrimaryKey().addColumn( (Column) valueBinding.getValue() );
-		}
+		this.entityIdentifierBinding =
+				new SingleAttributeIdentifierBindingImpl( nature, attributeBinding, idGenerator, unsavedValue );
 	}
 
 	public void prepareAsNonAggregatedCompositeIdentifier(
-			CompositeAttributeBinding syntheticCompositeAttributeBinding,
-			Class idClassClass) {
+			List<SingularNonAssociationAttributeBinding> attributeBindings,
+			Class<?> idClassClass,
+			MetaAttributeContext metaAttributeContext) {
 		ensureNotBound();
-
-		this.nature = COMPOSITE;
-		this.identifierAttributeBinding = syntheticCompositeAttributeBinding;
-		this.idClassClass = idClassClass;
-
-		for ( AttributeBinding attributeBinding : syntheticCompositeAttributeBinding.attributeBindings() ) {
-			if ( ! attributeBinding.getAttribute().isSingular() ) {
-				throw new AssertionFailure( "Expecting all singular attribute bindings as part of composite identifier" );
-			}
-			final SingularAttributeBinding singularAttributeBinding = (SingularAttributeBinding) attributeBinding;
-			columnCount += singularAttributeBinding.getRelationalValueBindings().size();
-
-			// Configure primary key in relational model
-			for ( final RelationalValueBinding valueBinding : singularAttributeBinding.getRelationalValueBindings() ) {
-				entityBinding.getPrimaryTable().getPrimaryKey().addColumn( (Column) valueBinding.getValue() );
-			}
-		}
+		// TODO: where are IdGenerator and unsavedValue???
+		this.entityIdentifierBinding =
+				new CompositeIdentifierBindingImpl( null, null, attributeBindings, idClassClass, metaAttributeContext );
 	}
 
 	public EntityIdentifierNature getNature() {
-		return nature;
-	}
-
-	public boolean isSingleAttribute() {
 		ensureBound();
-		return getNature() != COMPOSITE;
+		return entityIdentifierBinding.getNature();
 	}
 
 	public SingularNonAssociationAttributeBinding getAttributeBinding() {
 		ensureBound();
-		return identifierAttributeBinding;
+		if ( isComposite() ) {
+			throw new UnsupportedOperationException( "Unsupported for composite IDs" );
+		}
+		return ( (SingleAttributeIdentifierBindingImpl) entityIdentifierBinding ).getAttributeBinding();
+	}
+
+	public Iterable<SingularNonAssociationAttributeBinding> getAttributeBindings() {
+		ensureBound();
+		List<SingularNonAssociationAttributeBinding> attributeBindings  =
+				isComposite() ?
+						( (CompositeIdentifierBindingImpl) entityIdentifierBinding ).getAttributeBindings() :
+						Collections.singletonList(
+								( (SingleAttributeIdentifierBindingImpl) entityIdentifierBinding ).getAttributeBinding()
+						);
+		return Collections.unmodifiableList( attributeBindings );
 	}
 
 	public boolean isIdentifierAttributeBinding(AttributeBinding attributeBinding) {
 		ensureBound();
-		if ( getNature() == COMPOSITE ) {
-			for ( AttributeBinding identifierAttributeBinding
-					: ( (CompositeAttributeBinding) this.identifierAttributeBinding ).attributeBindings() ) {
-				if ( identifierAttributeBinding.equals( attributeBinding ) ) {
-					return true;
-				}
-			}
-			return false;
-		}
-		else {
-			return identifierAttributeBinding.equals( attributeBinding );
-		}
+		return entityIdentifierBinding.isIdentifierAttributeBinding( attributeBinding );
 	}
 
 	public String getUnsavedValue() {
-		return unsavedValue;
+		ensureBound();
+		return entityIdentifierBinding.getUnsavedValue();
 	}
 
-	public boolean isEmbedded() {
-		return isSingleAttribute() && columnCount > 1;
+	public boolean isComposite() {
+		ensureBound();
+		return entityIdentifierBinding.getNature() == EntityIdentifierNature.COMPOSITE ;
 	}
 
 	public Class getIdClassClass() {
-		return idClassClass;
+		ensureBound();
+		return entityIdentifierBinding.getNature() != COMPOSITE ?
+				null :
+				( ( CompositeIdentifierBindingImpl ) entityIdentifierBinding ).getIdClassClass();
 	}
 
 	public boolean isIdentifierMapper() {
-		// i think this is the intended check for this method
-		return ! isSingleAttribute() && idClassClass != null;
+		return getIdClassClass() != null;
+	}
+
+
+	public MetaAttributeContext getMetaAttributeContext() {
+		ensureBound();
+		return entityIdentifierBinding.getMetaAttributeContext();
 	}
 
 	// todo do we really need this createIdentifierGenerator and how do we make sure the getter is not called too early
 	// maybe some sort of visitor pattern here!? (HF)
 	public IdentifierGenerator createIdentifierGenerator(IdentifierGeneratorFactory factory, Properties properties) {
 		ensureBound();
-		if ( identifierGenerator == null ) {
-			if ( isSingleAttribute() && idGenerator != null ) {
-				identifierGenerator = identifierAttributeBinding.createIdentifierGenerator(
-						idGenerator,
-						factory,
-						properties
-				);
-			}
-		}
-		return identifierGenerator;
+		return entityIdentifierBinding.createIdentifierGenerator( factory, properties );
 	}
 
 	public IdentifierGenerator getIdentifierGenerator() {
@@ -204,11 +183,152 @@ public class EntityIdentifier {
 	}
 
 	protected boolean isBound() {
-		return nature != null;
+		return entityIdentifierBinding != null;
 	}
 
 	public int getColumnCount() {
 		ensureBound();
-		return columnCount;
+		return entityIdentifierBinding.getColumnCount();
+	}
+
+	private abstract class EntityIdentifierBinding {
+		private final EntityIdentifierNature nature;
+		private final IdGenerator idGenerator;
+		private final String unsavedValue;
+		private final MetaAttributeContext metaAttributeContext;
+
+
+		protected EntityIdentifierBinding(
+				EntityIdentifierNature nature,
+				IdGenerator idGenerator,
+				String unsavedValue,
+				MetaAttributeContext metaAttributeContext) {
+			this.nature = nature;
+			this.idGenerator = idGenerator;
+			this.unsavedValue = unsavedValue;
+			this.metaAttributeContext = metaAttributeContext;
+		}
+
+		public EntityIdentifierNature getNature() {
+			return nature;
+		}
+
+		public String getUnsavedValue() {
+			return unsavedValue;
+		}
+
+		protected IdGenerator getIdGenerator() {
+			return idGenerator;
+		}
+
+		public MetaAttributeContext getMetaAttributeContext() {
+			return metaAttributeContext;
+		}
+
+		public abstract IdentifierGenerator createIdentifierGenerator(IdentifierGeneratorFactory factory, Properties properties);
+		public abstract boolean isIdentifierAttributeBinding(AttributeBinding attributeBinding);
+		public abstract int getColumnCount();
+	}
+
+	private class SingleAttributeIdentifierBindingImpl extends EntityIdentifierBinding {
+		private final SingularNonAssociationAttributeBinding identifierAttributeBinding;
+		private final int columnCount;
+
+		SingleAttributeIdentifierBindingImpl(
+				EntityIdentifierNature nature,
+				SingularNonAssociationAttributeBinding identifierAttributeBinding,
+				IdGenerator idGenerator,
+				String unsavedValue) {
+			super( nature, idGenerator, unsavedValue, identifierAttributeBinding.getMetaAttributeContext() );
+			this.identifierAttributeBinding = identifierAttributeBinding;
+			this.columnCount = identifierAttributeBinding.getRelationalValueBindings().size();
+
+			// Configure primary key in relational model
+			for ( final RelationalValueBinding valueBinding : identifierAttributeBinding.getRelationalValueBindings() ) {
+				entityBinding.getPrimaryTable().getPrimaryKey().addColumn( (Column) valueBinding.getValue() );
+			}
+		}
+
+		public boolean isIdentifierAttributeBinding(AttributeBinding attributeBinding) {
+				return identifierAttributeBinding.equals( attributeBinding );
+		}
+
+		public int getColumnCount() {
+			return columnCount;
+		}
+
+		public IdentifierGenerator createIdentifierGenerator(IdentifierGeneratorFactory factory, Properties properties) {
+			if ( getIdGenerator() != null ) {
+				identifierGenerator = identifierAttributeBinding.createIdentifierGenerator(
+						getIdGenerator(),
+						factory,
+						properties
+				);
+			}
+			return null;
+		}
+
+		public SingularNonAssociationAttributeBinding getAttributeBinding() {
+			return identifierAttributeBinding;
+		}
+	}
+
+	private class CompositeIdentifierBindingImpl extends EntityIdentifierBinding {
+		private final Class idClassClass; // the class named in @IdClass
+		private final int columnCount;
+		private final List<SingularNonAssociationAttributeBinding> identifierAttributeBindings;
+
+		CompositeIdentifierBindingImpl(
+				IdGenerator idGenerator,
+				String unsavedValue,
+				List<SingularNonAssociationAttributeBinding> identifierAttributeBindings,
+				Class<?> classReference,
+				MetaAttributeContext metaAttributeContext) {
+			super( COMPOSITE, idGenerator, unsavedValue, metaAttributeContext );
+			this.identifierAttributeBindings =
+					new ArrayList<SingularNonAssociationAttributeBinding>( identifierAttributeBindings );
+			this.idClassClass = classReference;
+
+			if ( identifierAttributeBindings.size() == 0 ) {
+				throw new MappingException(
+						"A composite ID has 0 attributes for " + entityBinding.getEntity().getName()
+				);
+			}
+			identifierAttributeBindings = new ArrayList<SingularNonAssociationAttributeBinding>(
+					identifierAttributeBindings.size()
+			);
+			int nColumns = 0;
+			for ( SingularNonAssociationAttributeBinding attributeBinding : identifierAttributeBindings ) {
+				nColumns += attributeBinding.getRelationalValueBindings().size();
+
+				// Configure primary key in relational model
+				for ( final RelationalValueBinding valueBinding : attributeBinding.getRelationalValueBindings() ) {
+					entityBinding.getPrimaryTable().getPrimaryKey().addColumn( (Column) valueBinding.getValue() );
+				}
+			}
+			this.columnCount = nColumns;
+		}
+
+		public boolean isIdentifierAttributeBinding(AttributeBinding attributeBinding) {
+			return attributeBinding instanceof SingularNonAssociationAttributeBinding &&
+					identifierAttributeBindings.contains( attributeBinding );
+		}
+
+		public int getColumnCount() {
+			return columnCount;
+		}
+
+		public Class getIdClassClass() {
+			return idClassClass;
+		}
+
+		public IdentifierGenerator createIdentifierGenerator(IdentifierGeneratorFactory factory, Properties properties) {
+			// TODO: implement this
+			throw new NotYetImplementedException( "Creation of IdentifierGenerator is not implemented for composite IDs yet." );
+		}
+
+		public List<SingularNonAssociationAttributeBinding> getAttributeBindings() {
+			return identifierAttributeBindings;
+		}
 	}
 }

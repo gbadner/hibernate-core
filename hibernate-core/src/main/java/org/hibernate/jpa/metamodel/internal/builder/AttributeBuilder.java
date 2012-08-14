@@ -35,7 +35,6 @@ import java.lang.reflect.ParameterizedType;
 
 import org.jboss.logging.Logger;
 
-import org.hibernate.HibernateException;
 import org.hibernate.annotations.common.AssertionFailure;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.jpa.metamodel.internal.AbstractIdentifiableType;
@@ -47,7 +46,7 @@ import org.hibernate.jpa.metamodel.internal.PluralAttributeImpl;
 import org.hibernate.jpa.metamodel.internal.SingularAttributeImpl;
 import org.hibernate.jpa.metamodel.internal.UnsupportedFeature;
 import org.hibernate.metamodel.spi.binding.AttributeBinding;
-import org.hibernate.metamodel.spi.binding.CompositeAttributeBinding;
+import org.hibernate.metamodel.spi.binding.ComponentAttributeBinding;
 import org.hibernate.metamodel.spi.binding.IndexedPluralAttributeBinding;
 import org.hibernate.metamodel.spi.binding.PluralAttributeBinding;
 import org.hibernate.metamodel.spi.binding.PluralAttributeElementBinding;
@@ -242,9 +241,9 @@ public class AttributeBuilder {
 						(ComponentType) attributeTypeDescriptor.getHibernateType()
 				);
 				context.registerEmbeddedableType( embeddableType );
-				CompositeAttributeBinding compositeAttributeBinding =
-						(CompositeAttributeBinding) attributeTypeDescriptor.getAttributeMetadata().getAttributeBinding();
-				for ( AttributeBinding subAttributeBinding : compositeAttributeBinding.attributeBindings() ) {
+				ComponentAttributeBinding componentAttributeBinding =
+						(ComponentAttributeBinding) attributeTypeDescriptor.getAttributeMetadata().getAttributeBinding();
+				for ( AttributeBinding subAttributeBinding : componentAttributeBinding.attributeBindings() ) {
 					final Attribute<Y, Object> attribute = buildAttribute( embeddableType, subAttributeBinding );
 					if ( attribute != null ) {
 						embeddableType.getBuilder().addAttribute( attribute );

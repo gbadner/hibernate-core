@@ -31,7 +31,7 @@ import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.mapping.Component;
 import org.hibernate.mapping.Property;
 import org.hibernate.metamodel.spi.binding.AttributeBinding;
-import org.hibernate.metamodel.spi.binding.CompositeAttributeBinding;
+import org.hibernate.metamodel.spi.binding.ComponentAttributeBinding;
 import org.hibernate.property.Getter;
 import org.hibernate.property.Setter;
 import org.hibernate.tuple.Instantiator;
@@ -54,7 +54,7 @@ public abstract class AbstractComponentTuplizer implements ComponentTuplizer {
 	protected abstract Getter buildGetter(Component component, Property prop);
 	protected abstract Setter buildSetter(Component component, Property prop);
 
-	protected abstract Instantiator buildInstantiator(CompositeAttributeBinding component);
+	protected abstract Instantiator buildInstantiator(ComponentAttributeBinding component);
 
 	protected AbstractComponentTuplizer(Component component) {
 		propertySpan = component.getPropertySpan();
@@ -77,7 +77,7 @@ public abstract class AbstractComponentTuplizer implements ComponentTuplizer {
 		instantiator = buildInstantiator( component );
 	}
 
-	protected AbstractComponentTuplizer(CompositeAttributeBinding component) {
+	protected AbstractComponentTuplizer(ComponentAttributeBinding component) {
 		propertySpan = component.attributeBindingSpan();
 		getters = new Getter[propertySpan];
 		setters = new Setter[propertySpan];

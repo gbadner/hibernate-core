@@ -24,8 +24,6 @@
 package org.hibernate.metamodel.spi.binding;
 
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -44,14 +42,14 @@ import org.hibernate.metamodel.spi.source.MetaAttributeContext;
 /**
  * @author Steve Ebersole
  */
-public class CompositeAttributeBinding
+public class ComponentAttributeBinding
 		extends AbstractSingularAttributeBinding
 		implements SingularNonAssociationAttributeBinding, AttributeBindingContainer {
 	private final String path;
 	private final SingularAttribute parentReference;
 	private Map<String, AttributeBinding> attributeBindingMap;
 
-	public CompositeAttributeBinding(
+	public ComponentAttributeBinding(
 			AttributeBindingContainer container,
 			SingularAttribute attribute,
 			String propertyAccessorName,
@@ -60,49 +58,17 @@ public class CompositeAttributeBinding
 			NaturalIdMutability naturalIdMutability,
 			MetaAttributeContext metaAttributeContext,
 			SingularAttribute parentReference) {
-		this(
-				container,
-				attribute,
-				propertyAccessorName,
-				includedInOptimisticLocking,
-				lazy,
-				naturalIdMutability,
-				metaAttributeContext,
-				parentReference,
-				null
-		);
-	}
-
-	public CompositeAttributeBinding(
-			AttributeBindingContainer container,
-			SingularAttribute attribute,
-			String propertyAccessorName,
-			NaturalIdMutability naturalIdMutability,
-			MetaAttributeContext metaAttributeContext,
-			List<SingularAttributeBinding> subAttributeBindings) {
-		this(
-				container,
-				attribute,
-				propertyAccessorName,
-				false,
-				false,
-				naturalIdMutability,
-				metaAttributeContext,
-				null,
-				subAttributeBindings
-		);
-	}
-
-	private CompositeAttributeBinding(
-			AttributeBindingContainer container,
-			SingularAttribute attribute,
-			String propertyAccessorName,
-			boolean includedInOptimisticLocking,
-			boolean lazy,
-			NaturalIdMutability naturalIdMutability,
-			MetaAttributeContext metaAttributeContext,
-			SingularAttribute parentReference,
-			List<SingularAttributeBinding> subAttributeBindings) {
+		//this(
+		//		container,
+		//		attribute,
+		//		propertyAccessorName,
+		//		includedInOptimisticLocking,
+		//		lazy,
+		//		naturalIdMutability,
+		//		metaAttributeContext,
+		//		parentReference,
+		//		null
+		//);
 		super(
 				container,
 				attribute,
@@ -115,18 +81,64 @@ public class CompositeAttributeBinding
 
 		this.parentReference = parentReference;
 		this.path = container.getPathBase() + '.' + attribute.getName();
-
-		if ( subAttributeBindings == null ) {
-			attributeBindingMap = new LinkedHashMap<String, AttributeBinding>();
-		}
-		else {
-			HashMap<String, AttributeBinding> map = new HashMap<String, AttributeBinding>();
-			for ( SingularAttributeBinding attributeBinding : subAttributeBindings ) {
-				attributeBindingMap.put( attributeBinding.getAttribute().getName(), attributeBinding );
-			}
-			attributeBindingMap = Collections.unmodifiableMap( map );
-		}
+		this.attributeBindingMap = new LinkedHashMap<String, AttributeBinding>();
 	}
+
+	//public ComponentAttributeBinding(
+	//		AttributeBindingContainer container,
+	//		SingularAttribute attribute,
+	//		String propertyAccessorName,
+	//		NaturalIdMutability naturalIdMutability,
+	//		MetaAttributeContext metaAttributeContext,
+	//		CompositeBinding compositeBinding) {
+	//	this(
+	//			container,
+	//			attribute,
+	//			propertyAccessorName,
+	//			false,
+	//			false,
+	//			naturalIdMutability,
+	//			metaAttributeContext,
+	//			null,
+	//			compositeBinding
+	//	);
+	//}
+
+	//private ComponentAttributeBinding(
+	//		AttributeBindingContainer container,
+	//		SingularAttribute attribute,
+	//		String propertyAccessorName,
+	//		boolean includedInOptimisticLocking,
+	//		boolean lazy,
+	//		NaturalIdMutability naturalIdMutability,
+	//		MetaAttributeContext metaAttributeContext,
+	//		SingularAttribute parentReference,
+	//		CompositeBinding compositeBinding
+	//) {
+	//	super(
+	//			container,
+	//			attribute,
+	//			propertyAccessorName,
+	//			includedInOptimisticLocking,
+	//			lazy,
+	//			naturalIdMutability,
+	//			metaAttributeContext
+	//	);
+	//
+	//	this.parentReference = parentReference;
+	//	this.path = container.getPathBase() + '.' + attribute.getName();
+	//
+	//	if ( compositeBinding == null ) {
+	//		attributeBindingMap = new LinkedHashMap<String, AttributeBinding>();
+	//	}
+	//	else {
+	//		Map<String, AttributeBinding> map = new LinkedHashMap<String, AttributeBinding>();
+	//		for ( SingularAttributeBinding attributeBinding : compositeBinding.getAttributeBindings() ) {
+	//			map.put( attributeBinding.getAttribute().getName(), attributeBinding );
+	//		}
+	//		attributeBindingMap = Collections.unmodifiableMap( map );
+	//	}
+	//}
 
 	@Override
 	public List<RelationalValueBinding> getRelationalValueBindings() {
@@ -243,17 +255,17 @@ public class CompositeAttributeBinding
 				metaAttributeContext,
 				generation
 		);
-		registerAttributeBinding( attribute.getName(), binding );
+		registerAttributeBinding( binding );
 		return binding;
 	}
 
-	protected void registerAttributeBinding(String name, AttributeBinding attributeBinding) {
+	protected final void registerAttributeBinding(AttributeBinding attributeBinding) {
 		// todo : hook this into the EntityBinding notion of "entity referencing attribute bindings"
-		attributeBindingMap.put( name, attributeBinding );
+		attributeBindingMap.put( attributeBinding.getAttribute().getName(), attributeBinding );
 	}
 
 	@Override
-	public CompositeAttributeBinding makeComponentAttributeBinding(
+	public ComponentAttributeBinding makeComponentAttributeBinding(
 			SingularAttribute attribute,
 			SingularAttribute parentReferenceAttribute,
 			String propertyAccessorName,
@@ -261,7 +273,7 @@ public class CompositeAttributeBinding
 			boolean lazy,
 			NaturalIdMutability naturalIdMutability,
 			MetaAttributeContext metaAttributeContext) {
-		final CompositeAttributeBinding binding = new CompositeAttributeBinding(
+		final ComponentAttributeBinding binding = new ComponentAttributeBinding(
 				this,
 				attribute,
 				propertyAccessorName,
@@ -271,7 +283,7 @@ public class CompositeAttributeBinding
 				metaAttributeContext,
 				parentReferenceAttribute
 		);
-		registerAttributeBinding( attribute.getName(), binding );
+		registerAttributeBinding( binding );
 		return binding;
 	}
 
@@ -298,7 +310,7 @@ public class CompositeAttributeBinding
 				referencedAttributeBinding,
 				valueBindings
 		);
-		registerAttributeBinding( attribute.getName(), binding );
+		registerAttributeBinding( binding );
 		return binding;
 	}
 
@@ -320,7 +332,7 @@ public class CompositeAttributeBinding
 				includedInOptimisticLocking,
 				metaAttributeContext
 		);
-		registerAttributeBinding( attribute.getName(), binding );
+		registerAttributeBinding( binding );
 		return binding;
 	}
 
@@ -343,7 +355,7 @@ public class CompositeAttributeBinding
 				includedInOptimisticLocking,
 				metaAttributeContext,
 				base );
-		registerAttributeBinding( attribute.getName(), binding );
+		registerAttributeBinding( binding );
 		return binding;
 	}
 
@@ -366,7 +378,7 @@ public class CompositeAttributeBinding
 				propertyAccessorName,
 				includedInOptimisticLocking,
 				metaAttributeContext );
-		registerAttributeBinding( attribute.getName(), binding );
+		registerAttributeBinding( binding );
 		return binding;
 	}
 
@@ -388,7 +400,7 @@ public class CompositeAttributeBinding
 				includedInOptimisticLocking,
 				metaAttributeContext
 		);
-		registerAttributeBinding( attribute.getName(), binding );
+		registerAttributeBinding( binding );
 		return binding;
 	}
 

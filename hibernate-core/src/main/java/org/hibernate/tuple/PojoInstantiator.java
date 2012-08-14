@@ -37,7 +37,7 @@ import org.hibernate.internal.CoreMessageLogger;
 import org.hibernate.internal.util.ReflectHelper;
 import org.hibernate.mapping.Component;
 import org.hibernate.mapping.PersistentClass;
-import org.hibernate.metamodel.spi.binding.CompositeAttributeBinding;
+import org.hibernate.metamodel.spi.binding.ComponentAttributeBinding;
 import org.hibernate.metamodel.spi.binding.EntityBinding;
 
 /**
@@ -72,7 +72,7 @@ public class PojoInstantiator implements Instantiator, Serializable {
 		}
 	}
 
-	public PojoInstantiator(CompositeAttributeBinding component, ReflectionOptimizer.InstantiationOptimizer optimizer) {
+	public PojoInstantiator(ComponentAttributeBinding component, ReflectionOptimizer.InstantiationOptimizer optimizer) {
 		this.mappedClass = component.getClassReference();
 		this.isAbstract = ReflectHelper.isAbstractClass( mappedClass );
 		this.optimizer = optimizer;
@@ -109,7 +109,7 @@ public class PojoInstantiator implements Instantiator, Serializable {
 		this.mappedClass = entityBinding.getEntity().getClassReference();
 		this.isAbstract = ReflectHelper.isAbstractClass( mappedClass );
 		this.proxyInterface = entityBinding.getProxyInterfaceType().getValue();
-		this.embeddedIdentifier = entityBinding.getHierarchyDetails().getEntityIdentifier().isEmbedded();
+		this.embeddedIdentifier = entityBinding.getHierarchyDetails().getEntityIdentifier().isComposite();
 		this.optimizer = optimizer;
 
 		try {

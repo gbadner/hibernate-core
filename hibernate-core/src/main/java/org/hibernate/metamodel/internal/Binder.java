@@ -47,7 +47,6 @@ import org.hibernate.id.IdentifierGenerator;
 import org.hibernate.id.IdentityGenerator;
 import org.hibernate.id.PersistentIdentifierGenerator;
 import org.hibernate.id.factory.IdentifierGeneratorFactory;
-import org.hibernate.internal.jaxb.mapping.hbm.JaxbJoinedSubclassElement;
 import org.hibernate.internal.util.ReflectHelper;
 import org.hibernate.internal.util.StringHelper;
 import org.hibernate.internal.util.ValueHolder;
@@ -61,7 +60,7 @@ import org.hibernate.metamodel.spi.binding.BagBinding;
 import org.hibernate.metamodel.spi.binding.BasicAttributeBinding;
 import org.hibernate.metamodel.spi.binding.BasicPluralAttributeElementBinding;
 import org.hibernate.metamodel.spi.binding.BasicPluralAttributeIndexBinding;
-import org.hibernate.metamodel.spi.binding.CompositeAttributeBinding;
+import org.hibernate.metamodel.spi.binding.ComponentAttributeBinding;
 import org.hibernate.metamodel.spi.binding.EntityBinding;
 import org.hibernate.metamodel.spi.binding.EntityDiscriminator;
 import org.hibernate.metamodel.spi.binding.EntityIdentifier;
@@ -84,6 +83,7 @@ import org.hibernate.metamodel.spi.binding.RelationalValueBinding;
 import org.hibernate.metamodel.spi.binding.SecondaryTable;
 import org.hibernate.metamodel.spi.binding.SetBinding;
 import org.hibernate.metamodel.spi.binding.SingularAttributeBinding;
+import org.hibernate.metamodel.spi.binding.SingularNonAssociationAttributeBinding;
 import org.hibernate.metamodel.spi.binding.TypeDefinition;
 import org.hibernate.metamodel.spi.domain.Attribute;
 import org.hibernate.metamodel.spi.domain.Composite;
@@ -155,7 +155,7 @@ import org.hibernate.type.ComponentType;
 import org.hibernate.type.EntityType;
 import org.hibernate.type.Type;
 
-import static org.hibernate.engine.spi.SyntheticAttributeHelper.SYNTHETIC_COMPOSITE_ID_ATTRIBUTE_NAME;
+//import static org.hibernate.engine.spi.SyntheticAttributeHelper.SYNTHETIC_COMPOSITE_ID_ATTRIBUTE_NAME;
 
 /**
  * The common binder shared between annotations and {@code hbm.xml} processing.
@@ -282,7 +282,7 @@ public class Binder {
 			EntityBinding rootEntityBinding,
 			AggregatedCompositeIdentifierSource identifierSource ) {
 		// locate the attribute binding
-		final CompositeAttributeBinding idAttributeBinding = ( CompositeAttributeBinding ) bindIdentifierAttribute(
+		final ComponentAttributeBinding idAttributeBinding = (ComponentAttributeBinding) bindIdentifierAttribute(
 				rootEntityBinding, identifierSource.getIdentifierAttributeSource()
 		);
 
@@ -561,7 +561,7 @@ public class Binder {
 		}
 	}
 
-	private CompositeAttributeBinding bindComponentAttribute(
+	private ComponentAttributeBinding bindComponentAttribute(
 			final AttributeBindingContainer attributeBindingContainer,
 			final ComponentAttributeSource attributeSource,
 			SingularAttribute attribute,
@@ -605,7 +605,7 @@ public class Binder {
 						null :
 						composite.createSingularAttribute( attributeSource.getParentReferenceAttributeName() );
 		final SingularAttributeBinding.NaturalIdMutability naturalIdMutability = attributeSource.getNaturalIdMutability();
-		final CompositeAttributeBinding attributeBinding =
+		final ComponentAttributeBinding attributeBinding =
 				attributeBindingContainer.makeComponentAttributeBinding(
 						attribute,
 						referencingAttribute,
@@ -1148,27 +1148,38 @@ public class Binder {
 			EntityBinding rootEntityBinding,
 			NonAggregatedCompositeIdentifierSource identifierSource ) {
 		// locate the attribute bindings for the real attributes
-		List< SingularAttributeBinding > idAttributeBindings = new ArrayList< SingularAttributeBinding >();
+		List<SingularNonAssociationAttributeBinding> idAttributeBindings =
+				new ArrayList< SingularNonAssociationAttributeBinding >();
 		for ( SingularAttributeSource attributeSource : identifierSource.getAttributeSourcesMakingUpIdentifier() ) {
-			idAttributeBindings.add( bindIdentifierAttribute( rootEntityBinding, attributeSource ) );
+			SingularAttributeBinding singularAttributeBinding =
+					bindIdentifierAttribute( rootEntityBinding, attributeSource );
+			if ( singularAttributeBinding.isAssociation() ) {
+				throw new NotYetImplementedException( "composite IDs containing an association attribute is not implemented yet." );
+			}
+			idAttributeBindings.add( (SingularNonAssociationAttributeBinding) singularAttributeBinding );
 		}
+		rootEntityBinding.getHierarchyDetails().getEntityIdentifier().prepareAsNonAggregatedCompositeIdentifier(
+				idAttributeBindings,
+				identifierSource.getLookupIdClass(),
+				createMetaAttributeContext( rootEntityBinding, identifierSource.getMetaAttributeSources() )
+		);
 
 		// Create the synthetic attribute
-		SingularAttribute syntheticAttribute =
-				rootEntityBinding.getEntity().createSyntheticCompositeAttribute(
-						SYNTHETIC_COMPOSITE_ID_ATTRIBUTE_NAME,
-						rootEntityBinding.getEntity() );
+		//SingularAttribute syntheticAttribute =
+		//		rootEntityBinding.getEntity().createSyntheticCompositeAttribute(
+		//				SYNTHETIC_COMPOSITE_ID_ATTRIBUTE_NAME,
+		//				rootEntityBinding.getEntity() );
 
 		// Create the synthetic attribute binding.
-		final CompositeAttributeBinding syntheticAttributeBinding =
-				rootEntityBinding.makeVirtualComponentAttributeBinding(
-						syntheticAttribute,
-						idAttributeBindings,
-						createMetaAttributeContext( rootEntityBinding, identifierSource.getMetaAttributeSources() ) );
+		//final CompositeAttributeBinding syntheticAttributeBinding =
+		//		rootEntityBinding.makeVirtualComponentAttributeBinding(
+		//				syntheticAttribute,
+		//				idAttributeBindings,
+		//				createMetaAttributeContext( rootEntityBinding, identifierSource.getMetaAttributeSources() ) );
 
-		rootEntityBinding.getHierarchyDetails().getEntityIdentifier().prepareAsNonAggregatedCompositeIdentifier(
-				syntheticAttributeBinding,
-				identifierSource.getLookupIdClass() );
+		//rootEntityBinding.getHierarchyDetails().getEntityIdentifier().prepareAsNonAggregatedCompositeIdentifier(
+		//		syntheticAttributeBinding,
+		//		identifierSource.getLookupIdClass() );
 	}
 
 	private void bindOneToManyCollectionElement(
@@ -1338,13 +1349,19 @@ public class Binder {
 	}
 
 	private void bindPrimaryTable( final EntityBinding entityBinding, final EntitySource entitySource ) {
-		entityBinding.setPrimaryTable( createTable( entitySource.getPrimaryTable(), new DefaultNamingStrategy() {
+		entityBinding.setPrimaryTable(
+				createTable(
+						entitySource.getPrimaryTable(), new DefaultNamingStrategy() {
 
-			@Override
-			public String defaultName() {
-				return bindingContexts.peek().getNamingStrategy().classToTableName( entityBinding.getEntity().getClassName() );
-			}
-		} ) );
+					@Override
+					public String defaultName() {
+						return bindingContexts.peek()
+								.getNamingStrategy()
+								.classToTableName( entityBinding.getEntity().getClassName() );
+					}
+				}
+				)
+		);
 	}
 
 	private void bindSecondaryTables( final EntityBinding entityBinding, final EntitySource entitySource ) {
@@ -2149,7 +2166,9 @@ public class Binder {
 			return metadata.getTypeResolver().getTypeFactory().bag(
 					bagBinding.getAttribute().getRole(),
 					bagBinding.getReferencedPropertyName(),
-					bagBinding.getPluralAttributeElementBinding().getPluralAttributeElementNature() == PluralAttributeElementNature.COMPOSITE );
+					bagBinding.getPluralAttributeElementBinding()
+							.getPluralAttributeElementNature() == PluralAttributeElementNature.COMPOSITE
+			);
 		}
 	}
 

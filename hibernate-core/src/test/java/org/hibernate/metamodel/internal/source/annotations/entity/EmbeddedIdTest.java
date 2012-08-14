@@ -48,7 +48,7 @@ public class EmbeddedIdTest extends BaseAnnotationBindingTestCase {
 	public void testEmbeddable() {
 		EntityBinding binding = getEntityBinding( User.class );
 		EntityIdentifier identifier = binding.getHierarchyDetails().getEntityIdentifier();
-		assertTrue( identifier.isEmbedded() );
+		assertTrue( !identifier.isComposite() );
 	}
 
 	@Entity

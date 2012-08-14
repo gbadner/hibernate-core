@@ -40,7 +40,6 @@ import org.hibernate.MappingException;
 import org.hibernate.engine.ResultSetMappingDefinition;
 import org.hibernate.engine.query.spi.sql.NativeSQLQueryRootReturn;
 import org.hibernate.engine.query.spi.sql.NativeSQLQueryScalarReturn;
-import org.hibernate.id.EntityIdentifierNature;
 import org.hibernate.internal.CoreMessageLogger;
 import org.hibernate.internal.util.StringHelper;
 import org.hibernate.internal.util.collections.CollectionHelper;
@@ -48,7 +47,7 @@ import org.hibernate.metamodel.internal.source.annotations.AnnotationBindingCont
 import org.hibernate.metamodel.internal.source.annotations.util.JPADotNames;
 import org.hibernate.metamodel.internal.source.annotations.util.JandexHelper;
 import org.hibernate.metamodel.spi.binding.AttributeBinding;
-import org.hibernate.metamodel.spi.binding.CompositeAttributeBinding;
+import org.hibernate.metamodel.spi.binding.ComponentAttributeBinding;
 import org.hibernate.metamodel.spi.binding.EntityBinding;
 import org.hibernate.metamodel.spi.binding.ManyToOneAttributeBinding;
 import org.hibernate.metamodel.spi.binding.SingularAssociationAttributeBinding;
@@ -210,8 +209,8 @@ public class SqlResultSetProcessor {
 				String reducedName = name.substring( 0, dotIndex );
 				AttributeBinding attributeBinding = entityBinding.locateAttributeBinding( reducedName );
 				Iterable<? extends AttributeBinding> attributeBindings = null;
-				if ( CompositeAttributeBinding.class.isInstance( attributeBinding ) ) {
-					CompositeAttributeBinding compositeAttributeBinding = CompositeAttributeBinding.class.cast(
+				if ( ComponentAttributeBinding.class.isInstance( attributeBinding ) ) {
+					ComponentAttributeBinding compositeAttributeBinding = ComponentAttributeBinding.class.cast(
 							attributeBinding
 					);
 					attributeBindings = compositeAttributeBinding.attributeBindings();
@@ -242,8 +241,8 @@ public class SqlResultSetProcessor {
 						SingularNonAssociationAttributeBinding identifierAttributeBinding = referencedEntityBinding.getHierarchyDetails()
 								.getEntityIdentifier()
 								.getAttributeBinding();
-						if ( CompositeAttributeBinding.class.isInstance( identifierAttributeBinding ) ) {
-							attributeBindings = CompositeAttributeBinding.class.cast( identifierAttributeBinding )
+						if ( ComponentAttributeBinding.class.isInstance( identifierAttributeBinding ) ) {
+							attributeBindings = ComponentAttributeBinding.class.cast( identifierAttributeBinding )
 									.attributeBindings();
 						}
 						else {

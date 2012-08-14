@@ -71,7 +71,7 @@ public class IdentifierGeneratorTest extends BaseAnnotationBindingTestCase {
 		IdentifierGenerator generator =identifier.getIdentifierGenerator();
         assertNotNull( generator );
         assertEquals( "Wrong generator", Assigned.class, generator.getClass() );
-        assertFalse( identifier.isEmbedded() );
+        assertFalse( identifier.isComposite() );
 
 	}
 

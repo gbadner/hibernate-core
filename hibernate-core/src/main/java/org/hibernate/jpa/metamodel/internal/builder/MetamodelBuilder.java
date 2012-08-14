@@ -29,7 +29,6 @@ import javax.persistence.metamodel.Type;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -37,7 +36,6 @@ import java.util.Set;
 import org.jboss.logging.Logger;
 
 import org.hibernate.HibernateException;
-import org.hibernate.cfg.NotYetImplementedException;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.jpa.metamodel.internal.AbstractIdentifiableType;
 import org.hibernate.jpa.metamodel.internal.EmbeddableTypeImpl;
@@ -46,13 +44,11 @@ import org.hibernate.jpa.metamodel.internal.JpaMetaModelPopulationSetting;
 import org.hibernate.jpa.metamodel.internal.MappedSuperclassTypeImpl;
 import org.hibernate.jpa.metamodel.internal.MetamodelImpl;
 import org.hibernate.jpa.metamodel.internal.UnsupportedFeature;
-import org.hibernate.mapping.Component;
-import org.hibernate.mapping.KeyValue;
-import org.hibernate.mapping.Property;
 import org.hibernate.metamodel.spi.binding.AttributeBinding;
 import org.hibernate.metamodel.spi.binding.BasicAttributeBinding;
-import org.hibernate.metamodel.spi.binding.CompositeAttributeBinding;
+import org.hibernate.metamodel.spi.binding.ComponentAttributeBinding;
 import org.hibernate.metamodel.spi.binding.EntityBinding;
+import org.hibernate.metamodel.spi.binding.EntityIdentifier;
 import org.hibernate.metamodel.spi.binding.HierarchyDetails;
 import org.hibernate.metamodel.spi.binding.SingularNonAssociationAttributeBinding;
 import org.hibernate.metamodel.spi.domain.Entity;
@@ -300,11 +296,13 @@ public class MetamodelBuilder {
 			}
 			default: {
 				// nature == (non-aggregated) COMPOSITE
-				CompositeAttributeBinding idAttributeBinding = (CompositeAttributeBinding) hierarchyDetails.getEntityIdentifier().getAttributeBinding();
-				if ( idAttributeBinding != null ) {
-					if ( idAttributeBinding.getAttribute().getAttributeContainer().equals( descriptor ) ) {
+				EntityIdentifier entityIdentifier =  hierarchyDetails.getEntityIdentifier();
+				if ( entityIdentifier.getEntityBinding().getEntity().equals( descriptor ) ) {
+					final Iterable<SingularNonAssociationAttributeBinding> idAttributeBindings =
+							entityIdentifier.getAttributeBindings();
+					if ( idAttributeBindings != null ) {
 						Set<SingularAttribute> idClassAttributes = new HashSet<SingularAttribute>();
-						for ( AttributeBinding idClassAttributeBinding : idAttributeBinding.attributeBindings() ) {
+						for ( AttributeBinding idClassAttributeBinding : idAttributeBindings ) {
 							idClassAttributes.add( attributeBuilder.buildIdAttribute( jpaDescriptor, idClassAttributeBinding ) );
 						}
 						//noinspection unchecked
