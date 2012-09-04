@@ -1,7 +1,7 @@
 /*
  * Hibernate, Relational Persistence for Idiomatic Java
  *
- * Copyright (c) 2011, Red Hat Inc. or third-party contributors as
+ * Copyright (c) 2012, Red Hat Inc. or third-party contributors as
  * indicated by the @author tags or express copyright attribution
  * statements applied by the authors.  All third-party contributions are
  * distributed under license by Red Hat Inc.
@@ -21,35 +21,24 @@
  * 51 Franklin Street, Fifth Floor
  * Boston, MA  02110-1301  USA
  */
-package org.hibernate.metamodel.internal.source.annotations.entity;
+package org.hibernate.metamodel.internal.source.hbm;
+
+import org.hibernate.jaxb.spi.hbm.JaxbKeyPropertyElement;
+import org.hibernate.metamodel.spi.binding.SingularAttributeBinding;
 
 /**
- * An enum for the type of id configuration for an entity.
- *
- * @author Hardy Ferentschik
+ * @author Gail Badner
  */
-public enum IdType {
-	/**
-	 * single @Id annotation.  Corresponds to
-	 * {@link org.hibernate.id.EntityIdentifierNature#SIMPLE}
-	 */
-	SIMPLE,
+public class IdentifierKeyAttributeSourceImpl extends KeyAttributeSourceImpl {
 
-	/**
-	 * multiple @Id annotations.  Corresponds to
-	 * {@link org.hibernate.id.EntityIdentifierNature#NON_AGGREGATED_COMPOSITE}
-	 */
-	COMPOSED,
+	public IdentifierKeyAttributeSourceImpl(
+			MappingDocument mappingDocument,
+			final JaxbKeyPropertyElement keyPropertyElement) {
+		super( mappingDocument, keyPropertyElement, SingularAttributeBinding.NaturalIdMutability.NOT_NATURAL_ID );
+	}
 
-	/**
-	 * Indicates encountered {@code @EmbeddedId} annotation.  Corresponds to
-	 * {@link org.hibernate.id.EntityIdentifierNature#AGGREGATED_COMPOSITE}
-	 */
-	//
-	EMBEDDED,
-
-	/**
-	 * does not contain any identifier mappings
-	 */
-	NONE
+	@Override
+	public boolean areValuesIncludedInUpdateByDefault() {
+		return false;
+	}
 }

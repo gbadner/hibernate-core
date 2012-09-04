@@ -83,7 +83,10 @@ public class ComponentMetamodel implements Serializable {
 		) : componentTuplizerFactory.constructTuplizer( tuplizerClassName, component );
 	}
 
-	public ComponentMetamodel(CompositeAttributeBinding component, boolean isIdentifierAttributeBinding) {
+	public ComponentMetamodel(
+			CompositeAttributeBinding component,
+			boolean isIdentifierAttributeBinding,
+			boolean isIdentifierMapper) {
 		this.isKey = isIdentifierAttributeBinding;
 		propertySpan = component.attributeBindingSpan();
 		properties = new StandardProperty[propertySpan];
@@ -101,10 +104,14 @@ public class ComponentMetamodel implements Serializable {
 		// TODO: provide support for custom tuplizer
 		final String tuplizerClassName = null;
 		if ( tuplizerClassName == null ) {
-			componentTuplizer = componentTuplizerFactory.constructDefaultTuplizer( entityMode, component );
+			componentTuplizer = componentTuplizerFactory.constructDefaultTuplizer(
+					entityMode, component, isIdentifierMapper
+			);
 		}
 		else {
-			componentTuplizer = componentTuplizerFactory.constructTuplizer( tuplizerClassName, component );
+			componentTuplizer = componentTuplizerFactory.constructTuplizer(
+					tuplizerClassName, component, isIdentifierMapper
+			);
 		}
 	}
 

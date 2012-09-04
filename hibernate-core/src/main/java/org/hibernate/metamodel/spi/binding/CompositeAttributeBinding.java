@@ -25,7 +25,6 @@ package org.hibernate.metamodel.spi.binding;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -49,6 +48,8 @@ public class CompositeAttributeBinding
 	private final String path;
 	private final SingularAttribute parentReference;
 	private Map<String, AttributeBinding> attributeBindingMap;
+	private Class<?> externalAggregatingClass;
+	private String externalAggregatingPropertyAccessorName;
 
 	public CompositeAttributeBinding(
 			AttributeBindingContainer container,
@@ -68,6 +69,8 @@ public class CompositeAttributeBinding
 				naturalIdMutability,
 				metaAttributeContext,
 				parentReference,
+				null,
+				null,
 				null
 		);
 	}
@@ -78,7 +81,9 @@ public class CompositeAttributeBinding
 			String propertyAccessorName,
 			NaturalIdMutability naturalIdMutability,
 			MetaAttributeContext metaAttributeContext,
-			List<SingularAttributeBinding> subAttributeBindings) {
+			List<SingularAttributeBinding> subAttributeBindings,
+			Class<?> externalAggregatingClass,
+			String externalAggregatingPropertyAccessorName) {
 		this(
 				container,
 				attribute,
@@ -88,7 +93,9 @@ public class CompositeAttributeBinding
 				naturalIdMutability,
 				metaAttributeContext,
 				null,
-				subAttributeBindings
+				subAttributeBindings,
+				externalAggregatingClass,
+				externalAggregatingPropertyAccessorName
 		);
 	}
 
@@ -101,7 +108,9 @@ public class CompositeAttributeBinding
 			NaturalIdMutability naturalIdMutability,
 			MetaAttributeContext metaAttributeContext,
 			SingularAttribute parentReference,
-			List<SingularAttributeBinding> subAttributeBindings) {
+			List<SingularAttributeBinding> subAttributeBindings,
+			Class<?> externalAggregatingClass,
+			String externalAggregatingPropertyAccessorName) {
 		super(
 				container,
 				attribute,
@@ -119,12 +128,15 @@ public class CompositeAttributeBinding
 			attributeBindingMap = new LinkedHashMap<String, AttributeBinding>();
 		}
 		else {
-			HashMap<String, AttributeBinding> map = new HashMap<String, AttributeBinding>();
+			Map<String, AttributeBinding> map = new LinkedHashMap<String, AttributeBinding>();
 			for ( SingularAttributeBinding attributeBinding : subAttributeBindings ) {
-				attributeBindingMap.put( attributeBinding.getAttribute().getName(), attributeBinding );
+				map.put( attributeBinding.getAttribute().getName(), attributeBinding );
 			}
 			attributeBindingMap = Collections.unmodifiableMap( map );
 		}
+
+		this.externalAggregatingClass = externalAggregatingClass;
+		this.externalAggregatingPropertyAccessorName = externalAggregatingPropertyAccessorName;
 	}
 
 	@Override
@@ -155,10 +167,30 @@ public class CompositeAttributeBinding
 
 	@Override
 	public AttributeContainer getAttributeContainer() {
-		return getComponent();
+		return (AttributeContainer) getAttribute().getSingularAttributeType();
 	}
 
-	public Composite getComponent() {
+	public boolean isAggregated() {
+		return ! getAttribute().isSynthetic();
+	}
+
+	public Class<?> getExternalAggregatingClass() {
+		return externalAggregatingClass;
+	}
+
+	public String getExternalAggregatingPropertyAccessorName() {
+		return externalAggregatingPropertyAccessorName;
+	}
+
+	public Composite getComposite() {
+		if ( !isAggregated() ) {
+			throw new UnsupportedOperationException(
+					String.format(
+							"Operation is unsupported for non-aggregated %s objects.",
+							getClass().getSimpleName()
+					)
+			);
+		}
 		return (Composite) getAttribute().getSingularAttributeType();
 	}
 
@@ -184,6 +216,41 @@ public class CompositeAttributeBinding
 			}
 		}
 		return true;
+	}
+
+
+	@Override
+	public boolean isIncludedInInsert() {
+		// if the attribute is synthetic, this attribute binding (as a whole) is not insertable;
+		if ( getAttribute().isSynthetic() ) {
+			return false;
+		}
+		// otherwise, return true if there are any singular attributes that are included in the insert.
+		for ( AttributeBinding attributeBinding : attributeBindings() ) {
+			// only check singular attributes
+			if ( attributeBinding.getAttribute().isSingular() &&
+					( (SingularAttributeBinding) attributeBinding ).isIncludedInInsert() ) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	@Override
+	public boolean isIncludedInUpdate() {
+		// if the attribute is synthetic, this attribute binding (as a whole) is not updateable;
+		if ( getAttribute().isSynthetic() ) {
+			return false;
+		}
+		// otherwise, return true if there are any singular attributes that are updatable;
+		for ( AttributeBinding attributeBinding : attributeBindings() ) {
+			// only check singular attributes
+			if ( attributeBinding.getAttribute().isSingular() &&
+					( (SingularAttributeBinding) attributeBinding ).isIncludedInUpdate() ) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	@Override
@@ -242,17 +309,17 @@ public class CompositeAttributeBinding
 				metaAttributeContext,
 				generation
 		);
-		registerAttributeBinding( attribute.getName(), binding );
+		registerAttributeBinding( binding );
 		return binding;
 	}
 
-	protected void registerAttributeBinding(String name, AttributeBinding attributeBinding) {
+	protected void registerAttributeBinding(AttributeBinding attributeBinding) {
 		// todo : hook this into the EntityBinding notion of "entity referencing attribute bindings"
-		attributeBindingMap.put( name, attributeBinding );
+		attributeBindingMap.put( attributeBinding.getAttribute().getName(), attributeBinding );
 	}
 
 	@Override
-	public CompositeAttributeBinding makeComponentAttributeBinding(
+	public CompositeAttributeBinding makeCompositeAttributeBinding(
 			SingularAttribute attribute,
 			SingularAttribute parentReferenceAttribute,
 			String propertyAccessorName,
@@ -270,7 +337,7 @@ public class CompositeAttributeBinding
 				metaAttributeContext,
 				parentReferenceAttribute
 		);
-		registerAttributeBinding( attribute.getName(), binding );
+		registerAttributeBinding( binding );
 		return binding;
 	}
 
@@ -297,7 +364,7 @@ public class CompositeAttributeBinding
 				referencedAttributeBinding,
 				valueBindings
 		);
-		registerAttributeBinding( attribute.getName(), binding );
+		registerAttributeBinding( binding );
 		return binding;
 	}
 
@@ -319,7 +386,7 @@ public class CompositeAttributeBinding
 				includedInOptimisticLocking,
 				metaAttributeContext
 		);
-		registerAttributeBinding( attribute.getName(), binding );
+		registerAttributeBinding( binding );
 		return binding;
 	}
 
@@ -342,7 +409,7 @@ public class CompositeAttributeBinding
 				includedInOptimisticLocking,
 				metaAttributeContext,
 				base );
-		registerAttributeBinding( attribute.getName(), binding );
+		registerAttributeBinding( binding );
 		return binding;
 	}
 
@@ -365,7 +432,7 @@ public class CompositeAttributeBinding
 				propertyAccessorName,
 				includedInOptimisticLocking,
 				metaAttributeContext );
-		registerAttributeBinding( attribute.getName(), binding );
+		registerAttributeBinding( binding );
 		return binding;
 	}
 
@@ -387,13 +454,13 @@ public class CompositeAttributeBinding
 				includedInOptimisticLocking,
 				metaAttributeContext
 		);
-		registerAttributeBinding( attribute.getName(), binding );
+		registerAttributeBinding( binding );
 		return binding;
 	}
 
 	@Override
 	public Class<?> getClassReference() {
-		return getComponent().getClassReference();
+		return getAttributeContainer().getClassReference();
 	}
 
 	public SingularAttribute getParentReference() {

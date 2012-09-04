@@ -508,7 +508,7 @@ public class EntityBinding implements AttributeBindingContainer {
 	}
 
 	@Override
-	public CompositeAttributeBinding makeComponentAttributeBinding(
+	public CompositeAttributeBinding makeCompositeAttributeBinding(
 			SingularAttribute attribute,
 			SingularAttribute parentReferenceAttribute,
 			String propertyAccessorName,
@@ -530,10 +530,12 @@ public class EntityBinding implements AttributeBindingContainer {
 		return binding;
 	}
 
-	public CompositeAttributeBinding makeVirtualComponentAttributeBinding(
+	public CompositeAttributeBinding makeVirtualCompositeAttributeBinding(
 			SingularAttribute syntheticAttribute,
 			List<SingularAttributeBinding> subAttributeBindings,
-			MetaAttributeContext metaAttributeContext) {
+			MetaAttributeContext metaAttributeContext,
+			Class<?> externalAggregatingClass,
+			String externalAggregatingPropertyAccessorName) {
 		if ( !syntheticAttribute.isSynthetic() ) {
 			throw new AssertionFailure(
 					"Illegal attempt to create synthetic attribute binding from non-synthetic attribute reference"
@@ -545,7 +547,9 @@ public class EntityBinding implements AttributeBindingContainer {
 				PropertyAccessorFactory.EMBEDDED_ACCESSOR_NAME,
 				SingularAttributeBinding.NaturalIdMutability.NOT_NATURAL_ID,
 				metaAttributeContext,
-				subAttributeBindings
+				subAttributeBindings,
+				externalAggregatingClass,
+				externalAggregatingPropertyAccessorName
 		);
 		registerAttributeBinding( syntheticAttribute.getName(), binding );
 		return binding;

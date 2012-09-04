@@ -41,10 +41,10 @@ import org.hibernate.mapping.Property;
 import org.hibernate.mapping.PropertyGeneration;
 import org.hibernate.metamodel.spi.binding.AbstractPluralAttributeBinding;
 import org.hibernate.metamodel.spi.binding.AttributeBinding;
+import org.hibernate.metamodel.spi.binding.BackRefAttributeBinding;
 import org.hibernate.metamodel.spi.binding.BasicAttributeBinding;
 import org.hibernate.metamodel.spi.binding.EntityBinding;
 import org.hibernate.metamodel.spi.binding.PluralAttributeAssociationElementBinding;
-import org.hibernate.metamodel.spi.binding.RelationalValueBinding;
 import org.hibernate.metamodel.spi.binding.SingularAssociationAttributeBinding;
 import org.hibernate.metamodel.spi.binding.SingularAttributeBinding;
 import org.hibernate.property.Getter;
@@ -121,7 +121,9 @@ public class PropertyFactory {
 		//		see org.hibernate.metamodel.domain.AbstractAttributeContainer.locateOrCreateVirtualAttribute()
 
 		final String mappedUnsavedValue = mappedEntity.getHierarchyDetails().getEntityIdentifier().getUnsavedValue();
-		final Type type = property.getHibernateTypeDescriptor().getResolvedTypeMapping();
+		final Type type = mappedEntity.getHierarchyDetails().getEntityIdentifier().isIdentifierMapper() ?
+				mappedEntity.getHierarchyDetails().getEntityIdentifier().getIdClassComponentType() :
+				property.getHibernateTypeDescriptor().getResolvedTypeMapping();
 
 		IdentifierValue unsavedValue = UnsavedValueFactory.getUnsavedIdentifierValue(
 				mappedUnsavedValue,
@@ -130,11 +132,12 @@ public class PropertyFactory {
 				getConstructor( mappedEntity )
 			);
 
-		if ( property == null ) {
+		if ( property.getAttribute().isSynthetic()  ) {
 			// this is a virtual id property...
 			return new IdentifierProperty(
 			        type,
-					mappedEntity.getHierarchyDetails().getEntityIdentifier().isEmbedded(),
+					mappedEntity.getHierarchyDetails().getEntityIdentifier().isNonAggregatedComposite() &&
+							mappedEntity.getHierarchyDetails().getEntityIdentifier().getIdClassClass() == null,
 					mappedEntity.getHierarchyDetails().getEntityIdentifier().isIdentifierMapper(),
 					unsavedValue,
 					generator
@@ -145,7 +148,7 @@ public class PropertyFactory {
 					property.getAttribute().getName(),
 					null,
 					type,
-					mappedEntity.getHierarchyDetails().getEntityIdentifier().isEmbedded(),
+					mappedEntity.getHierarchyDetails().getEntityIdentifier().isNonAggregatedComposite(),
 					unsavedValue,
 					generator
 				);
@@ -310,13 +313,13 @@ public class PropertyFactory {
 					null,
 					type,
 					lazyAvailable && singularAttributeBinding.isLazy(),
-					areAnyValuesIncludedInInsert( singularAttributeBinding ), // insertable
-					areAnyValuesIncludedInUpdate( singularAttributeBinding ), // updatable
+					singularAttributeBinding.isIncludedInInsert(), // insertable
+					singularAttributeBinding.isIncludedInUpdate(), // updatable
 					propertyGeneration == PropertyGeneration.INSERT
 							|| propertyGeneration == PropertyGeneration.ALWAYS,
 					propertyGeneration == PropertyGeneration.ALWAYS,
 					singularAttributeBinding.isNullable(),
-					alwaysDirtyCheck || areAnyValuesIncludedInUpdate( singularAttributeBinding ),
+					alwaysDirtyCheck || singularAttributeBinding.isIncludedInUpdate(),
 					singularAttributeBinding.isIncludedInOptimisticLocking(),
 					cascadeStyle,
 					fetchMode
@@ -350,24 +353,6 @@ public class PropertyFactory {
 					fetchMode
 				);
 		}
-	}
-
-	private static boolean areAnyValuesIncludedInInsert(SingularAttributeBinding attributeBinding) {
-		for ( RelationalValueBinding valueBinding : attributeBinding.getRelationalValueBindings() ) {
-			if ( valueBinding.isIncludeInInsert() ) {
-				return true;
-			}
-		}
-		return false;
-	}
-
-	private static boolean areAnyValuesIncludedInUpdate(SingularAttributeBinding attributeBinding) {
-		for ( RelationalValueBinding valueBinding : attributeBinding.getRelationalValueBindings() ) {
-			if ( valueBinding.isIncludeInUpdate() ) {
-				return true;
-			}
-		}
-		return false;
 	}
 
 	private static Constructor getConstructor(PersistentClass persistentClass) {
@@ -412,6 +397,29 @@ public class PropertyFactory {
 		);
 	}
 
+	//TODO: Remove this...
+	public static Getter getIdentifierMapperGetter(
+			String propertyPath,
+			String identifierMapperPropertyAccessorName,
+			EntityMode entityMode,
+			Class<?> identifierMapperClassReference) {
+		final PropertyAccessor pa =
+				PropertyAccessorFactory.getPropertyAccessor( identifierMapperPropertyAccessorName, entityMode );
+		return pa.getGetter( identifierMapperClassReference, propertyPath );
+
+	}
+
+	//TODO: Remove this...
+	public static Setter getIdentifierMapperSetter(
+			String propertyPath,
+			String identifierMapperPropertyAccessorName,
+			EntityMode entityMode,
+			Class<?> identifierMapperClassReference) {
+		final PropertyAccessor pa =
+				PropertyAccessorFactory.getPropertyAccessor( identifierMapperPropertyAccessorName, entityMode );
+		return pa.getSetter( identifierMapperClassReference, propertyPath );
+	}
+
 	private static Getter getGetterOrNull(AttributeBinding mappingProperty) {
 		try {
 			return getGetter( mappingProperty );
@@ -430,11 +438,17 @@ public class PropertyFactory {
 	}
 
 	private static PropertyAccessor getPropertyAccessor(AttributeBinding mappingProperty) {
-		// TODO: fix this to work w/ component entity mode also
-		return PropertyAccessorFactory.getPropertyAccessor(
-				mappingProperty,
-				mappingProperty.getContainer().seekEntityBinding().getHierarchyDetails().getEntityMode()
-		);
+		EntityMode entityMode = mappingProperty.getContainer().seekEntityBinding().getHierarchyDetails().getEntityMode();
+
+		if ( mappingProperty.isBackRef() ) {
+			BackRefAttributeBinding backRefAttributeBinding = (BackRefAttributeBinding) mappingProperty;
+			return PropertyAccessorFactory.getBackRefPropertyAccessor(
+					backRefAttributeBinding.getEntityName(), backRefAttributeBinding.getCollectionRole(), entityMode
+			);
+		}
+		else {
+			return PropertyAccessorFactory.getPropertyAccessor( mappingProperty.getPropertyAccessorName(), entityMode );
+		}
 	}
 
 }

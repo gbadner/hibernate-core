@@ -43,13 +43,10 @@ import org.hibernate.tuple.Instantiator;
  * @author Steve Ebersole
  */
 public class DynamicMapComponentTuplizer extends AbstractComponentTuplizer {
+	private final Instantiator instantiator = new DynamicMapInstantiator();
 
 	public Class getMappedClass() {
 		return Map.class;
-	}
-
-	protected Instantiator buildInstantiator(Component component) {
-		return new DynamicMapInstantiator();
 	}
 
 	public DynamicMapComponentTuplizer(Component component) {
@@ -69,7 +66,7 @@ public class DynamicMapComponentTuplizer extends AbstractComponentTuplizer {
 	}
 
 	@Override
-	protected Instantiator buildInstantiator(CompositeAttributeBinding component) {
-		return new DynamicMapInstantiator();
+	protected Instantiator getInstantiator() {
+		return instantiator;
 	}
 }

@@ -26,6 +26,7 @@ package org.hibernate.tuple.component;
 import java.lang.reflect.Method;
 import java.util.Iterator;
 
+import org.hibernate.EntityMode;
 import org.hibernate.HibernateException;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.mapping.Component;
@@ -47,14 +48,12 @@ public abstract class AbstractComponentTuplizer implements ComponentTuplizer {
 	protected final Getter[] getters;
 	protected final Setter[] setters;
 	protected final int propertySpan;
-	protected final Instantiator instantiator;
 	protected final boolean hasCustomAccessors;
 
-	protected abstract Instantiator buildInstantiator(Component component);
 	protected abstract Getter buildGetter(Component component, Property prop);
 	protected abstract Setter buildSetter(Component component, Property prop);
 
-	protected abstract Instantiator buildInstantiator(CompositeAttributeBinding component);
+	protected abstract Instantiator getInstantiator();
 
 	protected AbstractComponentTuplizer(Component component) {
 		propertySpan = component.getPropertySpan();
@@ -74,26 +73,50 @@ public abstract class AbstractComponentTuplizer implements ComponentTuplizer {
 			i++;
 		}
 		hasCustomAccessors = foundCustomAccessor;
-		instantiator = buildInstantiator( component );
 	}
 
-	protected AbstractComponentTuplizer(CompositeAttributeBinding component) {
-		propertySpan = component.attributeBindingSpan();
+	protected AbstractComponentTuplizer(
+			CompositeAttributeBinding compositeAttributeBinding,
+			boolean isIdentifierMapper
+	) {
+		propertySpan = compositeAttributeBinding.attributeBindingSpan();
 		getters = new Getter[propertySpan];
 		setters = new Setter[propertySpan];
 
 		boolean foundCustomAccessor=false;
 		int i = 0;
-		for ( AttributeBinding attributeBinding : component.attributeBindings() ) {
-			getters[i] = PropertyFactory.getGetter( attributeBinding );
-			setters[i] = PropertyFactory.getSetter( attributeBinding );
-			if ( !attributeBinding.isBasicPropertyAccessor() ) {
-				foundCustomAccessor = true;
+		if ( isIdentifierMapper ) {
+			final EntityMode entityMode =
+					compositeAttributeBinding.getContainer().seekEntityBinding().getHierarchyDetails().getEntityMode();
+			for ( AttributeBinding attributeBinding : compositeAttributeBinding.attributeBindings() ) {
+				getters[i] = PropertyFactory.getIdentifierMapperGetter(
+						attributeBinding.getAttribute().getName(),
+						compositeAttributeBinding.getExternalAggregatingPropertyAccessorName(),
+						entityMode,
+						compositeAttributeBinding.getExternalAggregatingClass()
+				);
+				setters[i] = PropertyFactory.getIdentifierMapperSetter(
+						attributeBinding.getAttribute().getName(),
+						compositeAttributeBinding.getExternalAggregatingPropertyAccessorName(),
+						entityMode,
+						compositeAttributeBinding.getExternalAggregatingClass()
+				);
+				foundCustomAccessor = foundCustomAccessor ||
+						!"property".equals( compositeAttributeBinding.getExternalAggregatingPropertyAccessorName() );
+				i++;
 			}
-			i++;
+		}
+		else {
+			for ( AttributeBinding attributeBinding : compositeAttributeBinding.attributeBindings() ) {
+				getters[i] = PropertyFactory.getGetter( attributeBinding );
+				setters[i] = PropertyFactory.getSetter( attributeBinding );
+				if ( !attributeBinding.isBasicPropertyAccessor() ) {
+					foundCustomAccessor = true;
+				}
+				i++;
+			}
 		}
 		hasCustomAccessors = foundCustomAccessor;
-		instantiator = buildInstantiator( component );
 	}
 
 	public Object getPropertyValue(Object component, int i) throws HibernateException {
@@ -109,7 +132,7 @@ public abstract class AbstractComponentTuplizer implements ComponentTuplizer {
 	}
 
 	public boolean isInstance(Object object) {
-		return instantiator.isInstance(object);
+		return getInstantiator().isInstance( object );
 	}
 
 	public void setPropertyValues(Object component, Object[] values) throws HibernateException {
@@ -122,7 +145,7 @@ public abstract class AbstractComponentTuplizer implements ComponentTuplizer {
 	* This method does not populate the component parent
 	*/
 	public Object instantiate() throws HibernateException {
-		return instantiator.instantiate();
+		return getInstantiator().instantiate();
 	}
 
 	public Object getParent(Object component) {

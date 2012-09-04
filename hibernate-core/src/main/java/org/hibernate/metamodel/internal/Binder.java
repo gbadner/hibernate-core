@@ -210,7 +210,7 @@ public class Binder {
 					// unsavedValue = null;
 					break;
 				}
-				case COMPOSITE: {
+				case NON_AGGREGATED_COMPOSITE: {
 					// The generator strategy should be "assigned" and processed above.
 					throw new IllegalStateException( String.format(
 							"Expected generator strategy for composite ID: 'assigned'; instead it is: %s",
@@ -578,7 +578,7 @@ public class Binder {
 		}
 	}
 
-	private CompositeAttributeBinding bindComponentAttribute(
+	private CompositeAttributeBinding bindCompositeAttribute(
 			final AttributeBindingContainer attributeBindingContainer,
 			final ComponentAttributeSource attributeSource,
 			SingularAttribute attribute,
@@ -623,14 +623,15 @@ public class Binder {
 						composite.createSingularAttribute( attributeSource.getParentReferenceAttributeName() );
 		final SingularAttributeBinding.NaturalIdMutability naturalIdMutability = attributeSource.getNaturalIdMutability();
 		final CompositeAttributeBinding attributeBinding =
-				attributeBindingContainer.makeComponentAttributeBinding(
+				attributeBindingContainer.makeCompositeAttributeBinding(
 						attribute,
 						referencingAttribute,
 						propertyAccessorName( attributeSource ),
 						attributeSource.isIncludedInOptimisticLocking(),
 						attributeSource.isLazy(),
 						naturalIdMutability,
-						createMetaAttributeContext( attributeBindingContainer, attributeSource ) );
+						createMetaAttributeContext( attributeBindingContainer, attributeSource )
+				);
 		// TODO: binding the HibernateTypeDescriptor should be simplified since we know the class name already
 		bindHibernateTypeDescriptor(
 				attributeBinding.getHibernateTypeDescriptor(),
@@ -650,7 +651,7 @@ public class Binder {
 			}
 		}
 		Type resolvedType = metadata.getTypeResolver().getTypeFactory().component(
-				new ComponentMetamodel( attributeBinding, isAttributeIdentifier )
+				new ComponentMetamodel( attributeBinding, isAttributeIdentifier, false )
 		);
 		bindHibernateResolvedType( attributeBinding.getHibernateTypeDescriptor(), resolvedType );
 		return attributeBinding;
@@ -922,7 +923,7 @@ public class Binder {
 				bindAggregatedCompositeIdentifier( rootEntityBinding, ( AggregatedCompositeIdentifierSource ) identifierSource );
 				break;
 			}
-			case COMPOSITE: {
+			case NON_AGGREGATED_COMPOSITE: {
 				bindNonAggregatedCompositeIdentifier(
 						rootEntityBinding,
 						( NonAggregatedCompositeIdentifierSource ) identifierSource );
@@ -1165,27 +1166,106 @@ public class Binder {
 			EntityBinding rootEntityBinding,
 			NonAggregatedCompositeIdentifierSource identifierSource ) {
 		// locate the attribute bindings for the real attributes
-		List< SingularAttributeBinding > idAttributeBindings = new ArrayList< SingularAttributeBinding >();
+		List<SingularAttributeBinding> idAttributeBindings =
+				new ArrayList< SingularAttributeBinding >();
 		for ( SingularAttributeSource attributeSource : identifierSource.getAttributeSourcesMakingUpIdentifier() ) {
-			idAttributeBindings.add( bindIdentifierAttribute( rootEntityBinding, attributeSource ) );
+			SingularAttributeBinding singularAttributeBinding =
+					bindIdentifierAttribute( rootEntityBinding, attributeSource );
+			if ( singularAttributeBinding.isAssociation() ) {
+				throw new NotYetImplementedException( "composite IDs containing an association attribute is not implemented yet." );
+			}
+			idAttributeBindings.add( singularAttributeBinding );
 		}
 
-		// Create the synthetic attribute
-		SingularAttribute syntheticAttribute =
-				rootEntityBinding.getEntity().createSyntheticCompositeAttribute(
-						SYNTHETIC_COMPOSITE_ID_ATTRIBUTE_NAME,
-						rootEntityBinding.getEntity() );
+		final Class<?> idClassClass = identifierSource.getLookupIdClass();
+		final String idClassPropertyAccessorName =
+				idClassClass == null ?
+						null :
+						propertyAccessorName( identifierSource.getIdClassPropertyAccessorName() );
 
-		// Create the synthetic attribute binding.
-		final CompositeAttributeBinding syntheticAttributeBinding =
-				rootEntityBinding.makeVirtualComponentAttributeBinding(
-						syntheticAttribute,
-						idAttributeBindings,
-						createMetaAttributeContext( rootEntityBinding, identifierSource.getMetaAttributeSources() ) );
+		SingularAttribute syntheticAttribute = null;
+		CompositeAttributeBinding syntheticAttributeBinding = null;
+		Type resolvedType = null;
+		// Configure ID generator
+		IdGenerator generator = identifierSource.getIdentifierGeneratorDescriptor();
+		if ( generator == null ) {
+			final Map< String, String > params = new HashMap< String, String >();
+			params.put( IdentifierGenerator.ENTITY_NAME, rootEntityBinding.getEntity().getName() );
+			generator = new IdGenerator( "default_assign_identity_generator", "assigned", params );
+		}
+		// determine the unsaved value mapping
+		final String unsavedValue = interpretIdentifierUnsavedValue( identifierSource, generator );
+		if ( idClassClass == null ) {
+			// Create the synthetic attribute
+			syntheticAttribute =
+					rootEntityBinding.getEntity().createSyntheticCompositeAttribute(
+							SYNTHETIC_COMPOSITE_ID_ATTRIBUTE_NAME,
+							rootEntityBinding.getEntity()
+					);
 
-		rootEntityBinding.getHierarchyDetails().getEntityIdentifier().prepareAsNonAggregatedCompositeIdentifier(
-				syntheticAttributeBinding,
-				identifierSource.getLookupIdClass() );
+			// Create the synthetic attribute binding.
+			syntheticAttributeBinding =
+					rootEntityBinding.makeVirtualCompositeAttributeBinding(
+							syntheticAttribute,
+							idAttributeBindings,
+							createMetaAttributeContext( rootEntityBinding, identifierSource.getMetaAttributeSources() ),
+							idClassClass,
+							idClassPropertyAccessorName
+					);
+
+			bindHibernateTypeDescriptor(
+					syntheticAttributeBinding.getHibernateTypeDescriptor(),
+					syntheticAttribute.getSingularAttributeType().getClassName(),
+					null,
+					null
+			);
+
+			rootEntityBinding.getHierarchyDetails().getEntityIdentifier().prepareAsNonAggregatedCompositeIdentifier(
+					syntheticAttributeBinding,
+					generator,
+					unsavedValue,
+					null
+			);
+		}
+		else {
+			// Create the synthetic attribute
+			syntheticAttribute =
+					rootEntityBinding.getEntity().createSyntheticCompositeAttribute(
+							SYNTHETIC_COMPOSITE_ID_ATTRIBUTE_NAME,
+							rootEntityBinding.getEntity()
+					);
+
+			// Create the synthetic attribute binding.
+			syntheticAttributeBinding =
+					rootEntityBinding.makeVirtualCompositeAttributeBinding(
+							syntheticAttribute,
+							idAttributeBindings,
+							createMetaAttributeContext( rootEntityBinding, identifierSource.getMetaAttributeSources() ),
+							idClassClass,
+							idClassPropertyAccessorName
+					);
+
+			bindHibernateTypeDescriptor(
+					syntheticAttributeBinding.getHibernateTypeDescriptor(),
+					syntheticAttribute.getSingularAttributeType().getClassName(),
+					null,
+					null
+			);
+
+			rootEntityBinding.getHierarchyDetails().getEntityIdentifier().prepareAsNonAggregatedCompositeIdentifier(
+					syntheticAttributeBinding,
+					generator,
+					unsavedValue,
+					metadata.getTypeResolver().getTypeFactory().component(
+							new ComponentMetamodel( syntheticAttributeBinding, true, true )
+					)
+			);
+		}
+
+		resolvedType = metadata.getTypeResolver().getTypeFactory().embeddedComponent(
+				new ComponentMetamodel( syntheticAttributeBinding, true, false )
+		);
+		bindHibernateResolvedType( syntheticAttributeBinding.getHibernateTypeDescriptor(), resolvedType );
 	}
 
 	private void bindOneToManyCollectionElement(
@@ -1463,8 +1543,8 @@ public class Binder {
 						ToOneAttributeSource.class.cast( attributeSource ),
 						attribute
 				);
-			case COMPONENT:
-				return bindComponentAttribute(
+			case COMPOSITE:
+				return bindCompositeAttribute(
 						attributeBindingContainer,
 						ComponentAttributeSource.class.cast( attributeSource ),
 						attribute,
@@ -2221,9 +2301,13 @@ public class Binder {
 	}
 
 	private String propertyAccessorName( final AttributeSource attributeSource ) {
-		return attributeSource.getPropertyAccessorName() == null
+		return propertyAccessorName( attributeSource.getPropertyAccessorName() );
+	}
+
+	private String propertyAccessorName(final String propertyAccessorName) {
+		return propertyAccessorName == null
 				? bindingContexts.peek().getMappingDefaults().getPropertyAccessorName()
-				: attributeSource.getPropertyAccessorName();
+				: propertyAccessorName;
 	}
 
 	private String quotedIdentifier( final String name ) {
@@ -2249,7 +2333,7 @@ public class Binder {
 				hibernateTypeDescriptor.getExplicitTypeName(),
 				typeParameters,
 				pluralAttributeBinding.getAttribute().getName(),
-				pluralAttributeBinding.getReferencedPropertyName(),
+				getReferencedPropertyNameIfNotId( pluralAttributeBinding ),
 				pluralAttributeBinding.getPluralAttributeElementBinding()
 						.getNature() == PluralAttributeElementBinding.Nature.COMPOSITE
 		);

@@ -113,7 +113,7 @@ public interface AttributeBindingContainer {
 	 *
 	 * @return The attribute binding instance.
 	 */
-	public CompositeAttributeBinding makeComponentAttributeBinding(
+	public CompositeAttributeBinding makeCompositeAttributeBinding(
 			SingularAttribute attribute,
 			SingularAttribute parentReferenceAttribute,
 			String propertyAccessorName,

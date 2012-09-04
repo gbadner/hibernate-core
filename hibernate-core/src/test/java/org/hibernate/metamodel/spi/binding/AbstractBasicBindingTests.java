@@ -245,7 +245,7 @@ public abstract class AbstractBasicBindingTests extends BaseUnitTestCase {
 		assertSame( compositeAttributeBinding.getAttribute().getSingularAttributeType(), compositeAttributeBinding.getAttributeContainer() );
 		assertEquals( SimpleEntityWithSimpleComponent.class.getName() + ".simpleComponent", compositeAttributeBinding.getPathBase() );
 		assertSame( entityBinding, compositeAttributeBinding.seekEntityBinding() );
-		assertNotNull( compositeAttributeBinding.getComponent() );
+		assertNotNull( compositeAttributeBinding.getComposite() );
 	}
 
 	public abstract void addSourcesForSimpleVersionedEntityBinding(MetadataSources sources);

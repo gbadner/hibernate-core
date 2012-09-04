@@ -447,14 +447,14 @@ public class AttributeBuilder {
 			final IdentifiableType identifiableType = (IdentifiableType) owner;
 			final EntityMetamodel entityMetamodel = getDeclarerEntityMetamodel( identifiableType );
 			if ( ! entityMetamodel.getIdentifierProperty().isVirtual() ) {
-				throw new IllegalArgumentException( "expecting IdClass mapping" );
+				throw new IllegalArgumentException( "expecting non-aggregated identifier mapping" );
 			}
 			org.hibernate.type.Type type = entityMetamodel.getIdentifierProperty().getType();
-			if ( ! EmbeddedComponentType.class.isInstance( type ) ) {
-				throw new IllegalArgumentException( "expecting IdClass mapping" );
+			if ( ! ComponentType.class.isInstance( type ) ) {
+				throw new IllegalArgumentException( "expecting non-aggregated identifier mapping" );
 			}
 
-			final EmbeddedComponentType componentType = (EmbeddedComponentType) type;
+			final ComponentType componentType = (ComponentType) type;
 			final String attributeName = attributeBinding.getAttribute().getName();
 			return componentType.getComponentTuplizer()
 					.getGetter( componentType.getPropertyIndex( attributeName ) )

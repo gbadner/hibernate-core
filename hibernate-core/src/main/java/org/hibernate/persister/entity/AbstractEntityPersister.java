@@ -105,6 +105,7 @@ import org.hibernate.metamodel.spi.binding.AttributeBinding;
 import org.hibernate.metamodel.spi.binding.BasicAttributeBinding;
 import org.hibernate.metamodel.spi.binding.CompositeAttributeBinding;
 import org.hibernate.metamodel.spi.binding.EntityBinding;
+import org.hibernate.metamodel.spi.binding.EntityIdentifier;
 import org.hibernate.metamodel.spi.binding.Fetchable;
 import org.hibernate.metamodel.spi.binding.PluralAttributeAssociationElementBinding;
 import org.hibernate.metamodel.spi.binding.PluralAttributeBinding;
@@ -2353,7 +2354,7 @@ public abstract class AbstractEntityPersister
 
 	private void internalInitSubclassPropertyAliasesMap(String path, Iterable<AttributeBinding> attributeBindings) {
 		for ( AttributeBinding prop : attributeBindings ) {
-			if ( prop == prop.getContainer().seekEntityBinding().getHierarchyDetails().getEntityIdentifier().getAttributeBinding() ) {
+			if ( prop.getContainer().seekEntityBinding().getHierarchyDetails().getEntityIdentifier().isIdentifierAttributeBinding( prop ) ) {
 				// ID propertie aliases are dealt with elsewhere.
 				continue;
 			}
