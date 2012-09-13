@@ -1183,9 +1183,6 @@ public class Binder {
 						null :
 						propertyAccessorName( identifierSource.getIdClassPropertyAccessorName() );
 
-		SingularAttribute syntheticAttribute = null;
-		CompositeAttributeBinding syntheticAttributeBinding = null;
-		Type resolvedType = null;
 		// Configure ID generator
 		IdGenerator generator = identifierSource.getIdentifierGeneratorDescriptor();
 		if ( generator == null ) {
@@ -1193,76 +1190,41 @@ public class Binder {
 			params.put( IdentifierGenerator.ENTITY_NAME, rootEntityBinding.getEntity().getName() );
 			generator = new IdGenerator( "default_assign_identity_generator", "assigned", params );
 		}
-		// determine the unsaved value mapping
-		final String unsavedValue = interpretIdentifierUnsavedValue( identifierSource, generator );
-		if ( idClassClass == null ) {
-			// Create the synthetic attribute
-			syntheticAttribute =
-					rootEntityBinding.getEntity().createSyntheticCompositeAttribute(
-							SYNTHETIC_COMPOSITE_ID_ATTRIBUTE_NAME,
-							rootEntityBinding.getEntity()
-					);
+		// Create the synthetic attribute
+		final SingularAttribute syntheticAttribute =
+				rootEntityBinding.getEntity().createSyntheticCompositeAttribute(
+						SYNTHETIC_COMPOSITE_ID_ATTRIBUTE_NAME,
+						rootEntityBinding.getEntity()
+				);
+		final CompositeAttributeBinding syntheticAttributeBinding =
+				rootEntityBinding.makeVirtualCompositeAttributeBinding(
+						syntheticAttribute,
+						idAttributeBindings,
+						createMetaAttributeContext( rootEntityBinding, identifierSource.getMetaAttributeSources() ),
+						idClassClass,
+						idClassPropertyAccessorName
+				);
+		bindHibernateTypeDescriptor(
+				syntheticAttributeBinding.getHibernateTypeDescriptor(),
+				syntheticAttribute.getSingularAttributeType().getClassName(),
+				null,
+				null
+		);
 
-			// Create the synthetic attribute binding.
-			syntheticAttributeBinding =
-					rootEntityBinding.makeVirtualCompositeAttributeBinding(
-							syntheticAttribute,
-							idAttributeBindings,
-							createMetaAttributeContext( rootEntityBinding, identifierSource.getMetaAttributeSources() ),
-							idClassClass,
-							idClassPropertyAccessorName
-					);
+		// Create the synthetic attribute binding.
+		rootEntityBinding.getHierarchyDetails().getEntityIdentifier().prepareAsNonAggregatedCompositeIdentifier(
+				syntheticAttributeBinding,
+				generator,
+				interpretIdentifierUnsavedValue( identifierSource, generator ),
+				idClassClass == null ?
+						null :
+						metadata.getTypeResolver().getTypeFactory().component(
+								new ComponentMetamodel( syntheticAttributeBinding, true, true )
+						)
 
-			bindHibernateTypeDescriptor(
-					syntheticAttributeBinding.getHibernateTypeDescriptor(),
-					syntheticAttribute.getSingularAttributeType().getClassName(),
-					null,
-					null
-			);
+		);
 
-			rootEntityBinding.getHierarchyDetails().getEntityIdentifier().prepareAsNonAggregatedCompositeIdentifier(
-					syntheticAttributeBinding,
-					generator,
-					unsavedValue,
-					null
-			);
-		}
-		else {
-			// Create the synthetic attribute
-			syntheticAttribute =
-					rootEntityBinding.getEntity().createSyntheticCompositeAttribute(
-							SYNTHETIC_COMPOSITE_ID_ATTRIBUTE_NAME,
-							rootEntityBinding.getEntity()
-					);
-
-			// Create the synthetic attribute binding.
-			syntheticAttributeBinding =
-					rootEntityBinding.makeVirtualCompositeAttributeBinding(
-							syntheticAttribute,
-							idAttributeBindings,
-							createMetaAttributeContext( rootEntityBinding, identifierSource.getMetaAttributeSources() ),
-							idClassClass,
-							idClassPropertyAccessorName
-					);
-
-			bindHibernateTypeDescriptor(
-					syntheticAttributeBinding.getHibernateTypeDescriptor(),
-					syntheticAttribute.getSingularAttributeType().getClassName(),
-					null,
-					null
-			);
-
-			rootEntityBinding.getHierarchyDetails().getEntityIdentifier().prepareAsNonAggregatedCompositeIdentifier(
-					syntheticAttributeBinding,
-					generator,
-					unsavedValue,
-					metadata.getTypeResolver().getTypeFactory().component(
-							new ComponentMetamodel( syntheticAttributeBinding, true, true )
-					)
-			);
-		}
-
-		resolvedType = metadata.getTypeResolver().getTypeFactory().embeddedComponent(
+		final Type resolvedType = metadata.getTypeResolver().getTypeFactory().embeddedComponent(
 				new ComponentMetamodel( syntheticAttributeBinding, true, false )
 		);
 		bindHibernateResolvedType( syntheticAttributeBinding.getHibernateTypeDescriptor(), resolvedType );
