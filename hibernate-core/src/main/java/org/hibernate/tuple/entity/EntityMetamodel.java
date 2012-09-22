@@ -52,8 +52,8 @@ import org.hibernate.mapping.Component;
 import org.hibernate.mapping.PersistentClass;
 import org.hibernate.mapping.Property;
 import org.hibernate.mapping.PropertyGeneration;
+import org.hibernate.metamodel.spi.binding.AbstractCompositeAttributeBinding;
 import org.hibernate.metamodel.spi.binding.AttributeBinding;
-import org.hibernate.metamodel.spi.binding.CompositeAttributeBinding;
 import org.hibernate.metamodel.spi.binding.EntityBinding;
 import org.hibernate.metamodel.spi.binding.EntityIdentifier;
 import org.hibernate.metamodel.spi.binding.SingularAttributeBinding;
@@ -376,7 +376,8 @@ public class EntityMetamodel implements Serializable {
 
 		identifierProperty = PropertyFactory.buildIdentifierProperty(
 		        entityBinding,
-		        sessionFactory.getIdentifierGenerator( rootName )
+				rootName,
+				sessionFactory
 		);
 
 		versioned = entityBinding.isVersioned();
@@ -403,7 +404,7 @@ public class EntityMetamodel implements Serializable {
 		}
 		else if ( rootEntityIdentifier.isNonAggregatedComposite() ) {
 			identifierAttributeBindingSpan =
-			( (CompositeAttributeBinding) rootEntityIdentifier.getAttributeBinding() ).attributeBindingSpan();
+			( (AbstractCompositeAttributeBinding) rootEntityIdentifier.getAttributeBinding() ).attributeBindingSpan();
 		}
 		else {
 			identifierAttributeBindingSpan = 1;

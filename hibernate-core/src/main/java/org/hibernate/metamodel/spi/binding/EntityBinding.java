@@ -54,7 +54,7 @@ import org.hibernate.tuple.entity.EntityTuplizer;
  * @author Hardy Ferentschik
  * @author Gail Badner
  */
-public class EntityBinding implements AttributeBindingContainer {
+public class EntityBinding implements MutableAttributeBindingContainer {
 	private static final String NULL_DISCRIMINATOR_MATCH_VALUE = "null";
 	private static final String NOT_NULL_DISCRIMINATOR_MATCH_VALUE = "not null";
 
@@ -508,7 +508,7 @@ public class EntityBinding implements AttributeBindingContainer {
 	}
 
 	@Override
-	public CompositeAttributeBinding makeCompositeAttributeBinding(
+	public CompositeAttributeBinding makeAggregatedCompositeAttributeBinding(
 			SingularAttribute attribute,
 			SingularAttribute parentReferenceAttribute,
 			String propertyAccessorName,
@@ -530,26 +530,22 @@ public class EntityBinding implements AttributeBindingContainer {
 		return binding;
 	}
 
-	public CompositeAttributeBinding makeVirtualCompositeAttributeBinding(
+	public NonAggregatedCompositeAttributeBinding makeVirtualCompositeAttributeBinding(
 			SingularAttribute syntheticAttribute,
 			List<SingularAttributeBinding> subAttributeBindings,
-			MetaAttributeContext metaAttributeContext,
-			Class<?> externalAggregatingClass,
-			String externalAggregatingPropertyAccessorName) {
+			MetaAttributeContext metaAttributeContext) {
 		if ( !syntheticAttribute.isSynthetic() ) {
 			throw new AssertionFailure(
 					"Illegal attempt to create synthetic attribute binding from non-synthetic attribute reference"
 			);
 		}
-		final CompositeAttributeBinding binding = new CompositeAttributeBinding(
+		final NonAggregatedCompositeAttributeBinding binding = new NonAggregatedCompositeAttributeBinding(
 				this,
 				syntheticAttribute,
 				PropertyAccessorFactory.EMBEDDED_ACCESSOR_NAME,
 				SingularAttributeBinding.NaturalIdMutability.NOT_NATURAL_ID,
 				metaAttributeContext,
-				subAttributeBindings,
-				externalAggregatingClass,
-				externalAggregatingPropertyAccessorName
+				subAttributeBindings
 		);
 		registerAttributeBinding( syntheticAttribute.getName(), binding );
 		return binding;

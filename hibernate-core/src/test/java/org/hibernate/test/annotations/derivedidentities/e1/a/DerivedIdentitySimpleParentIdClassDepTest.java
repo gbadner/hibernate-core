@@ -70,7 +70,6 @@ public class DerivedIdentitySimpleParentIdClassDepTest extends BaseCoreFunctiona
 	}
 
 	@Test
-	@FailureExpectedWithNewMetamodel
 	public void testQueryNewEntityInPC() throws Exception {
 		Session s = openSession();
 		s.getTransaction().begin();

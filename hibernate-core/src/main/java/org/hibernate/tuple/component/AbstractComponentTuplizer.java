@@ -31,8 +31,9 @@ import org.hibernate.HibernateException;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.mapping.Component;
 import org.hibernate.mapping.Property;
+import org.hibernate.metamodel.spi.binding.AbstractCompositeAttributeBinding;
 import org.hibernate.metamodel.spi.binding.AttributeBinding;
-import org.hibernate.metamodel.spi.binding.CompositeAttributeBinding;
+import org.hibernate.metamodel.spi.binding.EntityIdentifier;
 import org.hibernate.property.Getter;
 import org.hibernate.property.Setter;
 import org.hibernate.tuple.Instantiator;
@@ -76,7 +77,7 @@ public abstract class AbstractComponentTuplizer implements ComponentTuplizer {
 	}
 
 	protected AbstractComponentTuplizer(
-			CompositeAttributeBinding compositeAttributeBinding,
+			AbstractCompositeAttributeBinding compositeAttributeBinding,
 			boolean isIdentifierMapper
 	) {
 		propertySpan = compositeAttributeBinding.attributeBindingSpan();
@@ -88,21 +89,23 @@ public abstract class AbstractComponentTuplizer implements ComponentTuplizer {
 		if ( isIdentifierMapper ) {
 			final EntityMode entityMode =
 					compositeAttributeBinding.getContainer().seekEntityBinding().getHierarchyDetails().getEntityMode();
+			final EntityIdentifier entityIdentifier =
+					compositeAttributeBinding.seekEntityBinding().getHierarchyDetails().getEntityIdentifier();
 			for ( AttributeBinding attributeBinding : compositeAttributeBinding.attributeBindings() ) {
 				getters[i] = PropertyFactory.getIdentifierMapperGetter(
 						attributeBinding.getAttribute().getName(),
-						compositeAttributeBinding.getExternalAggregatingPropertyAccessorName(),
+						entityIdentifier.getIdClassPropertyAccessorName(),
 						entityMode,
-						compositeAttributeBinding.getExternalAggregatingClass()
+						entityIdentifier.getIdClassClass()
 				);
 				setters[i] = PropertyFactory.getIdentifierMapperSetter(
 						attributeBinding.getAttribute().getName(),
-						compositeAttributeBinding.getExternalAggregatingPropertyAccessorName(),
+						entityIdentifier.getIdClassPropertyAccessorName(),
 						entityMode,
-						compositeAttributeBinding.getExternalAggregatingClass()
+						entityIdentifier.getIdClassClass()
 				);
 				foundCustomAccessor = foundCustomAccessor ||
-						!"property".equals( compositeAttributeBinding.getExternalAggregatingPropertyAccessorName() );
+						!"property".equals( entityIdentifier.getIdClassPropertyAccessorName() );
 				i++;
 			}
 		}

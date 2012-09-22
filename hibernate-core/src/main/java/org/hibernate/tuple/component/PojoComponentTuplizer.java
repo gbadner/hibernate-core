@@ -36,7 +36,9 @@ import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.internal.util.ReflectHelper;
 import org.hibernate.mapping.Component;
 import org.hibernate.mapping.Property;
+import org.hibernate.metamodel.spi.binding.AbstractCompositeAttributeBinding;
 import org.hibernate.metamodel.spi.binding.CompositeAttributeBinding;
+import org.hibernate.metamodel.spi.binding.EntityIdentifier;
 import org.hibernate.property.BackrefPropertyAccessor;
 import org.hibernate.property.Getter;
 import org.hibernate.property.PropertyAccessor;
@@ -97,13 +99,16 @@ public class PojoComponentTuplizer extends AbstractComponentTuplizer {
 	}
 
 	public PojoComponentTuplizer(
-			CompositeAttributeBinding component,
+			AbstractCompositeAttributeBinding component,
 			boolean isIdentifierMapper) {
 		super( component, isIdentifierMapper );
 
+		final EntityIdentifier entityIdentifier =
+				component.seekEntityBinding().getHierarchyDetails().getEntityIdentifier();
+
 		this.componentClass =
 				isIdentifierMapper ?
-						component.getExternalAggregatingClass() :
+						entityIdentifier.getIdClassClass() :
 						component.getClassReference();
 
 		String[] getterNames = new String[propertySpan];
@@ -116,7 +121,10 @@ public class PojoComponentTuplizer extends AbstractComponentTuplizer {
 		}
 
 		final String parentPropertyName =
-				component.getParentReference() == null ? null : component.getParentReference().getName();
+				component.isAggregated() &&
+						( (CompositeAttributeBinding) component ).getParentReference() != null ?
+						( (CompositeAttributeBinding) component ).getParentReference().getName() :
+						null;
 		if ( parentPropertyName == null ) {
 			parentSetter = null;
 			parentGetter = null;

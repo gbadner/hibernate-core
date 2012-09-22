@@ -32,6 +32,7 @@ import org.hibernate.engine.internal.UnsavedValueFactory;
 import org.hibernate.engine.spi.CascadeStyle;
 import org.hibernate.engine.spi.CascadeStyles;
 import org.hibernate.engine.spi.IdentifierValue;
+import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.engine.spi.VersionValue;
 import org.hibernate.id.IdentifierGenerator;
 import org.hibernate.internal.util.ReflectHelper;
@@ -44,6 +45,7 @@ import org.hibernate.metamodel.spi.binding.AttributeBinding;
 import org.hibernate.metamodel.spi.binding.BackRefAttributeBinding;
 import org.hibernate.metamodel.spi.binding.BasicAttributeBinding;
 import org.hibernate.metamodel.spi.binding.EntityBinding;
+import org.hibernate.metamodel.spi.binding.NonAggregatedCompositeAttributeBinding;
 import org.hibernate.metamodel.spi.binding.PluralAttributeAssociationElementBinding;
 import org.hibernate.metamodel.spi.binding.SingularAssociationAttributeBinding;
 import org.hibernate.metamodel.spi.binding.SingularAttributeBinding;
@@ -51,6 +53,7 @@ import org.hibernate.property.Getter;
 import org.hibernate.property.PropertyAccessor;
 import org.hibernate.property.PropertyAccessorFactory;
 import org.hibernate.property.Setter;
+import org.hibernate.tuple.component.ComponentMetamodel;
 import org.hibernate.type.AssociationType;
 import org.hibernate.type.Type;
 import org.hibernate.type.VersionType;
@@ -109,30 +112,42 @@ public class PropertyFactory {
 	 * Generates an IdentifierProperty representation of the for a given entity mapping.
 	 *
 	 * @param mappedEntity The mapping definition of the entity.
-	 * @param generator The identifier value generator to use for this identifier.
+	 * @param rootEntityName The entity name for the EntityBinding at the root of this hierarchy.
+	 * @param sessionFactory The session factory.
 	 * @return The appropriate IdentifierProperty definition.
 	 */
-	public static IdentifierProperty buildIdentifierProperty(EntityBinding mappedEntity, IdentifierGenerator generator) {
+	public static IdentifierProperty buildIdentifierProperty(
+			EntityBinding mappedEntity,
+			String rootEntityName,
+			SessionFactoryImplementor sessionFactory) {
 
-		final SingularAttributeBinding property = mappedEntity.getHierarchyDetails().getEntityIdentifier().getAttributeBinding();
+		final IdentifierGenerator generator = sessionFactory.getIdentifierGenerator( rootEntityName );
+
+		final SingularAttributeBinding attributeBinding = mappedEntity.getHierarchyDetails().getEntityIdentifier().getAttributeBinding();
 
 		// TODO: the following will cause an NPE with "virtual" IDs; how should they be set?
 		// (steve) virtual attributes will still be attributes, they will simply be marked as virtual.
 		//		see org.hibernate.metamodel.domain.AbstractAttributeContainer.locateOrCreateVirtualAttribute()
 
 		final String mappedUnsavedValue = mappedEntity.getHierarchyDetails().getEntityIdentifier().getUnsavedValue();
-		final Type type = mappedEntity.getHierarchyDetails().getEntityIdentifier().isIdentifierMapper() ?
-				mappedEntity.getHierarchyDetails().getEntityIdentifier().getIdClassComponentType() :
-				property.getHibernateTypeDescriptor().getResolvedTypeMapping();
+		final Type type;
+		if ( mappedEntity.getHierarchyDetails().getEntityIdentifier().isIdentifierMapper() ) {
+			type = sessionFactory.getTypeResolver().getTypeFactory().component(
+					new ComponentMetamodel( (NonAggregatedCompositeAttributeBinding) attributeBinding, true, true )
+			);
+		}
+		else {
+			type = attributeBinding.getHibernateTypeDescriptor().getResolvedTypeMapping();
+		}
 
 		IdentifierValue unsavedValue = UnsavedValueFactory.getUnsavedIdentifierValue(
 				mappedUnsavedValue,
-				getGetterOrNull( property ),
+				getGetterOrNull( attributeBinding ),
 				type,
 				getConstructor( mappedEntity )
 			);
 
-		if ( property.getAttribute().isSynthetic()  ) {
+		if ( attributeBinding.getAttribute().isSynthetic()  ) {
 			// this is a virtual id property...
 			return new IdentifierProperty(
 			        type,
@@ -145,7 +160,7 @@ public class PropertyFactory {
 		}
 		else {
 			return new IdentifierProperty(
-					property.getAttribute().getName(),
+					attributeBinding.getAttribute().getName(),
 					null,
 					type,
 					mappedEntity.getHierarchyDetails().getEntityIdentifier().isNonAggregatedComposite(),

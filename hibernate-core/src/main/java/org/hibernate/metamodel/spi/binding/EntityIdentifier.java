@@ -90,16 +90,18 @@ public class EntityIdentifier {
 	}
 
 	public void prepareAsNonAggregatedCompositeIdentifier(
-			CompositeAttributeBinding compositeAttributeBinding,
+			NonAggregatedCompositeAttributeBinding compositeAttributeBinding,
 			IdGenerator idGenerator,
 			String unsavedValue,
-			ComponentType idClassComponentType) {
+			Class<?> externalAggregatingClass,
+			String externalAggregatingPropertyAccessorName) {
 		ensureNotBound();
 		this.entityIdentifierBinding = new NonAggregatedCompositeIdentifierBindingImpl(
 				compositeAttributeBinding,
 				idGenerator,
 				unsavedValue,
-				idClassComponentType
+				externalAggregatingClass,
+				externalAggregatingPropertyAccessorName
 		);
 	}
 
@@ -153,19 +155,6 @@ public class EntityIdentifier {
 			);
 		}
 		return ( (NonAggregatedCompositeIdentifierBindingImpl) entityIdentifierBinding ).getIdClassPropertyAccessorName();
-	}
-
-	public ComponentType getIdClassComponentType() {
-		ensureBound();
-		if ( ! isNonAggregatedComposite() ) {
-			throw new UnsupportedOperationException(
-					String.format(
-							"Entity identifiers of nature %s does not support idClasses.",
-							entityIdentifierBinding.getNature()
-					)
-			);
-		}
-		return ( (NonAggregatedCompositeIdentifierBindingImpl) entityIdentifierBinding ).getIdClassComponentType();
 	}
 
 	public boolean isIdentifierMapper() {
@@ -364,15 +353,18 @@ public class EntityIdentifier {
 	}
 
 	private class NonAggregatedCompositeIdentifierBindingImpl extends EntityIdentifierBinding {
-		private final ComponentType idClassComponentType;
+		private final Class<?> externalAggregatingClass;
+		private final String externalAggregatingPropertyAccessorName;
 
 		NonAggregatedCompositeIdentifierBindingImpl(
-				CompositeAttributeBinding identifierAttributeBinding,
+				NonAggregatedCompositeAttributeBinding identifierAttributeBinding,
 				IdGenerator idGenerator,
 				String unsavedValue,
-				ComponentType idClassComponentType) {
+				Class<?> externalAggregatingClass,
+				String externalAggregatingPropertyAccessorName) {
 			super( NON_AGGREGATED_COMPOSITE, identifierAttributeBinding, idGenerator, unsavedValue );
-			this.idClassComponentType = idClassComponentType;
+			this.externalAggregatingClass = externalAggregatingClass;
+			this.externalAggregatingPropertyAccessorName = externalAggregatingPropertyAccessorName;
 			if ( identifierAttributeBinding.attributeBindingSpan() == 0 ) {
 				throw new MappingException(
 						"A composite ID has 0 attributes for " + entityBinding.getEntity().getName()
@@ -400,11 +392,11 @@ public class EntityIdentifier {
 			}
 		}
 
-		private CompositeAttributeBinding getCompositeAttributeBinding() {
-			return (CompositeAttributeBinding) getAttributeBinding();
+		private NonAggregatedCompositeAttributeBinding getNonAggregatedCompositeAttributeBinding() {
+			return (NonAggregatedCompositeAttributeBinding) getAttributeBinding();
 		}
 		public boolean isIdentifierAttributeBinding(AttributeBinding attributeBinding) {
-			for ( AttributeBinding idAttributeBindings : getCompositeAttributeBinding().attributeBindings() ) {
+			for ( AttributeBinding idAttributeBindings : getNonAggregatedCompositeAttributeBinding().attributeBindings() ) {
 				if ( idAttributeBindings.equals( attributeBinding ) ) {
 					return true;
 				}
@@ -413,15 +405,11 @@ public class EntityIdentifier {
 		}
 
 		public Class getIdClassClass() {
-			return getCompositeAttributeBinding().getExternalAggregatingClass();
-		}
-
-		public ComponentType getIdClassComponentType() {
-			return idClassComponentType;
+			return externalAggregatingClass;
 		}
 
 		public String getIdClassPropertyAccessorName() {
-			return getCompositeAttributeBinding().getExternalAggregatingPropertyAccessorName();
+			return externalAggregatingPropertyAccessorName;
 		}
 
 		public IdentifierGenerator createIdentifierGenerator(
