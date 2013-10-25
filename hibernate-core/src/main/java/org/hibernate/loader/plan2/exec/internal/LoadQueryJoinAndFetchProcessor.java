@@ -36,6 +36,7 @@ import org.hibernate.loader.plan2.exec.process.internal.EntityReferenceInitializ
 import org.hibernate.loader.plan2.exec.process.spi.ReaderCollector;
 import org.hibernate.loader.plan2.exec.query.internal.SelectStatementBuilder;
 import org.hibernate.loader.plan2.exec.query.spi.QueryBuildingParameters;
+import org.hibernate.loader.plan2.exec.spi.AliasResolutionContext;
 import org.hibernate.loader.plan2.exec.spi.CollectionReferenceAliases;
 import org.hibernate.loader.plan2.exec.spi.EntityReferenceAliases;
 import org.hibernate.loader.plan2.spi.CollectionFetch;
@@ -50,13 +51,16 @@ import org.hibernate.loader.plan2.spi.Join;
 import org.hibernate.loader.plan2.spi.JoinDefinedByMetadata;
 import org.hibernate.loader.plan2.spi.QuerySpace;
 import org.hibernate.persister.collection.CollectionPersister;
+import org.hibernate.persister.collection.CollectionPropertyNames;
 import org.hibernate.persister.collection.QueryableCollection;
+import org.hibernate.persister.entity.EntityPersister;
 import org.hibernate.persister.entity.Joinable;
 import org.hibernate.persister.entity.OuterJoinLoadable;
 import org.hibernate.persister.walking.internal.FetchStrategyHelper;
 import org.hibernate.sql.JoinFragment;
 import org.hibernate.sql.JoinType;
 import org.hibernate.type.AssociationType;
+import org.hibernate.type.Type;
 
 /**
  * Helper for implementors of entity and collection based query building based on LoadPlans providing common
@@ -64,7 +68,7 @@ import org.hibernate.type.AssociationType;
  * <p/>
  * Exposes 2 main methods:<ol>
  *     <li>{@link #processQuerySpaceJoins(QuerySpace, SelectStatementBuilder)}</li>
- *     <li>{@link #processFetches(FetchSource, SelectStatementBuilder, ReaderCollector)}li>
+ *     <li>{@link #processFetches(FetchSource, SelectStatementBuilder, org.hibernate.loader.plan2.exec.process.spi.ReaderCollector)}li>
  * </ol>
  *
  * @author Steve Ebersole
@@ -90,6 +94,18 @@ public class LoadQueryJoinAndFetchProcessor {
 		this.aliasResolutionContext = aliasResolutionContext;
 		this.buildingParameters = buildingParameters;
 		this.factory = factory;
+	}
+
+	public AliasResolutionContext getAliasResolutionContext() {
+		return aliasResolutionContext;
+	}
+
+	public QueryBuildingParameters getQueryBuildingParameters() {
+		return buildingParameters;
+	}
+
+	public SessionFactoryImplementor getSessionFactory() {
+		return factory;
 	}
 
 	public void processQuerySpaceJoins(QuerySpace querySpace, SelectStatementBuilder selectStatementBuilder) {
@@ -130,19 +146,26 @@ public class LoadQueryJoinAndFetchProcessor {
 		else if ( EntityQuerySpace.class.isInstance( join.getRightHandSide() ) ) {
 			// do not render the entity join for a one-to-many association, since the collection join
 			// already joins to the associated entity table (see doc in renderCollectionJoin()).
-			if ( join.getLeftHandSide().getDisposition() == QuerySpace.Disposition.COLLECTION &&
-					 CollectionQuerySpace.class.cast( join.getLeftHandSide() ).getCollectionPersister().isManyToMany() ) {
-				final CollectionQuerySpace leftHandSide = (CollectionQuerySpace) join.getLeftHandSide();
-				final CollectionReferenceAliases aliases = aliasResolutionContext.resolveCollectionReferenceAliases(
-						leftHandSide.getUid()
-				);
-
-				renderManyToManyJoin(aliases, leftHandSide,  join, joinFragment );
+			if ( join.getLeftHandSide().getDisposition() == QuerySpace.Disposition.COLLECTION ) {
+				if ( CollectionQuerySpace.class.cast( join.getLeftHandSide() ).getCollectionPersister().isManyToMany() ) {
+					renderManyToManyJoin( join, joinFragment );
+				}
+				else if ( JoinDefinedByMetadata.class.isInstance( join ) &&
+						CollectionPropertyNames.COLLECTION_INDICES.equals( JoinDefinedByMetadata.class.cast( join ).getJoinedPropertyName() ) ) {
+					renderManyToManyJoin( join, joinFragment );
+				}
 			}
-			else if ( join.getLeftHandSide().getDisposition() != QuerySpace.Disposition.COLLECTION ||
-					! CollectionQuerySpace.class.cast( join.getLeftHandSide() ).getCollectionPersister().isOneToMany() ) {
+			else {
 				renderEntityJoin( join, joinFragment );
 			}
+			//if ( join.getLeftHandSide().getDisposition() == QuerySpace.Disposition.COLLECTION &&
+			//		 CollectionQuerySpace.class.cast( join.getLeftHandSide() ).getCollectionPersister().isManyToMany() ) {
+			//	renderManyToManyJoin( join, joinFragment );
+			//}
+			//else if ( join.getLeftHandSide().getDisposition() != QuerySpace.Disposition.COLLECTION ||
+			//		! CollectionQuerySpace.class.cast( join.getLeftHandSide() ).getCollectionPersister().isOneToMany() ) {
+			//	renderEntityJoin( join, joinFragment );
+			//}
 		}
 		else if ( CollectionQuerySpace.class.isInstance( join.getRightHandSide() ) ) {
 			renderCollectionJoin( join, joinFragment );
@@ -165,7 +188,9 @@ public class LoadQueryJoinAndFetchProcessor {
 
 	private void renderEntityJoin(Join join, JoinFragment joinFragment) {
 		final String leftHandSideUid = join.getLeftHandSide().getUid();
-		final String leftHandSideTableAlias = aliasResolutionContext.resolveSqlTableAliasFromQuerySpaceUid( leftHandSideUid );
+		final String leftHandSideTableAlias = aliasResolutionContext.resolveSqlTableAliasFromQuerySpaceUid(
+				leftHandSideUid
+		);
 		if ( leftHandSideTableAlias == null ) {
 			throw new IllegalStateException( "QuerySpace with that UID was not yet registered in the AliasResolutionContext" );
 		}
@@ -183,14 +208,12 @@ public class LoadQueryJoinAndFetchProcessor {
 			);
 		}
 
-		final String[] rhsColumnNames = join.resolveNonAliasedRightHandSideJoinConditionColumns();
 		final String rhsTableAlias = aliases.getTableAlias();
-		final AssociationType associationType = join instanceof JoinDefinedByMetadata ? ((JoinDefinedByMetadata)join).getJoinedAssociationPropertyType() : null;
 		final String additionalJoinConditions = resolveAdditionalJoinCondition(
 				rhsTableAlias,
 				join.getAnyAdditionalJoinConditions( rhsTableAlias ),
 				(Joinable) rightHandSide.getEntityPersister(),
-				associationType
+				getJoinedAssociationTypeOrNull( join )
 		);
 
 		final Joinable joinable = (Joinable) rightHandSide.getEntityPersister();
@@ -199,10 +222,21 @@ public class LoadQueryJoinAndFetchProcessor {
 				joinable,
 				join.isRightHandSideRequired() ? JoinType.INNER_JOIN : JoinType.LEFT_OUTER_JOIN,
 				aliases.getTableAlias(),
-				rhsColumnNames,
+				join.resolveNonAliasedRightHandSideJoinConditionColumns(),
 				aliasedLhsColumnNames,
 				additionalJoinConditions
 		);
+	}
+
+	private AssociationType getJoinedAssociationTypeOrNull(Join join) {
+
+		if ( !JoinDefinedByMetadata.class.isInstance( join ) ) {
+			return null;
+		}
+		final Type joinedType = ( (JoinDefinedByMetadata) join ).getJoinedPropertyType();
+		return joinedType.isAssociationType()
+				? (AssociationType) joinedType
+				: null;
 	}
 
 	private String resolveAdditionalJoinCondition(String rhsTableAlias, String withClause, Joinable joinable, AssociationType associationType) {
@@ -387,12 +421,13 @@ public class LoadQueryJoinAndFetchProcessor {
 	}
 
 	private void renderManyToManyJoin(
-			CollectionReferenceAliases aliases,
-			CollectionQuerySpace rightHandSide,
-//			String[] aliasedLhsColumnNames,
 			Join join,
 			JoinFragment joinFragment) {
-		final CollectionPersister persister = rightHandSide.getCollectionPersister();
+		final CollectionQuerySpace leftHandSide = (CollectionQuerySpace) join.getLeftHandSide();
+		final CollectionReferenceAliases aliases = aliasResolutionContext.resolveCollectionReferenceAliases(
+				leftHandSide.getUid()
+		);
+		final CollectionPersister persister = leftHandSide.getCollectionPersister();
 		final QueryableCollection queryableCollection = (QueryableCollection) persister;
 
 		// for many-to-many we have 3 table aliases.  By way of example, consider a normal m-n: User<->Role
@@ -404,13 +439,16 @@ public class LoadQueryJoinAndFetchProcessor {
 		//		2) the m-n table : user_role
 		final String collectionTableAlias = aliases.getCollectionTableAlias();
 		//		3) the element table : role
-		final String elementTableAlias = aliases.getElementTableAlias();
+		final EntityPersister entityPersister = ( (EntityQuerySpace) join.getRightHandSide() ).getEntityPersister();
+		final String entityTableAlias = aliasResolutionContext.resolveSqlTableAliasFromQuerySpaceUid(
+			join.getRightHandSide().getUid()
+		);
 
 		// somewhere, one of these being empty is causing trouble...
 		if ( StringHelper.isEmpty( collectionTableAlias ) ) {
 			throw new IllegalStateException( "Collection table alias cannot be empty" );
 		}
-		if ( StringHelper.isEmpty( elementTableAlias ) ) {
+		if ( StringHelper.isEmpty( entityTableAlias ) ) {
 			throw new IllegalStateException( "Collection element (many-to-many) table alias cannot be empty" );
 		}
 
@@ -437,41 +475,47 @@ public class LoadQueryJoinAndFetchProcessor {
 //		}
 
 		{
-			final AssociationType associationType = join instanceof JoinDefinedByMetadata ? ((JoinDefinedByMetadata)join).getJoinedAssociationPropertyType() : null;
 			// add join fragments from the collection table -> element entity table ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 			final String additionalJoinConditions = resolveAdditionalJoinCondition(
-					elementTableAlias,
-					join.getAnyAdditionalJoinConditions( elementTableAlias ),
+					entityTableAlias,
+					join.getAnyAdditionalJoinConditions( entityTableAlias ),
 					queryableCollection,
-					associationType
+					getJoinedAssociationTypeOrNull( join )
 			);
 
-			final String manyToManyFilter = persister.getManyToManyFilterFragment(
-					elementTableAlias,
-					buildingParameters.getQueryInfluencers().getEnabledFilters()
-			);
+			//final String manyToManyFilter;
+			if ( JoinDefinedByMetadata.class.isInstance( join ) &&
+					CollectionPropertyNames.COLLECTION_ELEMENTS.equals( ( (JoinDefinedByMetadata) join ).getJoinedPropertyName() ) ) {
+				final String manyToManyFilter = persister.getManyToManyFilterFragment(
+						entityTableAlias,
+						buildingParameters.getQueryInfluencers().getEnabledFilters()
+				);
+				joinFragment.addCondition( manyToManyFilter );
 
-			final String condition;
-			if ( StringHelper.isEmpty( manyToManyFilter ) ) {
-				condition = additionalJoinConditions;
 			}
-			else if ( StringHelper.isEmpty( additionalJoinConditions ) ) {
-				condition = manyToManyFilter;
-			}
-			else {
-				condition = additionalJoinConditions + " and " + manyToManyFilter;
-			}
+			//else {
+			//	manyToManyFilter = null;
+			//}
 
-			final OuterJoinLoadable elementPersister = (OuterJoinLoadable) queryableCollection.getElementPersister();
+			//final String condition;
+			//if ( StringHelper.isEmpty( manyToManyFilter ) ) {
+			//	condition = additionalJoinConditions;
+			//}
+			//else if ( StringHelper.isEmpty( additionalJoinConditions ) ) {
+			//	condition = manyToManyFilter;
+			//}
+			//else {
+			//	condition = additionalJoinConditions + " and " + manyToManyFilter;
+			//}
 
 			addJoins(
 					joinFragment,
-					elementPersister,
-					JoinType.LEFT_OUTER_JOIN,
-					elementTableAlias,
-					elementPersister.getIdentifierColumnNames(),
-					StringHelper.qualify( collectionTableAlias, queryableCollection.getElementColumnNames() ),
-					condition
+					(Joinable) entityPersister,
+					join.isRightHandSideRequired() ? JoinType.INNER_JOIN : JoinType.LEFT_OUTER_JOIN,
+					entityTableAlias,
+					join.resolveNonAliasedRightHandSideJoinConditionColumns(),
+					join.resolveAliasedLeftHandSideJoinConditionColumns( collectionTableAlias ),
+					additionalJoinConditions
 			);
 		}
 	}
