@@ -129,7 +129,7 @@ public class FetchStyleLoadPlanBuildingAssociationVisitationStrategy
 
 	@Override
 	protected boolean isTooManyCollections() {
-		return false;
+		return CollectionReturn.class.isInstance( rootReturn );
 	}
 
 //	@Override
