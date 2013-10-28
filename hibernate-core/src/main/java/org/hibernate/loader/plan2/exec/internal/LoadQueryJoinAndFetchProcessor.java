@@ -158,14 +158,6 @@ public class LoadQueryJoinAndFetchProcessor {
 			else {
 				renderEntityJoin( join, joinFragment );
 			}
-			//if ( join.getLeftHandSide().getDisposition() == QuerySpace.Disposition.COLLECTION &&
-			//		 CollectionQuerySpace.class.cast( join.getLeftHandSide() ).getCollectionPersister().isManyToMany() ) {
-			//	renderManyToManyJoin( join, joinFragment );
-			//}
-			//else if ( join.getLeftHandSide().getDisposition() != QuerySpace.Disposition.COLLECTION ||
-			//		! CollectionQuerySpace.class.cast( join.getLeftHandSide() ).getCollectionPersister().isOneToMany() ) {
-			//	renderEntityJoin( join, joinFragment );
-			//}
 		}
 		else if ( CollectionQuerySpace.class.isInstance( join.getRightHandSide() ) ) {
 			renderCollectionJoin( join, joinFragment );
@@ -287,7 +279,6 @@ public class LoadQueryJoinAndFetchProcessor {
 		if ( leftHandSideTableAlias == null ) {
 			throw new IllegalStateException( "QuerySpace with that UID was not yet registered in the AliasResolutionContext" );
 		}
-		final String[] aliasedLhsColumnNames = join.resolveAliasedLeftHandSideJoinConditionColumns( leftHandSideTableAlias );
 
 		final CollectionQuerySpace rightHandSide = (CollectionQuerySpace) join.getRightHandSide();
 		final CollectionReferenceAliases aliases = aliasResolutionContext.generateCollectionReferenceAliases(
@@ -344,48 +335,11 @@ public class LoadQueryJoinAndFetchProcessor {
 			);
 		}
 
-		renderSqlJoinToCollectionTable(
-				aliases,
-				rightHandSide,
-				aliasedLhsColumnNames,
+		addJoins(
 				join,
-				joinFragment
-		);
-	}
-
-	private void renderSqlJoinToCollectionTable(
-			CollectionReferenceAliases aliases,
-			CollectionQuerySpace rightHandSide,
-			String[] aliasedLhsColumnNames,
-			Join join,
-			JoinFragment joinFragment) {
-		final String rhsAlias = aliases.getCollectionTableAlias();
-		final Joinable joinable = (Joinable) rightHandSide.getCollectionPersister();
-
-		// add join fragments from the owner table -> collection table ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		//final String filterFragment = joinable.filterFragment(
-		//		rhsAlias,
-		//		buildingParameters.getQueryInfluencers().getEnabledFilters()
-		//);
-
-		final String filterFragment = resolveAdditionalJoinCondition(
-				rhsAlias,
-				join.getAnyAdditionalJoinConditions( rhsAlias ),
+				joinFragment,
 				(Joinable) rightHandSide.getCollectionPersister(),
-				getJoinedAssociationTypeOrNull( join )
-		);
-
-		joinFragment.addJoin(
-				joinable.getTableName(),
-				rhsAlias,
-				aliasedLhsColumnNames,
-				joinable.getKeyColumnNames(),
-				JoinType.LEFT_OUTER_JOIN,
-				filterFragment
-		);
-		joinFragment.addJoins(
-				joinable.fromJoinFragment( rhsAlias, false, true ),
-				joinable.whereJoinFragment( rhsAlias, false, true )
+				aliases.getCollectionTableAlias()
 		);
 	}
 
