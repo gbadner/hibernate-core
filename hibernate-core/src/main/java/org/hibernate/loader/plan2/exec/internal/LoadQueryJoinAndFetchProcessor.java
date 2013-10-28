@@ -184,7 +184,7 @@ public class LoadQueryJoinAndFetchProcessor {
 		// see if there is already aliases registered for this entity query space (collection joins)
 		EntityReferenceAliases aliases = aliasResolutionContext.resolveEntityReferenceAliases( rightHandSide.getUid() );
 		if ( aliases == null ) {
-				aliases = aliasResolutionContext.generateEntityReferenceAliases(
+			aliases = aliasResolutionContext.generateEntityReferenceAliases(
 					rightHandSide.getUid(),
 					rightHandSide.getEntityPersister()
 			);
@@ -496,9 +496,10 @@ public class LoadQueryJoinAndFetchProcessor {
 
 		// First write out the SQL SELECT fragments
 		final Joinable joinable = (Joinable) fetch.getEntityPersister();
-		final EntityReferenceAliases aliases = aliasResolutionContext.resolveEntityReferenceAliases(
+		EntityReferenceAliases aliases = aliasResolutionContext.resolveEntityReferenceAliases(
 				fetch.getQuerySpaceUid()
 		);
+
 		// the null arguments here relate to many-to-many fetches
 		selectStatementBuilder.appendSelectClauseFragment(
 				joinable.selectFragment(
@@ -543,7 +544,9 @@ public class LoadQueryJoinAndFetchProcessor {
 			FetchStatsImpl fetchStats) {
 		fetchStats.processingFetch( fetch );
 
-		final CollectionReferenceAliases aliases = aliasResolutionContext.resolveCollectionReferenceAliases( fetch.getQuerySpaceUid() );
+		final CollectionReferenceAliases aliases = aliasResolutionContext.resolveCollectionReferenceAliases(
+				fetch.getQuerySpaceUid()
+		);
 
 		final QueryableCollection queryableCollection = (QueryableCollection) fetch.getCollectionPersister();
 		final Joinable joinableCollection = (Joinable) fetch.getCollectionPersister();

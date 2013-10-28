@@ -164,9 +164,9 @@ public abstract class AbstractLoadQueryDetails implements LoadQueryDetails {
 		applyRootReturnOrderByFragments( select );
 		// then move on to joins...
 
-		queryProcessor.processQuerySpaceJoins( getRootQuerySpace(), select );
-
 		applyRootReturnSelectFragments( select );
+
+		queryProcessor.processQuerySpaceJoins( getRootQuerySpace(), select );
 
 		// Next, we process the Returns and Fetches building the SELECT clause and at the same time building
 		// Readers for reading the described results out of a SQL ResultSet
