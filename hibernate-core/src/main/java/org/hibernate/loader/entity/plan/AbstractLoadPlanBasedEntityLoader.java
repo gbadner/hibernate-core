@@ -25,32 +25,18 @@
 package org.hibernate.loader.entity.plan;
 
 import java.io.Serializable;
-import java.sql.CallableStatement;
-import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 
 import org.hibernate.AssertionFailure;
 import org.hibernate.HibernateException;
 import org.hibernate.LockOptions;
-import org.hibernate.ScrollMode;
-import org.hibernate.dialect.Dialect;
-import org.hibernate.dialect.pagination.LimitHandler;
-import org.hibernate.dialect.pagination.LimitHelper;
-import org.hibernate.dialect.pagination.NoopLimitHandler;
-import org.hibernate.engine.jdbc.ColumnNameCache;
-import org.hibernate.engine.spi.PersistenceContext;
 import org.hibernate.engine.spi.QueryParameters;
-import org.hibernate.engine.spi.RowSelection;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.engine.spi.SessionImplementor;
-import org.hibernate.engine.spi.TypedValue;
 import org.hibernate.internal.CoreLogging;
 import org.hibernate.internal.CoreMessageLogger;
 import org.hibernate.loader.entity.UniqueEntityLoader;
@@ -109,6 +95,7 @@ public abstract class AbstractLoadPlanBasedEntityLoader extends AbstractLoadPlan
 		);
 	}
 
+	@Override
 	protected EntityLoadQueryDetails getStaticLoadQuery() {
 		return staticLoadQuery;
 	}
@@ -175,8 +162,8 @@ public abstract class AbstractLoadPlanBasedEntityLoader extends AbstractLoadPlan
 
 	@Override
 	public Object load(Serializable id, Object optionalObject, SessionImplementor session, LockOptions lockOptions) {
-		Object result = null;
 
+		final Object result;
 		try {
 			final QueryParameters qp = new QueryParameters();
 			qp.setPositionalParameterTypes( new Type[] { entityPersister.getIdentifierType() } );

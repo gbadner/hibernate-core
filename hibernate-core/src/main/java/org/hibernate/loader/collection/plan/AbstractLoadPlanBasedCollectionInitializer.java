@@ -28,12 +28,9 @@ import java.io.Serializable;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
-import javax.persistence.Basic;
-
 import org.hibernate.AssertionFailure;
 import org.hibernate.HibernateException;
 import org.hibernate.engine.spi.QueryParameters;
-import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.engine.spi.SessionImplementor;
 import org.hibernate.internal.CoreLogging;
 import org.hibernate.internal.CoreMessageLogger;
@@ -51,7 +48,8 @@ import org.hibernate.pretty.MessageHelper;
 import org.hibernate.type.Type;
 
 /**
- *  A CollectionInitializer implementation based on using LoadPlans
+ * A CollectionInitializer implementation based on using LoadPlans
+ *
  * @author Gail Badner
  */
 public abstract class AbstractLoadPlanBasedCollectionInitializer
@@ -68,12 +66,13 @@ public abstract class AbstractLoadPlanBasedCollectionInitializer
 		super( collectionPersister.getFactory() );
 		this.collectionPersister = collectionPersister;
 
-		final FetchStyleLoadPlanBuildingAssociationVisitationStrategy strategy = new FetchStyleLoadPlanBuildingAssociationVisitationStrategy(
-				collectionPersister.getFactory(),
-				buildingParameters.getQueryInfluencers(),
-				buildingParameters.getLockMode() != null
-						? buildingParameters.getLockMode()
-						: buildingParameters.getLockOptions().getLockMode()
+		final FetchStyleLoadPlanBuildingAssociationVisitationStrategy strategy =
+				new FetchStyleLoadPlanBuildingAssociationVisitationStrategy(
+						collectionPersister.getFactory(),
+						buildingParameters.getQueryInfluencers(),
+						buildingParameters.getLockMode() != null
+								? buildingParameters.getLockMode()
+								: buildingParameters.getLockOptions().getLockMode()
 		);
 
 		this.plan = MetamodelDrivenLoadPlanBuilder.buildRootCollectionLoadPlan( strategy, collectionPersister );
@@ -90,6 +89,7 @@ public abstract class AbstractLoadPlanBasedCollectionInitializer
 				);
 	}
 
+	@Override
 	public void initialize(Serializable id, SessionImplementor session)
 			throws HibernateException {
 		if ( log.isDebugEnabled() ) {
@@ -130,14 +130,17 @@ public abstract class AbstractLoadPlanBasedCollectionInitializer
 		return collectionPersister;
 	}
 
+	@Override
 	protected CollectionLoadQueryDetails getStaticLoadQuery() {
 		return staticLoadQuery;
 	}
 
+	@Override
 	protected int[] getNamedParameterLocs(String name) {
 		throw new AssertionFailure("no named parameters");
 	}
 
+	@Override
 	protected void autoDiscoverTypes(ResultSet rs) {
 		throw new AssertionFailure("Auto discover types not supported in this loader");
 	}

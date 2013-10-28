@@ -30,6 +30,9 @@ import org.hibernate.loader.collection.CollectionInitializer;
 import org.hibernate.persister.collection.QueryableCollection;
 
 /**
+ * Base class for LoadPlan-based BatchingCollectionInitializerBuilder implementations.  Mainly we handle the common
+ * "no batching" case here to use the LoadPlan-based CollectionLoader
+ *
  * @author Gail Badner
  */
 public abstract class AbstractBatchingCollectionInitializerBuilder extends BatchingCollectionInitializerBuilder {

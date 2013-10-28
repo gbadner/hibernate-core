@@ -48,8 +48,4 @@ public abstract class BatchingCollectionInitializer implements CollectionInitial
 	public CollectionPersister getCollectionPersister() {
 		return collectionPersister;
 	}
-
-	public QueryableCollection toQueryableCollection() {
-		return collectionPersister;
-	}
 }

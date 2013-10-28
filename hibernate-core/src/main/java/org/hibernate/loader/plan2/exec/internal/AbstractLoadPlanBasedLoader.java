@@ -57,6 +57,8 @@ import org.hibernate.transform.ResultTransformer;
 import org.hibernate.type.Type;
 
 /**
+ * todo How much of AbstractLoadPlanBasedEntityLoader is actually needed?
+
  * @author Gail Badner
  */
 public abstract class AbstractLoadPlanBasedLoader {

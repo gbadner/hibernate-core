@@ -26,14 +26,10 @@ package org.hibernate.loader.plan2.exec.spi;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
-import org.hibernate.LockOptions;
-import org.hibernate.Session;
-import org.hibernate.engine.FetchStyle;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.internal.util.StringHelper;
 import org.hibernate.loader.plan2.exec.internal.AliasResolutionContextImpl;
 import org.hibernate.loader.plan2.exec.internal.EntityReferenceAliasesImpl;
-import org.hibernate.loader.plan2.exec.internal.Helper;
 import org.hibernate.loader.plan2.exec.process.internal.CollectionReferenceInitializerImpl;
 import org.hibernate.loader.plan2.exec.process.internal.CollectionReturnReader;
 import org.hibernate.loader.plan2.exec.process.internal.EntityReferenceInitializerImpl;
@@ -47,16 +43,9 @@ import org.hibernate.loader.plan2.exec.query.spi.QueryBuildingParameters;
 import org.hibernate.loader.plan2.spi.CollectionQuerySpace;
 import org.hibernate.loader.plan2.spi.CollectionReturn;
 import org.hibernate.loader.plan2.spi.EntityReference;
-import org.hibernate.loader.plan2.spi.JoinDefinedByMetadata;
 import org.hibernate.loader.plan2.spi.LoadPlan;
-import org.hibernate.loader.plan2.spi.QuerySpace;
-import org.hibernate.persister.collection.CollectionPropertyNames;
 import org.hibernate.persister.collection.QueryableCollection;
 import org.hibernate.persister.entity.OuterJoinLoadable;
-import org.hibernate.persister.walking.internal.FetchStrategyHelper;
-import org.hibernate.type.AssociationType;
-import org.hibernate.type.ComponentType;
-import org.hibernate.type.Type;
 
 /**
  * Handles interpreting a LoadPlan (for loading of a collection) by:<ul>
@@ -97,11 +86,6 @@ public abstract class CollectionLoadQueryDetails extends AbstractLoadQueryDetail
 				new CollectionReferenceInitializerImpl( rootReturn, collectionReferenceAliases )
 		);
 		if ( rootReturn.getCollectionPersister().getElementType().isEntityType() ) {
-			final FetchStyle fetchStyle = FetchStrategyHelper.determineFetchStyleByMetadata(
-					( (QueryableCollection) rootReturn.getCollectionPersister() ).getFetchMode(),
-					(AssociationType) rootReturn.getCollectionPersister().getElementType(),
-					getSessionFactory()
-			);
 			final EntityReference elementEntityReference = rootReturn.getElementGraph().resolveEntityReference();
 			final EntityReferenceAliases elementEntityReferenceAliases = new EntityReferenceAliasesImpl(
 					collectionReferenceAliases.getElementTableAlias(),
