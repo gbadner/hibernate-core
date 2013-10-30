@@ -30,7 +30,6 @@ import org.hibernate.engine.FetchTiming;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.internal.CoreLogging;
 import org.hibernate.internal.util.StringHelper;
-import org.hibernate.loader.EntityAliases;
 import org.hibernate.loader.plan2.exec.process.internal.CollectionReferenceInitializerImpl;
 import org.hibernate.loader.plan2.exec.process.internal.EntityReferenceInitializerImpl;
 import org.hibernate.loader.plan2.exec.process.spi.ReaderCollector;
@@ -496,22 +495,19 @@ public class LoadQueryJoinAndFetchProcessor {
 				)
 		);
 
-//		// process its identifier fetches first (building EntityReferenceInitializers for them if needed)
-//		if ( EntityReference.class.isInstance( fetchSource ) ) {
-//			final EntityReference fetchOwnerAsEntityReference = (EntityReference) fetchSource;
-//			if ( fetchOwnerAsEntityReference.getIdentifierDescription().hasFetches() ) {
-//				final FetchSource entityIdentifierAsFetchSource = (FetchSource) fetchOwnerAsEntityReference.getIdentifierDescription();
-//				for ( Fetch identifierFetch : entityIdentifierAsFetchSource.getFetches() ) {
-//					processFetch(
-//							selectStatementBuilder,
-//							fetchSource,
-//							identifierFetch,
-//							readerCollector,
-//							fetchStats
-//					);
-//				}
-//			}
-//		}
+		// process its identifier fetches first (building EntityReferenceInitializers for them if needed)
+		if ( fetch.getIdentifierDescription().hasFetches() ) {
+			final FetchSource entityIdentifierAsFetchSource = (FetchSource) fetch.getIdentifierDescription();
+			for ( Fetch identifierFetch : entityIdentifierAsFetchSource.getFetches() ) {
+				processFetch(
+						selectStatementBuilder,
+						fetch,
+						identifierFetch,
+						readerCollector,
+						fetchStats
+				);
+			}
+		}
 
 		// build an EntityReferenceInitializers for the incoming fetch itself
 		readerCollector.add( new EntityReferenceInitializerImpl( fetch, aliases ) );
