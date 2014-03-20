@@ -26,6 +26,7 @@ package org.hibernate.test.annotations.collectionelement.embeddables.withcustome
 import org.junit.Test;
 
 import org.hibernate.Session;
+import org.hibernate.testing.TestForIssue;
 import org.hibernate.testing.junit4.BaseCoreFunctionalTestCase;
 
 import static junit.framework.Assert.assertEquals;

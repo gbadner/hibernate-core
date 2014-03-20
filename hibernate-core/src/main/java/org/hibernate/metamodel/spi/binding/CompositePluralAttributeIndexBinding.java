@@ -29,6 +29,7 @@ import java.util.Map;
 
 import org.hibernate.metamodel.spi.domain.Aggregate;
 import org.hibernate.metamodel.spi.domain.SingularAttribute;
+import org.hibernate.metamodel.spi.relational.Value;
 import org.hibernate.metamodel.spi.source.MetaAttributeContext;
 
 /**
@@ -91,5 +92,10 @@ public class CompositePluralAttributeIndexBinding extends AbstractPluralAttribut
 	@Override
 	public List<RelationalValueBinding> getRelationalValueBindings() {
 		return compositeAttributeBindingContainer.getRelationalValueBindingContainer().relationalValueBindings();
+	}
+
+	@Override
+	public List<Value> getValues() {
+		return compositeAttributeBindingContainer.getRelationalValueBindingContainer().values();
 	}
 }

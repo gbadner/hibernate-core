@@ -169,11 +169,12 @@ class TypeSafeActivator {
 		Set<Class<?>> groups = new HashSet<Class<?>>( Arrays.asList( groupsArray ) );
 
 		for ( EntityBinding entityBinding : activationContext.getMetadata().getEntityBindings() ) {
-			final String className = entityBinding.getEntity().getDescriptor().getName().fullName();
 
-			if ( className == null || className.length() == 0 ) {
+			if ( entityBinding.getEntity().getDescriptor() == null ) {
 				continue;
 			}
+
+			final String className = entityBinding.getEntity().getDescriptor().getName().fullName();
 
 			final ClassLoaderService classLoaderService = activationContext.getServiceRegistry()
 					.getService( ClassLoaderService.class );

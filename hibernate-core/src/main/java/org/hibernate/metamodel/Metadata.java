@@ -24,6 +24,7 @@
 package org.hibernate.metamodel;
 
 import java.util.Map;
+import java.util.UUID;
 
 import org.hibernate.SessionFactory;
 import org.hibernate.cfg.annotations.NamedEntityGraphDefinition;
@@ -58,6 +59,12 @@ public interface Metadata {
 	 */
 	SessionFactory buildSessionFactory();
 
+	/**
+	 * Gets the {@link UUID} for this metamodel.
+	 *
+	 * @return the UUID.
+	 */
+	UUID getUUID();
 
 	EntityBinding getEntityBinding(String entityName);
 

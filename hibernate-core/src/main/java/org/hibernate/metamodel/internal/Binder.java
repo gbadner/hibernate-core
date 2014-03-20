@@ -272,13 +272,9 @@ public class Binder implements HelperContext {
 								new EntityBinding( inheritanceType, entityMode ) :
 								new EntityBinding( superEntityBinding );
 				// Create domain entity
-				LocalBindingContext bindingContext = bindingContext();
-				final JavaTypeDescriptor entityTypeDescriptor = entitySource.getClassName() == null ?
-						null :
-						bindingContext.typeDescriptor( entitySource.getClassName() );
 				final Entity entity = new Entity(
 						entitySource.getEntityName(),
-						entityTypeDescriptor,
+						typeHelper.determineJavaType( entitySource, entityMode ),
 						superEntityBinding == null ? null : superEntityBinding.getEntity()
 				);
 
@@ -300,6 +296,9 @@ public class Binder implements HelperContext {
 				// todo: deal with joined and unioned subclass bindings
 				// todo: bind fetch profiles
 				// Configure rest of binding
+
+				LocalBindingContext bindingContext = bindingContext();
+
 				final String customTuplizerClassName = entitySource.getCustomTuplizerClassName();
 				if ( customTuplizerClassName != null ) {
 					entityBinding.setCustomEntityTuplizerClass(
@@ -1654,16 +1653,12 @@ public class Binder implements HelperContext {
 		final String roleBase =
 				attributeBindingContainer.getAttributeContainer().getRoleBaseName() + '.' + attributeSource.getPath();
 		if ( attribute == null ) {
-			final JavaTypeDescriptor compositeTypeDescriptor;
-			if ( attributeSource.getTypeDescriptor() != null ) {
-				compositeTypeDescriptor = attributeSource.getTypeDescriptor();
-			}
-			else {
-				compositeTypeDescriptor = typeHelper.determineJavaType(
-						attributeSource,
-						attributeBindingContainer.getAttributeContainer()
-				);
-			}
+			final EntityMode entityMode = attributeBindingContainer.seekEntityBinding().getHierarchyDetails().getEntityMode();
+			final JavaTypeDescriptor compositeTypeDescriptor = typeHelper.determineJavaType(
+					attributeSource,
+					attributeBindingContainer.getAttributeContainer(),
+					entityMode
+			);
 			composite = new Aggregate(
 					roleBase,
 					attributeSource.getPath(),

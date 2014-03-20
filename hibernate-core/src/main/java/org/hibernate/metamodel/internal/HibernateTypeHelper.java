@@ -33,6 +33,7 @@ import java.util.Map;
 import java.util.Properties;
 
 import org.hibernate.AssertionFailure;
+import org.hibernate.EntityMode;
 import org.hibernate.boot.registry.classloading.spi.ClassLoaderService;
 import org.hibernate.cfg.NotYetImplementedException;
 import org.hibernate.internal.util.beans.BeanInfoHelper;
@@ -65,8 +66,10 @@ import org.hibernate.metamodel.spi.relational.AbstractValue;
 import org.hibernate.metamodel.spi.relational.JdbcDataType;
 import org.hibernate.metamodel.spi.relational.Value;
 import org.hibernate.metamodel.spi.source.AttributeSource;
+import org.hibernate.metamodel.spi.source.AttributeSourceContainer;
 import org.hibernate.metamodel.spi.source.BasicPluralAttributeElementSource;
 import org.hibernate.metamodel.spi.source.ComponentAttributeSource;
+import org.hibernate.metamodel.spi.source.EntitySource;
 import org.hibernate.metamodel.spi.source.HibernateTypeSource;
 import org.hibernate.metamodel.spi.source.ManyToManyPluralAttributeElementSource;
 import org.hibernate.metamodel.spi.source.PluralAttributeSource;
@@ -794,6 +797,37 @@ class HibernateTypeHelper {
 				: hibernateTypeDescriptor.getJavaTypeDescriptor().getName().fullName();
 	}
 
+	public JavaTypeDescriptor determineJavaType(
+			final EntitySource entitySource,
+			final EntityMode entityMode) {
+		if ( entitySource.getClassName() == null ) {
+			if ( entityMode == EntityMode.MAP ) {
+				return bindingContext().typeDescriptor( Map.class.getName() );
+
+			}
+			else {
+				return null;
+			}
+		}
+		else {
+			return bindingContext().typeDescriptor( entitySource.getClassName() );
+		}
+	}
+
+	public JavaTypeDescriptor determineJavaType(
+			final ComponentAttributeSource attributeSource,
+			final AttributeContainer attributeContainer,
+			final EntityMode entityMode) {
+		if ( attributeSource.getTypeDescriptor() != null ) {
+			 return attributeSource.getTypeDescriptor();
+		}
+		else if ( entityMode == EntityMode.MAP ) {
+			return bindingContext().typeDescriptor( Map.class.getName() );
+		}
+		else {
+			return determineJavaType( attributeSource, attributeContainer );
+		}
+	}
 
 	public JavaTypeDescriptor determineJavaType(
 			final AttributeSource attributeSource,
