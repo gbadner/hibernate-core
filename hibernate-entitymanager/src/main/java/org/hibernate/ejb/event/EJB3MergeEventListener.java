@@ -40,6 +40,10 @@ public class EJB3MergeEventListener extends DefaultMergeEventListener implements
 		this.callbackHandler = callbackHandler;
 	}
 
+	public void initializeFrom(EJB3MergeEventListener ejb3MergeEventListener) {
+		setCallbackHandler( ejb3MergeEventListener.callbackHandler );
+	}
+
 	public EJB3MergeEventListener() {
 		super();
 	}

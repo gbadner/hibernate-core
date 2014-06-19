@@ -31,10 +31,13 @@ import org.junit.Test;
 import org.hibernate.SessionFactory;
 import org.hibernate.ejb.HibernateEntityManagerFactory;
 import org.hibernate.ejb.event.EJB3EntityCopyAllowedMergeEventListener;
+import org.hibernate.ejb.event.EJB3MergeEventListener;
 import org.hibernate.ejb.test.BaseEntityManagerFunctionalTestCase;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
+import org.hibernate.event.service.spi.EventListenerGroup;
 import org.hibernate.event.service.spi.EventListenerRegistry;
 import org.hibernate.event.spi.EventType;
+import org.hibernate.event.spi.MergeEventListener;
 import org.hibernate.testing.TestForIssue;
 
 import static org.junit.Assert.assertFalse;
@@ -57,7 +60,13 @@ public class MergeMultipleEntityRepresentationsAllowedTest extends BaseEntityMan
 		SessionFactory sf = ( (HibernateEntityManagerFactory) entityManagerFactory() ).getSessionFactory();
 		EventListenerRegistry registry =
 				( (SessionFactoryImplementor) sf ).getServiceRegistry().getService( EventListenerRegistry.class );
-		registry.setListeners( EventType.MERGE, new EJB3EntityCopyAllowedMergeEventListener() );
+		final EventListenerGroup<MergeEventListener> mergeEventListenerGroup = registry.getEventListenerGroup( EventType.MERGE );
+		final MergeEventListener mergeEventListener = mergeEventListenerGroup.listeners().iterator().next();
+		assertTrue( EJB3MergeEventListener.class.isInstance( mergeEventListener ) );
+		final EJB3EntityCopyAllowedMergeEventListener entityCopyAllowedMergeEventListener =
+				new EJB3EntityCopyAllowedMergeEventListener();
+		entityCopyAllowedMergeEventListener.initializeFrom( (EJB3MergeEventListener) mergeEventListener );
+		registry.setListeners( EventType.MERGE, entityCopyAllowedMergeEventListener );
 	}
 
 	@Test
