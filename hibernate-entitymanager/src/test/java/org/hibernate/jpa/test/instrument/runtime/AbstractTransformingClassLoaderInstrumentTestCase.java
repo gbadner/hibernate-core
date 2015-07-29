@@ -16,6 +16,7 @@ import org.hibernate.bytecode.buildtime.spi.BasicClassFilter;
 import org.hibernate.bytecode.buildtime.spi.FieldFilter;
 import org.hibernate.bytecode.spi.BytecodeProvider;
 import org.hibernate.bytecode.spi.InstrumentedClassLoader;
+import org.hibernate.testing.FailureExpected;
 import org.hibernate.testing.TestForIssue;
 import org.hibernate.testing.junit4.BaseUnitTestCase;
 import org.hibernate.testing.junit4.ClassLoadingIsolater;
@@ -62,13 +63,14 @@ public abstract class AbstractTransformingClassLoaderInstrumentTestCase extends 
 	// the tests ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	/**
-	 * Test for HHH-7573.
+	 * Test for HHH-9937.
 	 * Load some test data into an entity which has a lazy property and a @PreUpdate callback, then reload and update a
 	 * non lazy field which will trigger the PreUpdate lifecycle callback.
 	 * @throws Exception
 	 */
 	@Test
-	@TestForIssue( jiraKey = "HHH-7573" )
+	@TestForIssue( jiraKey = "HHH-9937" )
+	@FailureExpected( jiraKey = "HHH-9937" )
 	public void LazyPropertyOnPreUpdate() throws Exception {
 		executeExecutable( "org.hibernate.jpa.test.instrument.cases.TestLazyPropertyOnPreUpdateExecutable" );
 	}
