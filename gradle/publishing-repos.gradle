@@ -26,8 +26,8 @@ publishing {
 
 	repositories {
 		maven {
-			name 'jboss-snapshots-repository'
-			url 'https://repository.jboss.org/nexus/content/repositories/snapshots'
+			name 'maven-repository'
+			url System.getProperty('maven.deploy.url')
 		}
 	}
 }

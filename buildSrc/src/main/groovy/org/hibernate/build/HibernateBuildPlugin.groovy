@@ -75,14 +75,14 @@ class HibernateBuildPlugin implements Plugin<Project> {
 		if ( gradlePublishingExtension.repositories.empty ) {
 			if ( project.version.endsWith( 'SNAPSHOT' ) ) {
 				gradlePublishingExtension.repositories.maven {
-					name 'jboss-snapshots-repository'
-					url 'https://repository.jboss.org/nexus/content/repositories/snapshots'
+					name 'maven-repository'
+					url System.getProperty('maven.deploy.url')
 				}
 			}
 			else {
 				gradlePublishingExtension.repositories.maven {
-					name 'jboss-releases-repository'
-					url 'https://repository.jboss.org/nexus/service/local/staging/deploy/maven2/'
+					name 'maven-repository'
+					url System.getProperty('maven.deploy.url')
 				}
 			}
 		}
