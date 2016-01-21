@@ -192,7 +192,6 @@ public class DefaultSaveOrUpdateEventListener extends AbstractSaveEventListener 
 		return saveWithGeneratedId(
 				event.getEntity(),
 				event.getEntityName(),
-				null,
 				event.getSession(),
 				true
 		);

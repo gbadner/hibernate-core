@@ -363,7 +363,7 @@ public class TypeTest extends BaseUnitTestCase {
 			assertFalse( original == copy );
 		}
 
-		assertTrue( original == type.replace( original, copy, null, null, null ) );
+		assertTrue( original == type.replace( original, copy, null, null ) );
 
 		assertTrue( type.isSame( original, copy ) );
 		assertTrue( type.isEqual( original, copy ) );

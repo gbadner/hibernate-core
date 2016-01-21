@@ -24,6 +24,8 @@ import org.hibernate.collection.spi.PersistentCollection;
 import org.hibernate.engine.jdbc.LobCreationContext;
 import org.hibernate.engine.jdbc.connections.spi.JdbcConnectionAccess;
 import org.hibernate.engine.jdbc.spi.JdbcCoordinator;
+import org.hibernate.engine.operationContext.spi.OperationContext;
+import org.hibernate.engine.operationContext.spi.OperationContextType;
 import org.hibernate.engine.query.spi.sql.NativeSQLQuerySpecification;
 import org.hibernate.loader.custom.CustomQuery;
 import org.hibernate.persister.entity.EntityPersister;
@@ -91,6 +93,37 @@ public interface SessionImplementor extends Serializable, LobCreationContext, Wr
 	 * or is there a JTA transaction in progress?
 	 */
 	boolean isTransactionInProgress();
+
+	/**
+	 * Indicates if an {@link OperationContext} of the specified type is already
+	 * in progress.
+	 *
+	 * @param operationContextType - the operation context type.
+	 * @return true, if an {@link OperationContext} of the specified type is already
+	 * in progress; false, otherwise.
+	 *
+	 * @see OperationContext
+	 * @see OperationContextType
+	 */
+	boolean isOperationInProgress(OperationContextType operationContextType);
+
+	/**
+	 * Gets the {@link OperationContext} of the specified type for the operation
+	 * currently in progress.
+	 * <p/>
+	 * The requested {@link OperationContext} must be in progress. Callers should
+	 * use {@link #isOperationInProgress(OperationContextType)} to ensure the
+	 * specified type of {@link OperationContext} is in progress before calling
+	 * this method.
+	 *
+	 * @return the {@link OperationContext} of the specified type.
+	 * @throws IllegalStateException if the {@link OperationContext} is not in progress.
+	 *
+	 * @see OperationContext
+	 * @see OperationContextType
+	 * @see {@link #isOperationInProgress(OperationContextType)}
+	 */
+	<T extends OperationContext> T getOperationContext(OperationContextType<T> operationContextType);
 
 	/**
 	 * Initialize the collection (if not already initialized)

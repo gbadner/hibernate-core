@@ -6,15 +6,16 @@
  */
 package org.hibernate.event.internal;
 
-import java.util.IdentityHashMap;
 import java.util.Map;
 
 import org.hibernate.HibernateException;
 import org.hibernate.ObjectDeletedException;
 import org.hibernate.PersistentObjectException;
+import org.hibernate.engine.operationContext.spi.PersistOperationContext;
 import org.hibernate.engine.spi.CascadingAction;
 import org.hibernate.engine.spi.CascadingActions;
 import org.hibernate.engine.spi.EntityEntry;
+import org.hibernate.engine.operationContext.spi.OperationContextType;
 import org.hibernate.engine.spi.SessionImplementor;
 import org.hibernate.engine.spi.Status;
 import org.hibernate.event.spi.EventSource;
@@ -54,8 +55,8 @@ public class DefaultPersistEventListener extends AbstractSaveEventListener imple
 	 *
 	 * @throws HibernateException
 	 */
-	public void onPersist(PersistEvent event) throws HibernateException {
-		onPersist( event, new IdentityHashMap( 10 ) );
+	public void onPersist(PersistEvent event, Map createCache) throws HibernateException {
+		onPersist( event );
 	}
 
 	/**
@@ -65,7 +66,7 @@ public class DefaultPersistEventListener extends AbstractSaveEventListener imple
 	 *
 	 * @throws HibernateException
 	 */
-	public void onPersist(PersistEvent event, Map createCache) throws HibernateException {
+	public void onPersist(PersistEvent event) throws HibernateException {
 		final SessionImplementor source = event.getSession();
 		final Object object = event.getObject();
 
@@ -125,18 +126,18 @@ public class DefaultPersistEventListener extends AbstractSaveEventListener imple
 				);
 			}
 			case PERSISTENT: {
-				entityIsPersistent( event, createCache );
+				entityIsPersistent( event );
 				break;
 			}
 			case TRANSIENT: {
-				entityIsTransient( event, createCache );
+				entityIsTransient( event );
 				break;
 			}
 			case DELETED: {
 				entityEntry.setStatus( Status.MANAGED );
 				entityEntry.setDeletedState( null );
 				event.getSession().getActionQueue().unScheduleDeletion( entityEntry, event.getObject() );
-				entityIsDeleted( event, createCache );
+				entityIsDeleted( event );
 				break;
 			}
 			default: {
@@ -151,7 +152,7 @@ public class DefaultPersistEventListener extends AbstractSaveEventListener imple
 	}
 
 	@SuppressWarnings({"unchecked"})
-	protected void entityIsPersistent(PersistEvent event, Map createCache) {
+	protected void entityIsPersistent(PersistEvent event) {
 		LOG.trace( "Ignoring persistent instance" );
 		final EventSource source = event.getSession();
 
@@ -160,38 +161,36 @@ public class DefaultPersistEventListener extends AbstractSaveEventListener imple
 		final Object entity = source.getPersistenceContext().unproxy( event.getObject() );
 		final EntityPersister persister = source.getEntityPersister( event.getEntityName(), entity );
 
-		if ( createCache.put( entity, entity ) == null ) {
-			justCascade( createCache, source, entity, persister );
-
+		if ( getPersistOperationContext( source).addEntity( entity ) ) {
+			justCascade( source, entity, persister );
 		}
 	}
 
-	private void justCascade(Map createCache, EventSource source, Object entity, EntityPersister persister) {
+	private void justCascade(EventSource source, Object entity, EntityPersister persister) {
 		//TODO: merge into one method!
-		cascadeBeforeSave( source, persister, entity, createCache );
-		cascadeAfterSave( source, persister, entity, createCache );
+		cascadeBeforeSave( source, persister, entity);
+		cascadeAfterSave( source, persister, entity );
 	}
 
 	/**
 	 * Handle the given create event.
 	 *
 	 * @param event The save event to be handled.
-	 * @param createCache The copy cache of entity instance to merge/copy instance.
 	 */
 	@SuppressWarnings({"unchecked"})
-	protected void entityIsTransient(PersistEvent event, Map createCache) {
+	protected void entityIsTransient(PersistEvent event) {
 		LOG.trace( "Saving transient instance" );
 
 		final EventSource source = event.getSession();
 		final Object entity = source.getPersistenceContext().unproxy( event.getObject() );
 
-		if ( createCache.put( entity, entity ) == null ) {
-			saveWithGeneratedId( entity, event.getEntityName(), createCache, source, false );
+		if ( getPersistOperationContext( source).addEntity( entity ) ) {
+			saveWithGeneratedId( entity, event.getEntityName(), source, false );
 		}
 	}
 
 	@SuppressWarnings({"unchecked"})
-	private void entityIsDeleted(PersistEvent event, Map createCache) {
+	private void entityIsDeleted(PersistEvent event) {
 		final EventSource source = event.getSession();
 
 		final Object entity = source.getPersistenceContext().unproxy( event.getObject() );
@@ -206,8 +205,14 @@ public class DefaultPersistEventListener extends AbstractSaveEventListener imple
 				)
 		);
 
-		if ( createCache.put( entity, entity ) == null ) {
-			justCascade( createCache, source, entity, persister );
+		if ( getPersistOperationContext( source).addEntity( entity ) ) {
+			justCascade( source, entity, persister );
 		}
+	}
+
+	private static PersistOperationContext getPersistOperationContext(EventSource source) {
+		// don't bother checking if persist operation is in progress
+		// since we're in the middle of a persist operation.
+		return source.getOperationContext( OperationContextType.PERSIST );
 	}
 }

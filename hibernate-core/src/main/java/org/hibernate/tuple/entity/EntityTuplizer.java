@@ -171,9 +171,22 @@ public interface EntityTuplizer extends Tuplizer {
 	 * @param session The session in which the resuest is being made.
 	 * @return The insertable property values.
 	 * @throws HibernateException Indicates a problem access the properties
+	 * @deprecated Use {@link #getPropertyValuesToInsert(Object, SessionImplementor)} instead.
 	 */
+	@Deprecated
 	Object[] getPropertyValuesToInsert(Object entity, Map mergeMap, SessionImplementor session)
 	throws HibernateException;
+
+	/**
+	 * Extract the values of the insertable properties of the entity (including backrefs)
+	 *
+	 * @param entity The entity from which to extract.
+	 * @param session The session in which the resuest is being made.
+	 * @return The insertable property values.
+	 * @throws HibernateException Indicates a problem access the properties
+	 */
+	Object[] getPropertyValuesToInsert(Object entity, SessionImplementor session)
+			throws HibernateException;
 
 	/**
 	 * Extract the value of a particular property from the given entity.

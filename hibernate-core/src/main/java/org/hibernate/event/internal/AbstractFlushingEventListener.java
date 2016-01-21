@@ -131,23 +131,22 @@ public abstract class AbstractFlushingEventListener implements Serializable {
 
 		LOG.debug( "Processing flush-time cascades" );
 
-		final Object anything = getAnything();
 		//safe from concurrent modification because of how concurrentEntries() is implemented on IdentityMap
 		for ( Map.Entry<Object,EntityEntry> me : persistenceContext.reentrantSafeEntityEntries() ) {
 //		for ( Map.Entry me : IdentityMap.concurrentEntries( persistenceContext.getEntityEntries() ) ) {
 			EntityEntry entry = (EntityEntry) me.getValue();
 			Status status = entry.getStatus();
 			if ( status == Status.MANAGED || status == Status.SAVING || status == Status.READ_ONLY ) {
-				cascadeOnFlush( session, entry.getPersister(), me.getKey(), anything );
+				cascadeOnFlush( session, entry.getPersister(), me.getKey() );
 			}
 		}
 	}
 
-	private void cascadeOnFlush(EventSource session, EntityPersister persister, Object object, Object anything)
+	private void cascadeOnFlush(EventSource session, EntityPersister persister, Object object)
 	throws HibernateException {
 		session.getPersistenceContext().incrementCascadeLevel();
 		try {
-			Cascade.cascade( getCascadingAction(), CascadePoint.BEFORE_FLUSH, session, persister, object, anything );
+			Cascade.cascade( getCascadingAction(), CascadePoint.BEFORE_FLUSH, session, persister, object );
 		}
 		finally {
 			session.getPersistenceContext().decrementCascadeLevel();

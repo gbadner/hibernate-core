@@ -511,8 +511,7 @@ public class ComponentType extends AbstractType implements CompositeType, Proced
 			Object original,
 			Object target,
 			SessionImplementor session,
-			Object owner,
-			Map copyCache)
+			Object owner)
 			throws HibernateException {
 
 		if ( original == null ) {
@@ -529,8 +528,7 @@ public class ComponentType extends AbstractType implements CompositeType, Proced
 				getPropertyValues( result, entityMode ),
 				propertyTypes,
 				session,
-				owner,
-				copyCache
+				owner
 		);
 
 		setPropertyValues( result, values, entityMode );
@@ -543,7 +541,6 @@ public class ComponentType extends AbstractType implements CompositeType, Proced
 			Object target,
 			SessionImplementor session,
 			Object owner,
-			Map copyCache,
 			ForeignKeyDirection foreignKeyDirection)
 			throws HibernateException {
 
@@ -562,7 +559,6 @@ public class ComponentType extends AbstractType implements CompositeType, Proced
 				propertyTypes,
 				session,
 				owner,
-				copyCache,
 				foreignKeyDirection
 		);
 

@@ -53,7 +53,6 @@ public class MapType extends CollectionType {
 			final Object original,
 			final Object target,
 			final Object owner,
-			final java.util.Map copyCache,
 			final SessionImplementor session) throws HibernateException {
 		CollectionPersister cp = session.getFactory().getCollectionPersister( getRole() );
 
@@ -62,8 +61,8 @@ public class MapType extends CollectionType {
 
 		for ( Object o : ( (Map) original ).entrySet() ) {
 			Map.Entry me = (Map.Entry) o;
-			Object key = cp.getIndexType().replace( me.getKey(), null, session, owner, copyCache );
-			Object value = cp.getElementType().replace( me.getValue(), null, session, owner, copyCache );
+			Object key = cp.getIndexType().replace( me.getKey(), null, session, owner );
+			Object value = cp.getElementType().replace( me.getValue(), null, session, owner );
 			result.put( key, value );
 		}
 

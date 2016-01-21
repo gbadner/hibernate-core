@@ -41,8 +41,23 @@ public interface Getter extends Serializable {
 	 * @return The extracted value.
 	 *
 	 * @throws org.hibernate.HibernateException
+	 *
+	 * @deprecated Use {@link #getForInsert(Object, SessionImplementor)}
 	 */
+	@Deprecated
 	Object getForInsert(Object owner, Map mergeMap, SessionImplementor session);
+
+	/**
+	 * Get the property value from the given owner instance.
+	 *
+	 * @param owner The instance containing the value to be retreived.
+	 * @param session The session from which this request originated.
+	 *
+	 * @return The extracted value.
+	 *
+	 * @throws org.hibernate.HibernateException
+	 */
+	Object getForInsert(Object owner, SessionImplementor session);
 
 	/**
 	 * Retrieve the declared Java type

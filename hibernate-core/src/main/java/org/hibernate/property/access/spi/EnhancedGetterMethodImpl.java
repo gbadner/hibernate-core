@@ -99,6 +99,11 @@ public class EnhancedGetterMethodImpl implements Getter {
 
 	@Override
 	public Object getForInsert(Object owner, Map mergeMap, SessionImplementor session) {
+		return getForInsert( owner, session );
+	}
+
+	@Override
+	public Object getForInsert(Object owner, SessionImplementor session) {
 		return get( owner );
 	}
 

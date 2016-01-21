@@ -31,7 +31,9 @@ public interface MergeEventListener extends Serializable {
      *
      * @param event The merge event to be handled.
      * @throws HibernateException
+	 *
+	 * @deprecated Use {@link #onMerge(MergeEvent)} instead.
      */
+	@Deprecated
 	public void onMerge(MergeEvent event, Map copiedAlready) throws HibernateException;
-
 }

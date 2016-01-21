@@ -36,6 +36,9 @@ import org.hibernate.cache.spi.access.NaturalIdRegionAccessStrategy;
 import org.hibernate.cache.spi.access.SoftLock;
 import org.hibernate.collection.spi.PersistentCollection;
 import org.hibernate.engine.loading.internal.LoadContexts;
+import org.hibernate.engine.operationContext.spi.MergeData;
+import org.hibernate.engine.operationContext.spi.MergeOperationContext;
+import org.hibernate.engine.operationContext.spi.OperationContextType;
 import org.hibernate.engine.spi.AssociationKey;
 import org.hibernate.engine.spi.BatchFetchQueue;
 import org.hibernate.engine.spi.CachedNaturalIdValueSource;
@@ -384,7 +387,7 @@ public class StatefulPersistenceContext implements PersistenceContext {
 	public void addEntity(EntityKey key, Object entity) {
 		entitiesByKey.put( key, entity );
 		if( batchFetchQueue != null ) {
-			getBatchFetchQueue().removeBatchLoadableEntityKey(key);
+			getBatchFetchQueue().removeBatchLoadableEntityKey( key );
 		}
 	}
 
@@ -1124,6 +1127,12 @@ public class StatefulPersistenceContext implements PersistenceContext {
 
 	@Override
 	public Serializable getOwnerId(String entityName, String propertyName, Object childEntity, Map mergeMap) {
+		return getOwnerId( entityName, propertyName, childEntity );
+	}
+
+	@Override
+	public Serializable getOwnerId(String entityName, String propertyName, Object childEntity) {
+
 		final String collectionRole = entityName + '.' + propertyName;
 		final EntityPersister persister = session.getFactory().getEntityPersister( entityName );
 		final CollectionPersister collectionPersister = session.getFactory().getCollectionPersister( collectionRole );
@@ -1143,6 +1152,8 @@ public class StatefulPersistenceContext implements PersistenceContext {
 			}
 		}
 
+		final MergeOperationContext mergeOperationContext = getMergeOperationContext( session );
+
 		//not found in case, proceed
 		// iterate all the entities currently associated with the persistence context.
 		for ( Entry<Object,EntityEntry> me : reentrantSafeEntityEntries() ) {
@@ -1160,10 +1171,12 @@ public class StatefulPersistenceContext implements PersistenceContext {
 						entityEntryInstance
 				);
 
-				if ( !found && mergeMap != null ) {
+				if ( !found && mergeOperationContext != null ) {
 					//check if the detached object being merged is the parent
-					final Object unmergedInstance = mergeMap.get( entityEntryInstance );
-					final Object unmergedChild = mergeMap.get( childEntity );
+					final Object unmergedInstance = mergeOperationContext.getMergeEntityFromEntityCopy(
+							entityEntryInstance
+					);
+					final Object unmergedChild = mergeOperationContext.getMergeEntityFromEntityCopy( childEntity );
 					if ( unmergedInstance != null && unmergedChild != null ) {
 						found = isFoundInParent(
 								propertyName,
@@ -1189,18 +1202,17 @@ public class StatefulPersistenceContext implements PersistenceContext {
 		// if we get here, it is possible that we have a proxy 'in the way' of the merge map resolution...
 		// 		NOTE: decided to put this here rather than in the above loop as I was nervous about the performance
 		//		of the loop-in-loop especially considering this is far more likely the 'edge case'
-		if ( mergeMap != null ) {
-			for ( Object o : mergeMap.entrySet() ) {
-				final Entry mergeMapEntry = (Entry) o;
-				if ( mergeMapEntry.getKey() instanceof HibernateProxy ) {
-					final HibernateProxy proxy = (HibernateProxy) mergeMapEntry.getKey();
+		if ( mergeOperationContext != null ) {
+			for ( MergeData mergeData : mergeOperationContext.getAllMergeData() ) {
+				if ( mergeData.getEntityCopy() instanceof HibernateProxy ) {
+					final HibernateProxy proxy = (HibernateProxy) mergeData.getEntityCopy();
 					if ( persister.isSubclassEntityName( proxy.getHibernateLazyInitializer().getEntityName() ) ) {
 						boolean found = isFoundInParent(
 								propertyName,
 								childEntity,
 								persister,
 								collectionPersister,
-								mergeMap.get( proxy )
+								mergeData.getMergeEntity()
 						);
 						LOG.debugf(
 								"Detached proxy being merged has a collection that [%s] the managed child.",
@@ -1209,10 +1221,10 @@ public class StatefulPersistenceContext implements PersistenceContext {
 						if ( !found ) {
 							found = isFoundInParent(
 									propertyName,
-									mergeMap.get( childEntity ),
+									mergeOperationContext.getMergeEntityFromEntityCopy( childEntity ),
 									persister,
 									collectionPersister,
-									mergeMap.get( proxy )
+									mergeData.getMergeEntity()
 							);
 							LOG.debugf(
 									"Detached proxy being merged has a collection that [%s] the detached child being merged..",
@@ -1243,9 +1255,16 @@ public class StatefulPersistenceContext implements PersistenceContext {
 	}
 
 	@Override
-	public Object getIndexInOwner(String entity, String property, Object childEntity, Map mergeMap) {
+	public Object getIndexInOwner(String entity, String property, Object childObject, Map mergeMap) {
+		return getIndexInOwner( entity, property, childObject );
+	}
+
+	@Override
+	public Object getIndexInOwner(String entity, String property, Object childEntity) {
 		final EntityPersister persister = session.getFactory().getEntityPersister( entity );
 		final CollectionPersister cp = session.getFactory().getCollectionPersister( entity + '.' + property );
+
+		final MergeOperationContext mergeOperationContext = getMergeOperationContext( session );
 
 	    // try cache lookup first
 		final Object parent = parentsByChild.get( childEntity );
@@ -1255,9 +1274,9 @@ public class StatefulPersistenceContext implements PersistenceContext {
 			if ( persister.isSubclassEntityName( entityEntry.getEntityName() ) ) {
 				Object index = getIndexInParent( property, childEntity, persister, cp, parent );
 
-				if (index==null && mergeMap!=null) {
-					final Object unMergedInstance = mergeMap.get( parent );
-					final Object unMergedChild = mergeMap.get( childEntity );
+				if (index==null && mergeOperationContext!=null) {
+					final Object unMergedInstance = mergeOperationContext.getMergeEntityFromEntityCopy( parent );
+					final Object unMergedChild = mergeOperationContext.getMergeEntityFromEntityCopy( childEntity );
 					if ( unMergedInstance != null && unMergedChild != null ) {
 						index = getIndexInParent( property, unMergedChild, persister, cp, unMergedInstance );
 						LOG.debugf(
@@ -1283,9 +1302,9 @@ public class StatefulPersistenceContext implements PersistenceContext {
 				final Object instance = me.getKey();
 
 				Object index = getIndexInParent( property, childEntity, persister, cp, instance );
-				if ( index==null && mergeMap!=null ) {
-					final Object unMergedInstance = mergeMap.get( instance );
-					final Object unMergedChild = mergeMap.get( childEntity );
+				if ( index==null && mergeOperationContext!=null ) {
+					final Object unMergedInstance = mergeOperationContext.getMergeEntityFromEntityCopy( instance );
+					final Object unMergedChild = mergeOperationContext.getMergeEntityFromEntityCopy( childEntity );
 					if ( unMergedInstance != null && unMergedChild!=null ) {
 						index = getIndexInParent( property, unMergedChild, persister, cp, unMergedInstance );
 						LOG.debugf(
@@ -1642,6 +1661,16 @@ public class StatefulPersistenceContext implements PersistenceContext {
 		}
 
 		return rtn;
+	}
+
+	private static MergeOperationContext getMergeOperationContext(SessionImplementor session) {
+		// a merge operation may not be in process, so check first.
+		if ( session.isOperationInProgress( OperationContextType.MERGE ) ) {
+			return session.getOperationContext( OperationContextType.MERGE );
+		}
+		else {
+			return null;
+		}
 	}
 
 	@Override

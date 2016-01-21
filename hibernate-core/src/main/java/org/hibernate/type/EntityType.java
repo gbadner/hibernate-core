@@ -16,8 +16,10 @@ import org.hibernate.AssertionFailure;
 import org.hibernate.HibernateException;
 import org.hibernate.MappingException;
 import org.hibernate.engine.internal.ForeignKeys;
+import org.hibernate.engine.operationContext.spi.MergeOperationContext;
 import org.hibernate.engine.spi.EntityUniqueKey;
 import org.hibernate.engine.spi.Mapping;
+import org.hibernate.engine.operationContext.spi.OperationContextType;
 import org.hibernate.engine.spi.PersistenceContext;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.engine.spi.SessionImplementor;
@@ -290,14 +292,16 @@ public abstract class EntityType extends AbstractType implements AssociationType
 			Object original,
 			Object target,
 			SessionImplementor session,
-			Object owner,
-			Map copyCache) throws HibernateException {
+			Object owner) throws HibernateException {
 		if ( original == null ) {
 			return null;
 		}
-		Object cached = copyCache.get( original );
-		if ( cached != null ) {
-			return cached;
+		// don't bother checking if merge operation is in progress
+		// since we're in the middle of a merge operation.
+		MergeOperationContext copyCache = session.getOperationContext( OperationContextType.MERGE );
+		final Object existingCopy = copyCache.getEntityCopyFromMergeEntity( original );
+		if ( existingCopy != null ) {
+			return existingCopy;
 		}
 		else {
 			if ( original == target ) {
@@ -307,7 +311,7 @@ public abstract class EntityType extends AbstractType implements AssociationType
 					ForeignKeys.isTransient( associatedEntityName, original, Boolean.FALSE, session ) ) {
 				final Object copy = session.getEntityPersister( associatedEntityName, original )
 						.instantiate( null, session );
-				copyCache.put( original, copy );
+				copyCache.addTransientMergeDataBeforeInMergeProcess( original, copy );
 				return copy;
 			}
 			else {
@@ -319,7 +323,7 @@ public abstract class EntityType extends AbstractType implements AssociationType
 					);
 				}
 				id = getIdentifierOrUniqueKeyType( session.getFactory() )
-						.replace( id, null, session, owner, copyCache );
+						.replace( id, null, session, owner );
 				return resolve( id, session, owner );
 			}
 		}

@@ -64,9 +64,13 @@ public class PropertyAccessMapImpl implements PropertyAccess {
 
 		@Override
 		public Object getForInsert(Object owner, Map mergeMap, SessionImplementor session) {
-			return get( owner );
+			return getForInsert( owner, session );
 		}
 
+		@Override
+		public Object getForInsert(Object owner, SessionImplementor session) {
+			return get( owner );
+		}
 		@Override
 		public Class getReturnType() {
 			// we just don't know...

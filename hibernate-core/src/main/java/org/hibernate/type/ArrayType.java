@@ -81,7 +81,6 @@ public class ArrayType extends CollectionType {
 		Object original,
 		Object target,
 		Object owner, 
-		Map copyCache, 
 		SessionImplementor session)
 	throws HibernateException {
 		
@@ -93,7 +92,7 @@ public class ArrayType extends CollectionType {
 		
 		Type elemType = getElementType( session.getFactory() );
 		for ( int i=0; i<length; i++ ) {
-			Array.set( target, i, elemType.replace( Array.get(original, i), null, session, owner, copyCache ) );
+			Array.set( target, i, elemType.replace( Array.get(original, i), null, session, owner ) );
 		}
 		
 		return target;

@@ -44,12 +44,14 @@ public class TypeHelper {
 		for ( int i = 0; i < types.length; i++ ) {
 			if ( copy[i] ) {
 				if ( values[i] == LazyPropertyInitializer.UNFETCHED_PROPERTY
-					|| values[i] == PropertyAccessStrategyBackRefImpl.UNKNOWN ) {
+						|| values[i] == PropertyAccessStrategyBackRefImpl.UNKNOWN ) {
 					target[i] = values[i];
 				}
 				else {
-					target[i] = types[i].deepCopy( values[i], session
-						.getFactory() );
+					target[i] = types[i].deepCopy(
+							values[i], session
+									.getFactory()
+					);
 				}
 			}
 		}
@@ -68,7 +70,7 @@ public class TypeHelper {
 			final SessionImplementor session) {
 		for ( int i = 0; i < types.length; i++ ) {
 			if ( row[i] != LazyPropertyInitializer.UNFETCHED_PROPERTY
-				&& row[i] != PropertyAccessStrategyBackRefImpl.UNKNOWN ) {
+					&& row[i] != PropertyAccessStrategyBackRefImpl.UNKNOWN ) {
 				types[i].beforeAssemble( row[i], session );
 			}
 		}
@@ -81,6 +83,7 @@ public class TypeHelper {
 	 * @param types The value types
 	 * @param session The originating session
 	 * @param owner The entity "owning" the values
+	 *
 	 * @return The assembled state
 	 */
 	public static Object[] assemble(
@@ -119,7 +122,7 @@ public class TypeHelper {
 			final Object owner) {
 		Serializable[] disassembled = new Serializable[row.length];
 		for ( int i = 0; i < row.length; i++ ) {
-			if ( nonCacheable!=null && nonCacheable[i] ) {
+			if ( nonCacheable != null && nonCacheable[i] ) {
 				disassembled[i] = LazyPropertyInitializer.UNFETCHED_PROPERTY;
 			}
 			else if ( row[i] == LazyPropertyInitializer.UNFETCHED_PROPERTY || row[i] == PropertyAccessStrategyBackRefImpl.UNKNOWN ) {
@@ -143,7 +146,10 @@ public class TypeHelper {
 	 * @param copyCache A map representing a cache of already replaced state
 	 *
 	 * @return The replaced state
+	 *
+	 * @deprecated Use {@link #replace(Object[], Object[], Type[], SessionImplementor, Object)} instead.
 	 */
+	@Deprecated
 	public static Object[] replace(
 			final Object[] original,
 			final Object[] target,
@@ -151,10 +157,30 @@ public class TypeHelper {
 			final SessionImplementor session,
 			final Object owner,
 			final Map copyCache) {
+		return replace( original, target, types, session, owner );
+	}
+
+	/**
+	 * Apply the {@link Type#replace} operation across a series of values.
+	 *
+	 * @param original The source of the state
+	 * @param target The target into which to replace the source values.
+	 * @param types The value types
+	 * @param session The originating session
+	 * @param owner The entity "owning" the values
+	 *
+	 * @return The replaced state
+	 */
+	public static Object[] replace(
+			final Object[] original,
+			final Object[] target,
+			final Type[] types,
+			final SessionImplementor session,
+			final Object owner) {
 		Object[] copied = new Object[original.length];
 		for ( int i = 0; i < types.length; i++ ) {
 			if ( original[i] == LazyPropertyInitializer.UNFETCHED_PROPERTY
-				|| original[i] == PropertyAccessStrategyBackRefImpl.UNKNOWN ) {
+					|| original[i] == PropertyAccessStrategyBackRefImpl.UNKNOWN ) {
 				copied[i] = target[i];
 			}
 			else if ( target[i] == LazyPropertyInitializer.UNFETCHED_PROPERTY ) {
@@ -174,7 +200,7 @@ public class TypeHelper {
 				}
 			}
 			else {
-				copied[i] = types[i].replace( original[i], target[i], session, owner, copyCache );
+				copied[i] = types[i].replace( original[i], target[i], session, owner );
 			}
 		}
 		return copied;
@@ -192,7 +218,10 @@ public class TypeHelper {
 	 * @param foreignKeyDirection FK directionality to be applied to the replacement
 	 *
 	 * @return The replaced state
+	 *
+	 * @deprecated Use {@link #replace(Object[], Object[], Type[], SessionImplementor, Object, ForeignKeyDirection)}
 	 */
+	@Deprecated
 	public static Object[] replace(
 			final Object[] original,
 			final Object[] target,
@@ -201,6 +230,28 @@ public class TypeHelper {
 			final Object owner,
 			final Map copyCache,
 			final ForeignKeyDirection foreignKeyDirection) {
+		return replace( original, target, types, session, owner, foreignKeyDirection );
+	}
+
+	/**
+	 * Apply the {@link Type#replace} operation across a series of values.
+	 *
+	 * @param original The source of the state
+	 * @param target The target into which to replace the source values.
+	 * @param types The value types
+	 * @param session The originating session
+	 * @param owner The entity "owning" the values
+	 * @param foreignKeyDirection FK directionality to be applied to the replacement
+	 *
+	 * @return The replaced state
+	 */
+	public static Object[] replace(
+			final Object[] original,
+			final Object[] target,
+			final Type[] types,
+			final SessionImplementor session,
+			final Object owner,
+			final ForeignKeyDirection foreignKeyDirection) {
 		Object[] copied = new Object[original.length];
 		for ( int i = 0; i < types.length; i++ ) {
 			if ( original[i] == LazyPropertyInitializer.UNFETCHED_PROPERTY
@@ -208,7 +259,7 @@ public class TypeHelper {
 				copied[i] = target[i];
 			}
 			else {
-				copied[i] = types[i].replace( original[i], target[i], session, owner, copyCache, foreignKeyDirection );
+				copied[i] = types[i].replace( original[i], target[i], session, owner, foreignKeyDirection );
 			}
 		}
 		return copied;
@@ -230,7 +281,9 @@ public class TypeHelper {
 	 * @param foreignKeyDirection FK directionality to be applied to the replacement
 	 *
 	 * @return The replaced state
+	 * @deprecated Use
 	 */
+	@Deprecated
 	public static Object[] replaceAssociations(
 			final Object[] original,
 			final Object[] target,
@@ -238,6 +291,32 @@ public class TypeHelper {
 			final SessionImplementor session,
 			final Object owner,
 			final Map copyCache,
+			final ForeignKeyDirection foreignKeyDirection) {
+		return replaceAssociations( original, target, types, session, owner, foreignKeyDirection );
+	}
+
+	/**
+	 * Apply the {@link Type#replace} operation across a series of values, as long as the corresponding
+	 * {@link Type} is an association.
+	 * <p/>
+	 * If the corresponding type is a component type, then apply {@link Type#replace} across the component
+	 * subtypes but do not replace the component value itself.
+	 *
+	 * @param original The source of the state
+	 * @param target The target into which to replace the source values.
+	 * @param types The value types
+	 * @param session The originating session
+	 * @param owner The entity "owning" the values
+	 * @param foreignKeyDirection FK directionality to be applied to the replacement
+	 *
+	 * @return The replaced state
+	 */
+	public static Object[] replaceAssociations(
+			final Object[] original,
+			final Object[] target,
+			final Type[] types,
+			final SessionImplementor session,
+			final Object owner,
 			final ForeignKeyDirection foreignKeyDirection) {
 		Object[] copied = new Object[original.length];
 		for ( int i = 0; i < types.length; i++ ) {
@@ -251,14 +330,14 @@ public class TypeHelper {
 				Type[] subtypes = componentType.getSubtypes();
 				Object[] origComponentValues = original[i] == null ? new Object[subtypes.length] : componentType.getPropertyValues( original[i], session );
 				Object[] targetComponentValues = target[i] == null ? new Object[subtypes.length] : componentType.getPropertyValues( target[i], session );
-				replaceAssociations( origComponentValues, targetComponentValues, subtypes, session, null, copyCache, foreignKeyDirection );
+				replaceAssociations( origComponentValues, targetComponentValues, subtypes, session, null, foreignKeyDirection );
 				copied[i] = target[i];
 			}
 			else if ( !types[i].isAssociationType() ) {
 				copied[i] = target[i];
 			}
 			else {
-				copied[i] = types[i].replace( original[i], target[i], session, owner, copyCache, foreignKeyDirection );
+				copied[i] = types[i].replace( original[i], target[i], session, owner, foreignKeyDirection );
 			}
 		}
 		return copied;

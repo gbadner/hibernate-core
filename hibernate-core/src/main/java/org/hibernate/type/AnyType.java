@@ -335,7 +335,7 @@ public class AnyType extends AbstractType implements CompositeType, AssociationT
 	}
 
 	@Override
-	public Object replace(Object original, Object target, SessionImplementor session, Object owner, Map copyCache)
+	public Object replace(Object original, Object target, SessionImplementor session, Object owner)
 			throws HibernateException {
 		if ( original == null ) {
 			return null;

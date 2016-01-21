@@ -38,6 +38,8 @@ import org.hibernate.engine.query.spi.sql.NativeSQLQuerySpecification;
 import org.hibernate.engine.spi.EntityKey;
 import org.hibernate.engine.spi.NamedQueryDefinition;
 import org.hibernate.engine.spi.NamedSQLQueryDefinition;
+import org.hibernate.engine.operationContext.spi.OperationContext;
+import org.hibernate.engine.operationContext.spi.OperationContextType;
 import org.hibernate.engine.spi.QueryParameters;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.engine.spi.SessionImplementor;
@@ -97,6 +99,16 @@ public abstract class AbstractSessionImpl
 
 	@Override
 	public abstract boolean shouldAutoJoinTransaction();
+
+	@Override
+	public boolean isOperationInProgress(OperationContextType operationContextType) {
+		return false;
+	}
+
+	@Override
+	public <T extends OperationContext> T getOperationContext(OperationContextType<T> operationContextType) {
+		return null;
+	}
 
 	@Override
 	public <T> T execute(final LobCreationContext.Callback<T> callback) {

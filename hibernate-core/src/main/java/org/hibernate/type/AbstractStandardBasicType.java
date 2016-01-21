@@ -250,7 +250,7 @@ public abstract class AbstractStandardBasicType<T>
 
 	@SuppressWarnings({ "unchecked" })
 	protected final void nullSafeSet(PreparedStatement st, Object value, int index, WrapperOptions options) throws SQLException {
-		remapSqlTypeDescriptor( options ).getBinder( javaTypeDescriptor ).bind( st, ( T ) value, index, options );
+		remapSqlTypeDescriptor( options ).getBinder( javaTypeDescriptor ).bind( st, (T) value, index, options );
 	}
 
 	protected SqlTypeDescriptor remapSqlTypeDescriptor(WrapperOptions options) {
@@ -310,6 +310,11 @@ public abstract class AbstractStandardBasicType<T>
 
 	@SuppressWarnings({ "unchecked" })
 	public final Object replace(Object original, Object target, SessionImplementor session, Object owner, Map copyCache) {
+		return replace( original, target, session, owner );
+	}
+
+	@SuppressWarnings({ "unchecked" })
+	public final Object replace(Object original, Object target, SessionImplementor session, Object owner) {
 		return getReplacement( (T) original, (T) target, session );
 	}
 
@@ -320,6 +325,16 @@ public abstract class AbstractStandardBasicType<T>
 			SessionImplementor session,
 			Object owner,
 			Map copyCache,
+			ForeignKeyDirection foreignKeyDirection) {
+		return replace( original, target, session, owner, foreignKeyDirection );
+	}
+
+	@SuppressWarnings({ "unchecked" })
+	public Object replace(
+			Object original,
+			Object target,
+			SessionImplementor session,
+			Object owner,
 			ForeignKeyDirection foreignKeyDirection) {
 		return ForeignKeyDirection.FROM_PARENT == foreignKeyDirection
 				? getReplacement( (T) original, (T) target, session )

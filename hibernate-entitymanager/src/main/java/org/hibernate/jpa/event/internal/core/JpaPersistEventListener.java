@@ -8,7 +8,6 @@ package org.hibernate.jpa.event.internal.core;
 
 import java.io.Serializable;
 import java.util.Iterator;
-import java.util.Map;
 
 import org.hibernate.HibernateException;
 import org.hibernate.engine.spi.CascadingAction;
@@ -50,21 +49,19 @@ public class JpaPersistEventListener extends DefaultPersistEventListener impleme
 			Object entity,
 			Serializable requestedId,
 			String entityName,
-			Object anything,
 			EventSource source) {
 		callbackRegistry.preCreate( entity );
-		return super.saveWithRequestedId( entity, requestedId, entityName, anything, source );
+		return super.saveWithRequestedId( entity, requestedId, entityName, source );
 	}
 
 	@Override
 	protected Serializable saveWithGeneratedId(
 			Object entity,
 			String entityName,
-			Object anything,
 			EventSource source,
 			boolean requiresImmediateIdAccess) {
 		callbackRegistry.preCreate( entity );
-		return super.saveWithGeneratedId( entity, entityName, anything, source, requiresImmediateIdAccess );
+		return super.saveWithGeneratedId( entity, entityName, source, requiresImmediateIdAccess );
 	}
 
 	@Override
@@ -76,9 +73,16 @@ public class JpaPersistEventListener extends DefaultPersistEventListener impleme
 		@Override
 		public void cascade(EventSource session, Object child, String entityName, Object anything, boolean isCascadeDeleteEnabled)
 				throws HibernateException {
-			log.trace( "Cascading persist to : " + entityName );
-			session.persist( entityName, child, (Map) anything );
+			cascade( session, child, entityName, isCascadeDeleteEnabled );
 		}
+
+		@Override
+		public void cascade(EventSource session, Object child, String entityName, boolean isCascadeDeleteEnabled)
+				throws HibernateException {
+			log.trace( "Cascading persist to : " + entityName );
+			session.persist( entityName, child );
+		}
+
 		@Override
 		public Iterator getCascadableChildrenIterator(EventSource session, CollectionType collectionType, Object collection) {
 			// persists don't cascade to uninitialized collections

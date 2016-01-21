@@ -91,8 +91,7 @@ public class DefaultLockEventListener extends AbstractLockUpgradeEventListener i
 					CascadePoint.AFTER_LOCK,
 					source,
 					persister,
-					entity,
-					event.getLockOptions()
+					entity
 			);
 		}
 		finally {

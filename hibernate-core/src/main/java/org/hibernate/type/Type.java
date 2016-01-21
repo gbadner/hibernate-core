@@ -513,14 +513,38 @@ public interface Type extends Serializable {
 	 * @return the value to be merged
 	 *
 	 * @throws HibernateException An error from Hibernate
+	 * @deprecated Use {@link #replace(Object, Object, SessionImplementor, Object)} instead.
 	 */
+	@Deprecated
 	public Object replace(
 			Object original, 
 			Object target, 
 			SessionImplementor session, 
 			Object owner, 
 			Map copyCache) throws HibernateException;
-	
+
+	/**
+	 * During merge, replace the existing (target) value in the entity we are merging to
+	 * with a new (original) value from the detached entity we are merging. For immutable
+	 * objects, or null values, it is safe to simply return the first parameter. For
+	 * mutable objects, it is safe to return a copy of the first parameter. For objects
+	 * with component values, it might make sense to recursively replace component values.
+	 *
+	 * @param original the value from the detached entity being merged
+	 * @param target the value in the managed entity
+	 * @param session The originating session
+	 * @param owner The owner of the value
+	 *
+	 * @return the value to be merged
+	 *
+	 * @throws HibernateException An error from Hibernate
+	 */
+	public Object replace(
+			Object original,
+			Object target,
+			SessionImplementor session,
+			Object owner) throws HibernateException;
+
 	/**
 	 * During merge, replace the existing (target) value in the entity we are merging to
 	 * with a new (original) value from the detached entity we are merging. For immutable
@@ -538,7 +562,9 @@ public interface Type extends Serializable {
 	 * @return the value to be merged
 	 *
 	 * @throws HibernateException An error from Hibernate
+	 * @deprecated Use {@link #replace(Object, Object, SessionImplementor, Object, ForeignKeyDirection)} instead.
 	 */
+	@Deprecated
 	public Object replace(
 			Object original, 
 			Object target, 
@@ -546,7 +572,31 @@ public interface Type extends Serializable {
 			Object owner, 
 			Map copyCache, 
 			ForeignKeyDirection foreignKeyDirection) throws HibernateException;
-	
+
+	/**
+	 * During merge, replace the existing (target) value in the entity we are merging to
+	 * with a new (original) value from the detached entity we are merging. For immutable
+	 * objects, or null values, it is safe to simply return the first parameter. For
+	 * mutable objects, it is safe to return a copy of the first parameter. For objects
+	 * with component values, it might make sense to recursively replace component values.
+	 *
+	 * @param original the value from the detached entity being merged
+	 * @param target the value in the managed entity
+	 * @param session The originating session
+	 * @param owner The owner of the value
+	 * @param foreignKeyDirection For associations, which direction does the foreign key point?
+	 *
+	 * @return the value to be merged
+	 *
+	 * @throws HibernateException An error from Hibernate
+	 */
+	public Object replace(
+			Object original,
+			Object target,
+			SessionImplementor session,
+			Object owner,
+			ForeignKeyDirection foreignKeyDirection) throws HibernateException;
+
 	/**
 	 * Given an instance of the type, return an array of boolean, indicating
 	 * which mapped columns would be null.
