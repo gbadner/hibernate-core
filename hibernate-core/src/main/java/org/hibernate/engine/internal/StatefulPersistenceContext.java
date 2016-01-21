@@ -51,6 +51,7 @@ import org.hibernate.engine.spi.PersistentAttributeInterceptor;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.engine.spi.SessionImplementor;
 import org.hibernate.engine.spi.Status;
+import org.hibernate.event.internal.MergeOperationContext;
 import org.hibernate.event.spi.EventSource;
 import org.hibernate.internal.CoreMessageLogger;
 import org.hibernate.internal.util.collections.ConcurrentReferenceHashMap;
@@ -1124,6 +1125,12 @@ public class StatefulPersistenceContext implements PersistenceContext {
 
 	@Override
 	public Serializable getOwnerId(String entityName, String propertyName, Object childEntity, Map mergeMap) {
+		return getOwnerId( entityName, propertyName, childEntity );
+	}
+
+	@Override
+	public Serializable getOwnerId(String entityName, String propertyName, Object childEntity) {
+
 		final String collectionRole = entityName + '.' + propertyName;
 		final EntityPersister persister = session.getFactory().getEntityPersister( entityName );
 		final CollectionPersister collectionPersister = session.getFactory().getCollectionPersister( collectionRole );
@@ -1141,6 +1148,14 @@ public class StatefulPersistenceContext implements PersistenceContext {
 				// remove wrong entry
 				parentsByChild.remove( childEntity );
 			}
+		}
+
+		// mergeMap acts as a local copy cache managed for the duration of a merge
+		// operation.  It represents a map of the detached entity instances pointing
+		// to the corresponding managed instance.
+		Map mergeMap = null;
+		if ( MergeOperationContext.class.isInstance( session.getOperationContext() ) ) {
+			mergeMap = ( (MergeOperationContext) session.getOperationContext() ).invertMap();
 		}
 
 		//not found in case, proceed
@@ -1244,10 +1259,23 @@ public class StatefulPersistenceContext implements PersistenceContext {
 
 	@Override
 	public Object getIndexInOwner(String entity, String property, Object childEntity, Map mergeMap) {
+		return getIndexInOwner( entity, property, childEntity );
+	}
+
+	@Override
+	public Object getIndexInOwner(String entity, String property, Object childEntity) {
 		final EntityPersister persister = session.getFactory().getEntityPersister( entity );
 		final CollectionPersister cp = session.getFactory().getCollectionPersister( entity + '.' + property );
 
-	    // try cache lookup first
+		// mergeMap acts as a local copy cache managed for the duration of a merge
+		// operation.  It represents a map of the detached entity instances pointing
+		// to the corresponding managed instance.
+		Map mergeMap = null;
+		if ( MergeOperationContext.class.isInstance( session.getOperationContext() ) ) {
+			mergeMap = ( (MergeOperationContext) session.getOperationContext() ).invertMap();
+		}
+
+		// try cache lookup first
 		final Object parent = parentsByChild.get( childEntity );
 		if ( parent != null ) {
 			final EntityEntry entityEntry = entityEntryContext.getEntityEntry( parent );

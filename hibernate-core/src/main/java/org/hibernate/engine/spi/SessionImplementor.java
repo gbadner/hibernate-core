@@ -93,6 +93,12 @@ public interface SessionImplementor extends Serializable, LobCreationContext, Wr
 	boolean isTransactionInProgress();
 
 	/**
+	 * Get the context of the operation currently in progress.
+	 * @return
+	 */
+	OperationContext getOperationContext();
+
+	/**
 	 * Initialize the collection (if not already initialized)
 	 */
 	void initializeCollection(PersistentCollection collection, boolean writing)

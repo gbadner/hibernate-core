@@ -514,11 +514,17 @@ public abstract class AbstractEntityTuplizer implements EntityTuplizer {
 	@Override
 	public Object[] getPropertyValuesToInsert(Object entity, Map mergeMap, SessionImplementor session)
 			throws HibernateException {
+		return getPropertyValuesToInsert( entity, session );
+	}
+
+	@Override
+	public Object[] getPropertyValuesToInsert(Object entity, SessionImplementor session)
+			throws HibernateException {
 		final int span = entityMetamodel.getPropertySpan();
 		final Object[] result = new Object[span];
 
 		for ( int j = 0; j < span; j++ ) {
-			result[j] = getters[j].getForInsert( entity, mergeMap, session );
+			result[j] = getters[j].getForInsert( entity, session );
 		}
 		return result;
 	}

@@ -46,17 +46,6 @@ public class DefaultDeleteEventListener implements DeleteEventListener {
 	private static final CoreMessageLogger LOG = CoreLogging.messageLogger( DefaultDeleteEventListener.class );
 
 	/**
-	 * Handle the given delete event.
-	 *
-	 * @param event The delete event to be handled.
-	 *
-	 * @throws HibernateException
-	 */
-	public void onDelete(DeleteEvent event) throws HibernateException {
-		onDelete( event, new IdentitySet() );
-	}
-
-	/**
 	 * Handle the given delete event.  This is the cascaded form.
 	 *
 	 * @param event The delete event.
@@ -64,7 +53,20 @@ public class DefaultDeleteEventListener implements DeleteEventListener {
 	 *
 	 * @throws HibernateException
 	 */
+	@Override
 	public void onDelete(DeleteEvent event, Set transientEntities) throws HibernateException {
+		onDelete( event );
+	}
+
+	/**
+	 * Handle the given delete event.
+	 *
+	 * @param event The delete event to be handled.
+	 *
+	 * @throws HibernateException
+	 */
+	@Override
+	public void onDelete(DeleteEvent event) throws HibernateException {
 
 		final EventSource source = event.getSession();
 
@@ -82,7 +84,7 @@ public class DefaultDeleteEventListener implements DeleteEventListener {
 			persister = source.getEntityPersister( event.getEntityName(), entity );
 
 			if ( ForeignKeys.isTransient( persister.getEntityName(), entity, null, source ) ) {
-				deleteTransientEntity( source, entity, event.isCascadeDeleteEnabled(), persister, transientEntities );
+				deleteTransientEntity( source, entity, event.isCascadeDeleteEnabled(), persister );
 				// EARLY EXIT!!!
 				return;
 			}
@@ -145,8 +147,7 @@ public class DefaultDeleteEventListener implements DeleteEventListener {
 				entityEntry,
 				event.isCascadeDeleteEnabled(),
 				event.isOrphanRemovalBeforeUpdates(),
-				persister,
-				transientEntities
+				persister
 		);
 
 		if ( source.getFactory().getSettings().isIdentifierRollbackEnabled() ) {
@@ -179,23 +180,19 @@ public class DefaultDeleteEventListener implements DeleteEventListener {
 	 * @param entity The entity being delete processed
 	 * @param cascadeDeleteEnabled Is cascading of deletes enabled
 	 * @param persister The entity persister
-	 * @param transientEntities A cache of already visited transient entities
-	 * (to avoid infinite recursion).
 	 */
 	protected void deleteTransientEntity(
 			EventSource session,
 			Object entity,
 			boolean cascadeDeleteEnabled,
-			EntityPersister persister,
-			Set transientEntities) {
+			EntityPersister persister) {
 		LOG.handlingTransientEntity();
-		if ( transientEntities.contains( entity ) ) {
+		if ( ! addTransientEntity( session, entity ) ) {
 			LOG.trace( "Already handled transient entity; skipping" );
 			return;
 		}
-		transientEntities.add( entity );
-		cascadeBeforeDelete( session, persister, entity, null, transientEntities );
-		cascadeAfterDelete( session, persister, entity, transientEntities );
+		cascadeBeforeDelete( session, persister, entity, null );
+		cascadeAfterDelete( session, persister, entity );
 	}
 
 	/**
@@ -208,7 +205,6 @@ public class DefaultDeleteEventListener implements DeleteEventListener {
 	 * @param entityEntry The entity's entry in the {@link PersistenceContext}
 	 * @param isCascadeDeleteEnabled Is delete cascading enabled?
 	 * @param persister The entity persister.
-	 * @param transientEntities A cache of already deleted entities.
 	 */
 	protected final void deleteEntity(
 			final EventSource session,
@@ -216,8 +212,7 @@ public class DefaultDeleteEventListener implements DeleteEventListener {
 			final EntityEntry entityEntry,
 			final boolean isCascadeDeleteEnabled,
 			final boolean isOrphanRemovalBeforeUpdates,
-			final EntityPersister persister,
-			final Set transientEntities) {
+			final EntityPersister persister) {
 
 		if ( LOG.isTraceEnabled() ) {
 			LOG.tracev(
@@ -254,7 +249,7 @@ public class DefaultDeleteEventListener implements DeleteEventListener {
 		persistenceContext.setEntryStatus( entityEntry, Status.DELETED );
 		final EntityKey key = session.generateEntityKey( entityEntry.getId(), persister );
 
-		cascadeBeforeDelete( session, persister, entity, entityEntry, transientEntities );
+		cascadeBeforeDelete( session, persister, entity, entityEntry );
 
 		new ForeignKeys.Nullifier( entity, true, false, session )
 				.nullifyTransientReferences( entityEntry.getDeletedState(), propTypes );
@@ -291,7 +286,7 @@ public class DefaultDeleteEventListener implements DeleteEventListener {
 			);
 		}
 
-		cascadeAfterDelete( session, persister, entity, transientEntities );
+		cascadeAfterDelete( session, persister, entity );
 
 		// the entry will be removed after the flush, and will no longer
 		// override the stale snapshot
@@ -324,8 +319,7 @@ public class DefaultDeleteEventListener implements DeleteEventListener {
 			EventSource session,
 			EntityPersister persister,
 			Object entity,
-			EntityEntry entityEntry,
-			Set transientEntities) throws HibernateException {
+			EntityEntry entityEntry) throws HibernateException {
 
 		CacheMode cacheMode = session.getCacheMode();
 		session.setCacheMode( CacheMode.GET );
@@ -337,8 +331,7 @@ public class DefaultDeleteEventListener implements DeleteEventListener {
 					CascadePoint.AFTER_INSERT_BEFORE_DELETE,
 					session,
 					persister,
-					entity,
-					transientEntities
+					entity
 			);
 		}
 		finally {
@@ -350,8 +343,7 @@ public class DefaultDeleteEventListener implements DeleteEventListener {
 	protected void cascadeAfterDelete(
 			EventSource session,
 			EntityPersister persister,
-			Object entity,
-			Set transientEntities) throws HibernateException {
+			Object entity) throws HibernateException {
 
 		CacheMode cacheMode = session.getCacheMode();
 		session.setCacheMode( CacheMode.GET );
@@ -363,13 +355,16 @@ public class DefaultDeleteEventListener implements DeleteEventListener {
 					CascadePoint.BEFORE_INSERT_AFTER_DELETE,
 					session,
 					persister,
-					entity,
-					transientEntities
+					entity
 			);
 		}
 		finally {
 			session.getPersistenceContext().decrementCascadeLevel();
 			session.setCacheMode( cacheMode );
 		}
+	}
+
+	private static boolean addTransientEntity(EventSource session, Object transientEntity) {
+		return ( (DeleteOperationContext) session.getOperationContext() ).addTransientEntity( transientEntity );
 	}
 }

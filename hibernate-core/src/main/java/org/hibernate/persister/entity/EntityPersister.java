@@ -621,8 +621,15 @@ public interface EntityPersister extends OptimisticCacheSource, EntityDefinition
 
 	/**
 	 * Return the values of the insertable properties of the object (including backrefs)
+	 * @deprecated Use {@link #getPropertyValuesToInsert(Object, SessionImplementor)} instead.
 	 */
+	@Deprecated
 	public Object[] getPropertyValuesToInsert(Object object, Map mergeMap, SessionImplementor session) throws HibernateException;
+
+	/**
+	 * Return the values of the insertable properties of the object (including backrefs)
+	 */
+	public Object[] getPropertyValuesToInsert(Object object, SessionImplementor session) throws HibernateException;
 
 	/**
 	 * Perform a select to retrieve the values of any generated properties

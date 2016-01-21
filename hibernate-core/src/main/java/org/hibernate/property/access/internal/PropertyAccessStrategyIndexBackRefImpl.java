@@ -76,11 +76,16 @@ public class PropertyAccessStrategyIndexBackRefImpl implements PropertyAccessStr
 
 		@Override
 		public Object getForInsert(Object owner, Map mergeMap, SessionImplementor session) {
+			return getForInsert( owner, session );
+		}
+
+		@Override
+		public Object getForInsert(Object owner, SessionImplementor session) {
 			if ( session == null ) {
 				return PropertyAccessStrategyBackRefImpl.UNKNOWN;
 			}
 			else {
-				return session.getPersistenceContext().getIndexInOwner( entityName, propertyName, owner, mergeMap );
+				return session.getPersistenceContext().getIndexInOwner( entityName, propertyName, owner );
 			}
 		}
 

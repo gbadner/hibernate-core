@@ -69,6 +69,11 @@ public class PropertyAccessEmbeddedImpl implements PropertyAccess {
 
 		@Override
 		public Object getForInsert(Object owner, Map mergeMap, SessionImplementor session) {
+			return getForInsert( owner, session );
+		}
+
+		@Override
+		public Object getForInsert(Object owner, SessionImplementor session) {
 			return owner;
 		}
 

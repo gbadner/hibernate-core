@@ -93,11 +93,16 @@ public class PropertyAccessStrategyBackRefImpl implements PropertyAccessStrategy
 
 		@Override
 		public Object getForInsert(Object owner, Map mergeMap, SessionImplementor session) {
+			return getForInsert( owner, session );
+		}
+
+		@Override
+		public Object getForInsert(Object owner, SessionImplementor session) {
 			if ( session == null ) {
 				return UNKNOWN;
 			}
 			else {
-				return session.getPersistenceContext().getOwnerId( entityName, propertyName, owner, mergeMap );
+				return session.getPersistenceContext().getOwnerId( entityName, propertyName, owner );
 			}
 		}
 

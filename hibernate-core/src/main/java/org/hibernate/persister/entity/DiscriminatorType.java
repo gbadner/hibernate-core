@@ -9,7 +9,6 @@ package org.hibernate.persister.entity;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.Map;
 
 import org.hibernate.EntityMode;
 import org.hibernate.HibernateException;
@@ -101,7 +100,7 @@ public class DiscriminatorType extends AbstractType {
 		return value;
 	}
 
-	public Object replace(Object original, Object target, SessionImplementor session, Object owner, Map copyCache)
+	public Object replace(Object original, Object target, SessionImplementor session, Object owner)
 			throws HibernateException {
 		return original;
 	}

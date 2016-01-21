@@ -84,10 +84,10 @@ public class CustomCollectionType extends CollectionType {
 		return userType.indexOf(collection, entity);
 	}
 
-	public Object replaceElements(Object original, Object target, Object owner, Map copyCache, SessionImplementor session)
+	public Object replaceElements(Object original, Object target, Object owner, SessionImplementor session)
 	throws HibernateException {
 		CollectionPersister cp = session.getFactory().getCollectionPersister( getRole() );
-		return userType.replaceElements(original, target, cp, owner, copyCache, session);
+		return userType.replaceElements(original, target, cp, owner, null, session);
 	}
 
 	protected String renderLoggableString(Object value, SessionFactoryImplementor factory) throws HibernateException {

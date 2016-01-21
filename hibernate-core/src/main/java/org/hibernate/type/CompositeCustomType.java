@@ -11,7 +11,6 @@ import java.lang.reflect.Method;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.Map;
 
 import org.hibernate.EntityMode;
 import org.hibernate.FetchMode;
@@ -143,8 +142,7 @@ public class CompositeCustomType extends AbstractType implements CompositeType, 
 			Object original,
 			Object target,
 			SessionImplementor session,
-			Object owner,
-			Map copyCache)
+			Object owner)
 			throws HibernateException {
 		return userType.replace( original, target, session, owner );
 	}

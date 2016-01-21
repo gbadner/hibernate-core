@@ -40,25 +40,48 @@ public interface EventSource extends SessionImplementor, Session {
 
 	/**
 	 * Cascade merge an entity instance
+	 *
+	 * @deprecated Use {@link #merge(String, Object)} instead.
 	 */
+	@Deprecated
 	public void merge(String entityName, Object object, Map copiedAlready) throws HibernateException;
 	/**
 	 * Cascade persist an entity instance
+	 *
+	 * @deprecated Use {@link #persist(String, Object)} instead.
 	 */
+	@Deprecated
 	public void persist(String entityName, Object object, Map createdAlready) throws HibernateException;
 
 	/**
 	 * Cascade persist an entity instance during the flush process
+	 *
+	 * @deprecated Use {@link #persistOnFlush(String, Object)}
 	 */
+	@Deprecated
 	public void persistOnFlush(String entityName, Object object, Map copiedAlready);
 	/**
-	 * Cascade refresh an entity instance
+	 * Cascade persist an entity instance during the flush process
 	 */
+	public void persistOnFlush(String entityName, Object object);
+	/**
+	 * Cascade refresh an entity instance
+	 *
+	 * @deprecated Use {@link #refresh(String, Object)}
+	 */
+	@Deprecated
 	public void refresh(String entityName, Object object, Map refreshedAlready) throws HibernateException;
 	/**
 	 * Cascade delete an entity instance
+	 *
+	 * @deprecated Use {@link #delete
 	 */
+	@Deprecated
 	public void delete(String entityName, Object child, boolean isCascadeDeleteEnabled, Set transientEntities);
+	/**
+	 * Cascade delete an entity instance
+	 */
+	public void delete(String entityName, Object child, boolean isCascadeDeleteEnabled);
 	/**
 	 * A specialized type of deletion for orphan removal that must occur prior to queued inserts and updates.
 	 */

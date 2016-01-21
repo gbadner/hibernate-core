@@ -105,11 +105,11 @@ public abstract class AbstractType implements Type {
 	}
 	
 	public boolean isSame(Object x, Object y) throws HibernateException {
-		return isEqual(x, y );
+		return isEqual( x, y );
 	}
 
 	public boolean isEqual(Object x, Object y) {
-		return EqualsHelper.equals(x, y);
+		return EqualsHelper.equals( x, y );
 	}
 	
 	public int getHashCode(Object x) {
@@ -117,15 +117,19 @@ public abstract class AbstractType implements Type {
 	}
 
 	public boolean isEqual(Object x, Object y, SessionFactoryImplementor factory) {
-		return isEqual(x, y );
+		return isEqual( x, y );
 	}
 	
 	public int getHashCode(Object x, SessionFactoryImplementor factory) {
-		return getHashCode(x );
+		return getHashCode( x );
 	}
 	
 	public Type getSemiResolvedType(SessionFactoryImplementor factory) {
 		return this;
+	}
+
+	public Object replace(Object original, Object target, SessionImplementor session, Object owner, Map copyCache) {
+		return replace( original, target, session, owner );
 	}
 
 	public Object replace(
@@ -136,6 +140,16 @@ public abstract class AbstractType implements Type {
 			Map copyCache, 
 			ForeignKeyDirection foreignKeyDirection) 
 	throws HibernateException {
+		return replace( original, target, session, owner, foreignKeyDirection );
+	}
+
+	public Object replace(
+			Object original,
+			Object target,
+			SessionImplementor session,
+			Object owner,
+			ForeignKeyDirection foreignKeyDirection)
+			throws HibernateException {
 		boolean include;
 		if ( isAssociationType() ) {
 			AssociationType atype = (AssociationType) this;
@@ -144,7 +158,7 @@ public abstract class AbstractType implements Type {
 		else {
 			include = ForeignKeyDirection.FROM_PARENT ==foreignKeyDirection;
 		}
-		return include ? replace(original, target, session, owner, copyCache) : target;
+		return include ? replace(original, target, session, owner) : target;
 	}
 
 	public void beforeAssemble(Serializable cached, SessionImplementor session) {}

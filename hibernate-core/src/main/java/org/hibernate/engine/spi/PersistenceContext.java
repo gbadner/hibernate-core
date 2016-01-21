@@ -577,14 +577,44 @@ public interface PersistenceContext {
 	 *
 	 * @return The id of the entityName instance which is said to own the child; null if an appropriate owner not
 	 * located.
+	 * @deprecated Use {@link #getOwnerId(String, String, Object)} instead.
 	 */
+	@Deprecated
 	public Serializable getOwnerId(String entityName, String propertyName, Object childEntity, Map mergeMap);
+
+	/**
+	 * Search <tt>this</tt> persistence context for an associated entity instance which is considered the "owner" of
+	 * the given <tt>childEntity</tt>, and return that owner's id value.  This is performed in the scenario of a
+	 * uni-directional, non-inverse one-to-many collection (which means that the collection elements do not maintain
+	 * a direct reference to the owner).
+	 * <p/>
+	 * As such, the processing here is basically to loop over every entity currently associated with this persistence
+	 * context and for those of the correct entity (sub) type to extract its collection role property value and see
+	 * if the child is contained within that collection.  If so, we have found the owner; if not, we go on.
+	 *
+	 * @param entityName The entity name for the entity type which would own the child
+	 * @param propertyName The name of the property on the owning entity type which would name this child association.
+	 * @param childEntity The child entity instance for which to locate the owner instance id.
+	 *
+	 * @return The id of the entityName instance which is said to own the child; null if an appropriate owner not
+	 * located.
+	 */
+	public Serializable getOwnerId(String entityName, String propertyName, Object childEntity);
+
+
+	/**
+	 * Search the persistence context for an index of the child object,
+	 * given a collection role
+	 * @deprecated Use {@link #getIndexInOwner(String, String, Object)} instead.
+	 */
+	@Deprecated
+	public Object getIndexInOwner(String entity, String property, Object childObject, Map mergeMap);
 
 	/**
 	 * Search the persistence context for an index of the child object,
 	 * given a collection role
 	 */
-	public Object getIndexInOwner(String entity, String property, Object childObject, Map mergeMap);
+	public Object getIndexInOwner(String entity, String property, Object childObject);
 
 	/**
 	 * Record the fact that the association belonging to the keyed

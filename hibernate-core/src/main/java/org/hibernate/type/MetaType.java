@@ -19,8 +19,6 @@ import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.engine.spi.SessionImplementor;
 import org.hibernate.engine.jdbc.Size;
 
-import org.dom4j.Node;
-
 /**
  * @author Gavin King
  */
@@ -133,8 +131,7 @@ public class MetaType extends AbstractType {
 			Object original, 
 			Object target,
 			SessionImplementor session, 
-			Object owner, 
-			Map copyCache) {
+			Object owner) {
 		return original;
 	}
 	

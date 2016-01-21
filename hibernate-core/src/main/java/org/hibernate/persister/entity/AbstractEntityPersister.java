@@ -4698,7 +4698,12 @@ public abstract class AbstractEntityPersister
 
 	public Object[] getPropertyValuesToInsert(Object object, Map mergeMap, SessionImplementor session)
 			throws HibernateException {
-		return getEntityTuplizer().getPropertyValuesToInsert( object, mergeMap, session );
+		return getPropertyValuesToInsert( object, session );
+	}
+
+	public Object[] getPropertyValuesToInsert(Object object, SessionImplementor session)
+			throws HibernateException {
+		return getEntityTuplizer().getPropertyValuesToInsert( object, session );
 	}
 
 	public void processInsertGeneratedProperties(

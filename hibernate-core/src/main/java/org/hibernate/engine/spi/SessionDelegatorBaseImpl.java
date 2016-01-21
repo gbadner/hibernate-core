@@ -118,6 +118,11 @@ public class SessionDelegatorBaseImpl implements SessionImplementor, Session {
 	}
 
 	@Override
+	public OperationContext getOperationContext() {
+		return sessionImplementor.getOperationContext();
+	}
+
+	@Override
 	public void initializeCollection(PersistentCollection collection, boolean writing) throws HibernateException {
 		sessionImplementor.initializeCollection( collection, writing );
 	}

@@ -42,8 +42,7 @@ public class DefaultSaveEventListener extends DefaultSaveOrUpdateEventListener {
 					event.getEntity(), 
 					event.getRequestedId(), 
 					event.getEntityName(), 
-					null, 
-					event.getSession() 
+					event.getSession()
 				);
 		}
 		

@@ -47,9 +47,6 @@ import org.hibernate.proxy.LazyInitializer;
 
 import org.jboss.logging.Logger;
 
-import org.dom4j.Element;
-import org.dom4j.Node;
-
 /**
  * A type that handles Hibernate <tt>PersistentCollection</tt>s (including arrays).
  * 
@@ -310,7 +307,7 @@ public abstract class CollectionType extends AbstractType implements Association
 	@Override
 	public boolean isDirty(Object old, Object current, boolean[] checkable, SessionImplementor session)
 			throws HibernateException {
-		return isDirty(old, current, session);
+		return isDirty( old, current, session );
 	}
 
 	/**
@@ -502,12 +499,31 @@ public abstract class CollectionType extends AbstractType implements Association
 	 * @param copyCache The map of elements already replaced.
 	 * @param session The session from which the merge event originated.
 	 * @return The merged collection.
+	 *
+	 * @deprecated Use {@link #replaceElements(Object, Object, Object, SessionImplementor)} instead.
 	 */
+	@Deprecated
 	public Object replaceElements(
 			Object original,
 			Object target,
 			Object owner,
 			Map copyCache,
+			SessionImplementor session) {
+		return replaceElements( original, target, owner, session );
+	}
+	/**
+	 * Replace the elements of a collection with the elements of another collection.
+	 *
+	 * @param original The 'source' of the replacement elements (where we copy from)
+	 * @param target The target of the replacement elements (where we copy to)
+	 * @param owner The owner of the collection being merged
+	 * @param session The session from which the merge event originated.
+	 * @return The merged collection.
+	 */
+	public Object replaceElements(
+			Object original,
+			Object target,
+			Object owner,
 			SessionImplementor session) {
 		// TODO: does not work for EntityMode.DOM4J yet!
 		java.util.Collection result = ( java.util.Collection ) target;
@@ -517,7 +533,7 @@ public abstract class CollectionType extends AbstractType implements Association
 		Type elemType = getElementType( session.getFactory() );
 		Iterator iter = ( (java.util.Collection) original ).iterator();
 		while ( iter.hasNext() ) {
-			result.add( elemType.replace( iter.next(), null, session, owner, copyCache ) );
+			result.add( elemType.replace( iter.next(), null, session, owner ) );
 		}
 
 		// if the original is a PersistentCollection, and that original
@@ -532,7 +548,7 @@ public abstract class CollectionType extends AbstractType implements Association
 				final PersistentCollection originalPersistentCollection = (PersistentCollection) original;
 				final PersistentCollection resultPersistentCollection = (PersistentCollection) result;
 
-				preserveSnapshot( originalPersistentCollection, resultPersistentCollection, elemType, owner, copyCache, session );
+				preserveSnapshot( originalPersistentCollection, resultPersistentCollection, elemType, owner, session );
 
 				if ( ! originalPersistentCollection.isDirty() ) {
 					resultPersistentCollection.clearDirty();
@@ -548,7 +564,6 @@ public abstract class CollectionType extends AbstractType implements Association
 			PersistentCollection result,
 			Type elemType,
 			Object owner,
-			Map copyCache,
 			SessionImplementor session) {
 		Serializable originalSnapshot = original.getStoredSnapshot();
 		Serializable resultSnapshot = result.getStoredSnapshot();
@@ -558,7 +573,7 @@ public abstract class CollectionType extends AbstractType implements Association
 			targetSnapshot = new ArrayList(
 					( (List) originalSnapshot ).size() );
 			for ( Object obj : (List) originalSnapshot ) {
-				( (List) targetSnapshot ).add( elemType.replace( obj, null, session, owner, copyCache ) );
+				( (List) targetSnapshot ).add( elemType.replace( obj, null, session, owner ) );
 			}
 
 		}
@@ -580,7 +595,7 @@ public abstract class CollectionType extends AbstractType implements Association
 						? null
 						: ( (Map<Object, Object>) resultSnapshot ).get( key );
 
-				Object newValue = elemType.replace( value, resultSnapshotValue, session, owner, copyCache );
+				Object newValue = elemType.replace( value, resultSnapshotValue, session, owner );
 
 				if ( key == value ) {
 					( (Map) targetSnapshot ).put( newValue, newValue );
@@ -596,7 +611,7 @@ public abstract class CollectionType extends AbstractType implements Association
 		else if ( originalSnapshot instanceof Object[] ) {
 			Object[] arr = (Object[]) originalSnapshot;
 			for ( int i = 0; i < arr.length; i++ ) {
-				arr[i] = elemType.replace( arr[i], null, session, owner, copyCache );
+				arr[i] = elemType.replace( arr[i], null, session, owner );
 			}
 			targetSnapshot = originalSnapshot;
 
@@ -643,8 +658,7 @@ public abstract class CollectionType extends AbstractType implements Association
 			final Object original,
 			final Object target,
 			final SessionImplementor session,
-			final Object owner,
-			final Map copyCache) throws HibernateException {
+			final Object owner) throws HibernateException {
 		if ( original == null ) {
 			return null;
 		}
@@ -658,14 +672,14 @@ public abstract class CollectionType extends AbstractType implements Association
 		
 		//for arrays, replaceElements() may return a different reference, since
 		//the array length might not match
-		result = replaceElements( original, result, owner, copyCache, session );
+		result = replaceElements( original, result, owner, session );
 
 		if ( original == target ) {
 			// get the elements back into the target making sure to handle dirty flag
 			boolean wasClean = PersistentCollection.class.isInstance( target ) && !( ( PersistentCollection ) target ).isDirty();
 			//TODO: this is a little inefficient, don't need to do a whole
 			//      deep replaceElements() call
-			replaceElements( result, target, owner, copyCache, session );
+			replaceElements( result, target, owner, session );
 			if ( wasClean ) {
 				( ( PersistentCollection ) target ).clearDirty();
 			}

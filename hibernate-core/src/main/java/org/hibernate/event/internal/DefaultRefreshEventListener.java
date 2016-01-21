@@ -123,8 +123,7 @@ public class DefaultRefreshEventListener implements RefreshEventListener {
 				CascadePoint.BEFORE_REFRESH,
 				source,
 				persister,
-				object,
-				refreshedAlready
+				object
 		);
 
 		if ( e != null ) {

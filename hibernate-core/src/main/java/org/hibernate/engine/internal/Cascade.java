@@ -47,31 +47,16 @@ public final class Cascade {
 	}
 
 	/**
-	 * Cascade an action from the parent entity instance to all its children.
-	 *
-	 * @param persister The parent's entity persister
-	 * @param parent The parent reference.
-	 * @throws HibernateException
-	 */
-	public static void cascade(
-			final CascadingAction action, final CascadePoint cascadePoint,
-			final EventSource eventSource, final EntityPersister persister, final Object parent)
-			throws HibernateException {
-		cascade( action, cascadePoint, eventSource, persister, parent, null );
-	}
-
-	/**
 	 * Cascade an action from the parent entity instance to all its children.  This
 	 * form is typically called from within cascade actions.
 	 *
 	 * @param persister The parent's entity persister
 	 * @param parent The parent reference.
-	 * @param anything Anything ;)   Typically some form of cascade-local cache
 	 * which is specific to each CascadingAction type
 	 */
 	public static void cascade(
 			final CascadingAction action, final CascadePoint cascadePoint,
-			final EventSource eventSource, final EntityPersister persister, final Object parent, final Object anything)
+			final EventSource eventSource, final EntityPersister persister, final Object parent)
 			throws HibernateException {
 
 		if ( persister.hasCascades() || action.requiresNoCascadeChecking() ) { // performance opt
@@ -111,7 +96,6 @@ public final class Cascade {
 							types[i],
 							style,
 							propertyName,
-							anything,
 							false
 					);
 				}
@@ -145,7 +129,6 @@ public final class Cascade {
 			final Type type,
 			final CascadeStyle style,
 			final String propertyName,
-			final Object anything,
 			final boolean isCascadeDeleteEnabled) throws HibernateException {
 		
 		if ( child != null ) {
@@ -161,7 +144,6 @@ public final class Cascade {
 							child,
 							type,
 							style,
-							anything,
 							isCascadeDeleteEnabled
 						);
 				}
@@ -174,8 +156,7 @@ public final class Cascade {
 						componentPathStackDepth,
 						parent,
 						child,
-						(CompositeType) type,
-						anything
+						(CompositeType) type
 				);
 			}
 		}
@@ -238,7 +219,7 @@ public final class Cascade {
 							}
 							else {
 								// Else, we must delete after the updates.
-								eventSource.delete( entityName, loadedValue, isCascadeDeleteEnabled, new HashSet() );
+								eventSource.delete( entityName, loadedValue, isCascadeDeleteEnabled );
 							}
 						}
 					}
@@ -270,8 +251,7 @@ public final class Cascade {
 			final int componentPathStackDepth,
 			final Object parent,
 			final Object child,
-			final CompositeType componentType,
-			final Object anything) {
+			final CompositeType componentType) {
 
 		Object[] children = null;
 		final Type[] types = componentType.getSubtypes();
@@ -294,7 +274,6 @@ public final class Cascade {
 						types[i],
 						componentPropertyStyle,
 						subPropertyName,
-						anything,
 						false
 					);
 			}
@@ -310,10 +289,9 @@ public final class Cascade {
 			final Object child,
 			final Type type,
 			final CascadeStyle style,
-			final Object anything,
 			final boolean isCascadeDeleteEnabled) {
 		if ( type.isEntityType() || type.isAnyType() ) {
-			cascadeToOne( action, eventSource, parent, child, type, style, anything, isCascadeDeleteEnabled );
+			cascadeToOne( action, eventSource, parent, child, type, style, isCascadeDeleteEnabled );
 		}
 		else if ( type.isCollectionType() ) {
 			cascadeCollection(
@@ -324,7 +302,6 @@ public final class Cascade {
 					parent,
 					child,
 					style,
-					anything,
 					(CollectionType) type
 			);
 		}
@@ -341,7 +318,6 @@ public final class Cascade {
 			final Object parent,
 			final Object child,
 			final CascadeStyle style,
-			final Object anything,
 			final CollectionType type) {
 		final CollectionPersister persister = eventSource.getFactory().getCollectionPersister( type.getRole() );
 		final Type elemType = persister.getElementType();
@@ -363,7 +339,6 @@ public final class Cascade {
 				type,
 				style,
 				elemType,
-				anything,
 				persister.isCascadeDeleteEnabled()
 			);
 		}
@@ -379,7 +354,6 @@ public final class Cascade {
 			final Object child,
 			final Type type,
 			final CascadeStyle style,
-			final Object anything,
 			final boolean isCascadeDeleteEnabled) {
 		final String entityName = type.isEntityType()
 				? ( (EntityType) type ).getAssociatedEntityName()
@@ -388,7 +362,7 @@ public final class Cascade {
 			//not really necessary, but good for consistency...
 			eventSource.getPersistenceContext().addChildParent( child, parent );
 			try {
-				action.cascade( eventSource, child, entityName, anything, isCascadeDeleteEnabled );
+				action.cascade( eventSource, child, entityName, isCascadeDeleteEnabled );
 			}
 			finally {
 				eventSource.getPersistenceContext().removeChildParent( child );
@@ -409,7 +383,6 @@ public final class Cascade {
 			final CollectionType collectionType,
 			final CascadeStyle style,
 			final Type elemType,
-			final Object anything,
 			final boolean isCascadeDeleteEnabled) throws HibernateException {
 		final boolean reallyDoCascade = style.reallyDoCascade( action ) && child != CollectionType.UNFETCHED_COLLECTION;
 
@@ -431,7 +404,6 @@ public final class Cascade {
 						elemType,
 						style,
 						null,
-						anything,
 						isCascadeDeleteEnabled
 				);
 			}
@@ -483,7 +455,7 @@ public final class Cascade {
 		for ( Object orphan : orphans ) {
 			if ( orphan != null ) {
 				LOG.tracev( "Deleting orphaned entity instance: {0}", entityName );
-				eventSource.delete( entityName, orphan, false, new HashSet() );
+				eventSource.delete( entityName, orphan, false );
 			}
 		}
 	}

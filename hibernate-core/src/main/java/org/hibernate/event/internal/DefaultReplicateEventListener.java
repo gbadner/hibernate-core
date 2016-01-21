@@ -70,7 +70,7 @@ public class DefaultReplicateEventListener extends AbstractSaveEventListener imp
 			throw new TransientObjectException( "instance with null id passed to replicate()" );
 		}
 
-		final ReplicationMode replicationMode = event.getReplicationMode();
+		final ReplicationMode replicationMode = getReplicationMode( source );
 
 		final Object oldVersion;
 		if ( replicationMode == ReplicationMode.EXCEPTION ) {
@@ -107,7 +107,7 @@ public class DefaultReplicateEventListener extends AbstractSaveEventListener imp
 			// if can replicate, will result in a SQL UPDATE
 			// else do nothing (don't even reassociate object!)
 			if ( canReplicate ) {
-				performReplication( entity, id, realOldVersion, persister, replicationMode, source );
+				performReplication( entity, id, realOldVersion, persister, source );
 			}
 			else if ( traceEnabled ) {
 				LOG.trace( "No need to replicate" );
@@ -132,7 +132,6 @@ public class DefaultReplicateEventListener extends AbstractSaveEventListener imp
 					key,
 					persister,
 					regenerate,
-					replicationMode,
 					source,
 					true
 			);
@@ -173,7 +172,6 @@ public class DefaultReplicateEventListener extends AbstractSaveEventListener imp
 			Serializable id,
 			Object version,
 			EntityPersister persister,
-			ReplicationMode replicationMode,
 			EventSource source) throws HibernateException {
 
 		if ( LOG.isTraceEnabled() ) {
@@ -194,13 +192,12 @@ public class DefaultReplicateEventListener extends AbstractSaveEventListener imp
 				true
 		);
 
-		cascadeAfterReplicate( entity, persister, replicationMode, source );
+		cascadeAfterReplicate( entity, persister, source );
 	}
 
 	private void cascadeAfterReplicate(
 			Object entity,
 			EntityPersister persister,
-			ReplicationMode replicationMode,
 			EventSource source) {
 		source.getPersistenceContext().incrementCascadeLevel();
 		try {
@@ -209,8 +206,7 @@ public class DefaultReplicateEventListener extends AbstractSaveEventListener imp
 					CascadePoint.AFTER_UPDATE,
 					source,
 					persister,
-					entity,
-					replicationMode
+					entity
 			);
 		}
 		finally {
@@ -221,5 +217,9 @@ public class DefaultReplicateEventListener extends AbstractSaveEventListener imp
 	@Override
 	protected CascadingAction getCascadeAction() {
 		return CascadingActions.REPLICATE;
+	}
+
+	private static ReplicationMode getReplicationMode(EventSource session) {
+		return ( (ReplicateOperationContext) session.getOperationContext() ).getReplicationMode();
 	}
 }

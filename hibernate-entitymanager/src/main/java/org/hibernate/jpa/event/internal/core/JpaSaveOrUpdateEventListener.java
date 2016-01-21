@@ -39,20 +39,18 @@ public class JpaSaveOrUpdateEventListener extends DefaultSaveOrUpdateEventListen
 			Object entity,
 			Serializable requestedId,
 			String entityName,
-			Object anything,
 			EventSource source) {
 		callbackRegistry.preCreate( entity );
-		return super.saveWithRequestedId( entity, requestedId, entityName, anything, source );
+		return super.saveWithRequestedId( entity, requestedId, entityName, source );
 	}
 
 	@Override
 	protected Serializable saveWithGeneratedId(
 			Object entity,
 			String entityName,
-			Object anything,
 			EventSource source,
 			boolean requiresImmediateIdAccess) {
 		callbackRegistry.preCreate( entity );
-		return super.saveWithGeneratedId( entity, entityName, anything, source, requiresImmediateIdAccess );
+		return super.saveWithGeneratedId( entity, entityName, source, requiresImmediateIdAccess );
 	}
 }

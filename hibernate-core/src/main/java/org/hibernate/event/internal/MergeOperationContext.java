@@ -14,9 +14,13 @@ import java.util.Set;
 
 import org.jboss.logging.Logger;
 
+import org.hibernate.boot.registry.selector.spi.StrategySelector;
+import org.hibernate.engine.config.spi.ConfigurationService;
+import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.event.spi.EntityCopyObserver;
 import org.hibernate.event.spi.EventSource;
 import org.hibernate.pretty.MessageHelper;
+import org.hibernate.service.ServiceRegistry;
 
 /**
  * MergeContext is a Map implementation that is intended to be used by a merge
@@ -45,7 +49,7 @@ import org.hibernate.pretty.MessageHelper;
  * There are several restrictions.
  * <ul>
  *     <li>Methods that return collections (e.g., {@link #keySet()},
- *          {@link #values()}, {@link #entrySet()}) return an
+ *          {@link #values()}) return an
  *          unnmodifiable view of the collection;</li>
  *     <li>If {@link #put(Object mergeEntity, Object) managedEntity} or
  *         {@link #put(Object mergeEntity, Object managedEntity, boolean isOperatedOn)}
@@ -54,11 +58,6 @@ import org.hibernate.pretty.MessageHelper;
  *         same as what is already associated with <code>mergeEntity</code> in this
  *         MergeContext.
  *     </li>
- *     <li>If {@link #putAll(Map map)} is executed, the previous restriction
- *         applies to each entry in the Map;</li>
- *     <li>The {@link #remove(Object)} operation is not supported;
- *         The only way to remove data from a MergeContext is by calling
- *         {@link #clear()};</li>
  *      <li>the Map returned by {@link #invertMap()} will only contain the
  *          managed-to-merge entity cross-reference to its "newest"
  *          (most recently added) merge entity.</li>
@@ -68,19 +67,18 @@ import org.hibernate.pretty.MessageHelper;
  * classes) in the same package to add a merge entity and its corresponding
  * managed entity to a MergeContext and indicate if the merge operation is
  * being performed on the merge entity yet.<p/>
- * {@link MergeContext#put(Object mergeEntity, Object managedEntity, boolean isOperatedOn)}
+ * {@link MergeOperationContext#put(Object mergeEntity, Object managedEntity, boolean isOperatedOn)}
  * <p/>
  * The following method is intended to be used by a merge event listener (and other
  * classes) in the same package to indicate whether the merge operation is being
  * performed on a merge entity already in the MergeContext:
- * {@link MergeContext#setOperatedOn(Object mergeEntity, boolean isOperatedOn)
+ * {@link MergeOperationContext#setOperatedOn(Object mergeEntity, boolean isOperatedOn)
  *
  * @author Gail Badner
  */
-class MergeContext implements Map {
-	private static final Logger LOG = Logger.getLogger( MergeContext.class );
+public class MergeOperationContext extends AbstractSaveOperationContext {
+	private static final Logger LOG = Logger.getLogger( MergeOperationContext.class );
 
-	private final EventSource session;
 	private final EntityCopyObserver entityCopyObserver;
 
 	private Map<Object,Object> mergeToManagedEntityXref = new IdentityHashMap<Object,Object>(10);
@@ -101,18 +99,44 @@ class MergeContext implements Map {
 	    // key is a merge entity;
 	    // value is a flag indicating if the merge entity is currently in the merge process.
 
-	MergeContext(EventSource session, EntityCopyObserver entityCopyObserver){
-		this.session = session;
-		this.entityCopyObserver = entityCopyObserver;
+	public MergeOperationContext(EventSource session){
+		super( session );
+		this.entityCopyObserver = createEntityCopyObserver( session.getFactory() );
+	}
+
+	@Override
+	public void afterOperation() {
+		super.afterOperation();
+		entityCopyObserver.topLevelMergeComplete( getSession() );
+	}
+
+	private static EntityCopyObserver createEntityCopyObserver(SessionFactoryImplementor sessionFactory) {
+		final ServiceRegistry serviceRegistry = sessionFactory.getServiceRegistry();
+		final ConfigurationService configurationService
+				= serviceRegistry.getService( ConfigurationService.class );
+		String entityCopyObserverStrategy = configurationService.getSetting(
+				"hibernate.event.merge.entity_copy_observer",
+				new ConfigurationService.Converter<String>() {
+					@Override
+					public String convert(Object value) {
+						return value.toString();
+					}
+				},
+				EntityCopyNotAllowedObserver.SHORT_NAME
+		);
+		LOG.debugf( "EntityCopyObserver strategy: %s", entityCopyObserverStrategy );
+		final StrategySelector strategySelector = serviceRegistry.getService( StrategySelector.class );
+		return strategySelector.resolveStrategy( EntityCopyObserver.class, entityCopyObserverStrategy );
 	}
 
 	/**
 	 * Clears the MergeContext.
 	 */
-	public void clear() {
+	public void cleanup() {
 		mergeToManagedEntityXref.clear();
 		managedToMergeEntityXref.clear();
 		mergeEntityToOperatedOnFlagMap.clear();
+		entityCopyObserver.clear();
 	}
 
 	/**
@@ -123,7 +147,7 @@ class MergeContext implements Map {
 	 * @return true if this MergeContext contains a cross-reference for the specified merge entity
 	 * @throws NullPointerException if mergeEntity is null
 	 */
-	public boolean containsKey(Object mergeEntity) {
+	boolean containsMergeEntity(Object mergeEntity) {
 		if ( mergeEntity == null ) {
 			throw new NullPointerException( "null entities are not supported by " + getClass().getName() );
 		}
@@ -146,12 +170,15 @@ class MergeContext implements Map {
 	}
 
 	/**
+	 * Should only be used for testing.
+	 *
 	 * Returns an unmodifiable set view of the merge-to-managed entity cross-references contained in this MergeContext.
 	 * @return an unmodifiable set view of the merge-to-managed entity cross-references contained in this MergeContext
 	 *
 	 * @see {@link Collections#unmodifiableSet(java.util.Set)}
+	 *
 	 */
-	public Set entrySet() {
+	/* package-private */ Set entrySet() {
 		return Collections.unmodifiableSet( mergeToManagedEntityXref.entrySet() );
 	}
 
@@ -177,12 +204,14 @@ class MergeContext implements Map {
 	}
 
 	/**
+	 * Should only be used for testing.
+	 *
 	 * Returns an unmodifiable set view of the merge entities contained in this MergeContext
 	 * @return an unmodifiable set view of the merge entities contained in this MergeContext
 	 *
 	 * @see {@link Collections#unmodifiableSet(java.util.Set)}
 	 */
-	public Set keySet() {
+	/* package-private */ Set keySet() {
 		return Collections.unmodifiableSet( mergeToManagedEntityXref.keySet() );
 	}
 
@@ -246,7 +275,7 @@ class MergeContext implements Map {
 						managedEntity,
 						mergeEntity,
 						oldMergeEntity,
-						session
+						getSession()
 				);
 			}
 			if ( oldOperatedOn != null ) {
@@ -277,37 +306,6 @@ class MergeContext implements Map {
 	}
 
 	/**
-	 * Copies all of the mappings from the specified Map to this MergeContext.
-	 * The key and value for each entry in <code>map</code> is subject to the same
-	 * restrictions as {@link #put(Object mergeEntity, Object managedEntity)}.
-	 *
-	 * This method assumes that the merge process is not yet operating on any merge entity
-	 *
-	 * @param map keys and values must be non-null
-	 * @throws NullPointerException if any key or value is null
-	 * @throws IllegalArgumentException if a key in <code>map</code> was already in this MergeContext
-	 * but associated value in <code>map</code> is different from the previous value in this MergeContext.
-	 * @throws IllegalStateException if internal cross-references are out of sync,
-	 */
-	public void putAll(Map map) {
-		for ( Object o : map.entrySet() ) {
-			Entry entry = (Entry) o;
-			put( entry.getKey(), entry.getValue() );
-		}
-	}
-
-	/**
-	 * The remove operation is not supported.
-	 * @param mergeEntity the merge entity.
-	 * @throws UnsupportedOperationException if called.
-	 */
-	public Object remove(Object mergeEntity) {
-		throw new UnsupportedOperationException(
-				String.format( "Operation not supported: %s.remove()", getClass().getName() )
-		);
-	}
-
-	/**
 	 * Returns the number of merge-to-managed entity cross-references in this MergeContext
 	 * @return the number of merge-to-managed entity cross-references in this MergeContext
 	 */
@@ -316,12 +314,14 @@ class MergeContext implements Map {
 	}
 
 	/**
+	 * Should only be used for testing.
+	 *
 	 * Returns an unmodifiable Set view of managed entities contained in this MergeContext.
 	 * @return an unmodifiable Set view of managed entities contained in this MergeContext
 	 *
 	 * @see {@link Collections#unmodifiableSet(java.util.Set)}
 	 */
-	public Collection values() {
+	/* package-private */ Collection values() {
 		return Collections.unmodifiableSet( managedToMergeEntityXref.keySet() );
 	}
 
@@ -374,8 +374,8 @@ class MergeContext implements Map {
 	}
 
 	private String printEntity(Object entity) {
-		if ( session.getPersistenceContext().getEntry( entity ) != null ) {
-			return MessageHelper.infoString( session.getEntityName( entity ), session.getIdentifier( entity ) );
+		if ( getSession().getPersistenceContext().getEntry( entity ) != null ) {
+			return MessageHelper.infoString( getSession().getEntityName( entity ), getSession().getIdentifier( entity ) );
 		}
 		// Entity was not found in current persistence context. Use Object#toString() method.
 		return "[" + entity + "]";

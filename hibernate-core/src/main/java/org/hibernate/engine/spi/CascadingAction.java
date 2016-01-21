@@ -32,12 +32,30 @@ public interface CascadingAction {
 	 * which is specific to each CascadingAction type
 	 * @param isCascadeDeleteEnabled Are cascading deletes enabled.
 	 * @throws HibernateException
+	 * @deprecated Use {@link #cascade(EventSource, Object, String, boolean)} instead.
 	 */
+	@Deprecated
 	void cascade(
 			EventSource session,
 			Object child,
 			String entityName,
 			Object anything,
+			boolean isCascadeDeleteEnabled) throws HibernateException;
+
+	/**
+	 * Cascade the action to the child object.
+	 *
+	 * @param session The session within which the cascade is occuring.
+	 * @param child The child to which cascading should be performed.
+	 * @param entityName The child's entity name
+	 * which is specific to each CascadingAction type
+	 * @param isCascadeDeleteEnabled Are cascading deletes enabled.
+	 * @throws HibernateException
+	 */
+	void cascade(
+			EventSource session,
+			Object child,
+			String entityName,
 			boolean isCascadeDeleteEnabled) throws HibernateException;
 
 	/**

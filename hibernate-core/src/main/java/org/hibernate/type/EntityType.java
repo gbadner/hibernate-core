@@ -21,6 +21,7 @@ import org.hibernate.engine.spi.Mapping;
 import org.hibernate.engine.spi.PersistenceContext;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.engine.spi.SessionImplementor;
+import org.hibernate.event.internal.MergeOperationContext;
 import org.hibernate.internal.util.ReflectHelper;
 import org.hibernate.persister.entity.EntityPersister;
 import org.hibernate.persister.entity.Joinable;
@@ -290,11 +291,11 @@ public abstract class EntityType extends AbstractType implements AssociationType
 			Object original,
 			Object target,
 			SessionImplementor session,
-			Object owner,
-			Map copyCache) throws HibernateException {
+			Object owner) throws HibernateException {
 		if ( original == null ) {
 			return null;
 		}
+		MergeOperationContext copyCache = (MergeOperationContext) session.getOperationContext();
 		Object cached = copyCache.get( original );
 		if ( cached != null ) {
 			return cached;
@@ -319,7 +320,7 @@ public abstract class EntityType extends AbstractType implements AssociationType
 					);
 				}
 				id = getIdentifierOrUniqueKeyType( session.getFactory() )
-						.replace( id, null, session, owner, copyCache );
+						.replace( id, null, session, owner );
 				return resolve( id, session, owner );
 			}
 		}
