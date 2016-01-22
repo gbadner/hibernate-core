@@ -7,7 +7,6 @@
 package org.hibernate.event.spi;
 
 import org.hibernate.ReplicationMode;
-import org.hibernate.event.internal.ReplicateOperationContext;
 
 /**
  *  Defines an event class for the replication of an entity.
@@ -16,29 +15,14 @@ import org.hibernate.event.internal.ReplicateOperationContext;
  */
 public class ReplicateEvent extends AbstractEvent {
 	private Object object;
+	private ReplicationMode replicationMode;
 	private String entityName;
 
-	/**
-	 * @deprecated Use {@link #ReplicateEvent(Object, EventSource)} instead.
-	 */
-	@Deprecated
 	public ReplicateEvent(Object object, ReplicationMode replicationMode, EventSource source) {
 		this(null, object, replicationMode, source);
 	}
-
-	public ReplicateEvent(Object object, EventSource source) {
-		this(null, object, source);
-	}
-
-	/**
-	 * @deprecated Use {@link #ReplicateEvent(String, Object, EventSource)} instead.
-	 */
-	@Deprecated
+	
 	public ReplicateEvent(String entityName, Object object, ReplicationMode replicationMode, EventSource source) {
-		this( entityName, object, source );
-	}
-
-	public ReplicateEvent(String entityName, Object object, EventSource source) {
 		super(source);
 		this.entityName = entityName;
 
@@ -47,8 +31,14 @@ public class ReplicateEvent extends AbstractEvent {
 					"attempt to create replication strategy with null entity"
 			);
 		}
+		if ( replicationMode == null ) {
+			throw new IllegalArgumentException(
+					"attempt to create replication strategy with null replication mode"
+			);
+		}
 
 		this.object = object;
+		this.replicationMode = replicationMode;
 	}
 
 	public Object getObject() {
@@ -59,30 +49,12 @@ public class ReplicateEvent extends AbstractEvent {
 		this.object = object;
 	}
 
-	/**.
-	 * @return the replication mode
-	 * @deprecated Use {@link ReplicateOperationContext#getReplicationMode()} instead.
-	 */
-	@Deprecated
 	public ReplicationMode getReplicationMode() {
-		return ( (ReplicateOperationContext) getSession().getOperationContext() ).getReplicationMode();
+		return replicationMode;
 	}
 
-	/**.
-	 * Set the replication mode
-	 * @deprecated Use {@link ReplicateOperationContext#ReplicateOperationContext(ReplicationMode)} instead.
-	 */
-	@Deprecated
 	public void setReplicationMode(ReplicationMode replicationMode) {
-		if ( !replicationMode.equals( getReplicationMode() ) ) {
-			throw new IllegalStateException(
-					String.format(
-							"Attempt to set replicationMode to [%s]; it is already set in ReplicateContext as [%s]",
-							replicationMode.name(),
-							getReplicationMode().name()
-					)
-			);
-		}
+		this.replicationMode = replicationMode;
 	}
 
 	public String getEntityName() {

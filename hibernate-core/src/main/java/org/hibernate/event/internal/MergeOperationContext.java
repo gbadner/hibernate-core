@@ -16,9 +16,11 @@ import org.jboss.logging.Logger;
 
 import org.hibernate.boot.registry.selector.spi.StrategySelector;
 import org.hibernate.engine.config.spi.ConfigurationService;
+import org.hibernate.engine.internal.EventSourceProvider;
+import org.hibernate.engine.spi.OperationContext;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.event.spi.EntityCopyObserver;
-import org.hibernate.event.spi.EventSource;
+import org.hibernate.event.spi.EventType;
 import org.hibernate.pretty.MessageHelper;
 import org.hibernate.service.ServiceRegistry;
 
@@ -99,9 +101,14 @@ public class MergeOperationContext extends AbstractSaveOperationContext {
 	    // key is a merge entity;
 	    // value is a flag indicating if the merge entity is currently in the merge process.
 
-	public MergeOperationContext(EventSource session){
-		super( session );
-		this.entityCopyObserver = createEntityCopyObserver( session.getFactory() );
+	public MergeOperationContext(EventSourceProvider eventSourceProvider){
+		super( eventSourceProvider, EventType.MERGE, 0 );
+		this.entityCopyObserver = createEntityCopyObserver( eventSourceProvider.getSession().getFactory() );
+	}
+
+	@Override
+	public OperationContextType getOperationContextType() {
+		return OperationContextType.MERGE;
 	}
 
 	@Override
@@ -132,7 +139,7 @@ public class MergeOperationContext extends AbstractSaveOperationContext {
 	/**
 	 * Clears the MergeContext.
 	 */
-	public void cleanup() {
+	public void clear() {
 		mergeToManagedEntityXref.clear();
 		managedToMergeEntityXref.clear();
 		mergeEntityToOperatedOnFlagMap.clear();

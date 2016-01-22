@@ -6,48 +6,28 @@
  */
 package org.hibernate.event.internal;
 
-import java.util.Set;
-
 import org.hibernate.LockOptions;
+import org.hibernate.engine.internal.EventSourceProvider;
 import org.hibernate.engine.spi.OperationContext;
-import org.hibernate.event.spi.EventSource;
-import org.hibernate.internal.util.collections.IdentitySet;
+import org.hibernate.event.spi.EventType;
 
 /**
  * @author Gail Badner
  */
-public class LockOperationContext implements OperationContext {
-	private EventSource session;
-	private LockOptions lockOptions;
+public class LockOperationContext extends AbstractEventOperationContext {
+	private final LockOptions lockOptions;
 
-	public LockOperationContext(EventSource session, LockOptions lockOptions) {
-		if ( session.getPersistenceContext().getCascadeLevel() != 0 ) {
-			throw new IllegalStateException(
-					"Initiating operation with cascade level " +
-							session.getPersistenceContext().getCascadeLevel()
-			);
-		}
-		this.session = session;
-		this.lockOptions = lockOptions;
-	}
-
-	@Override
-	public void afterOperation() {
-		if ( session.getPersistenceContext().getCascadeLevel() != 0 ) {
-			throw new IllegalStateException(
-					"Cascade level is not 0 after completing merge operation; it is " +
-							session.getPersistenceContext().getCascadeLevel()
-			);
-		}
-	}
-
-	@Override
-	public void cleanup() {
-		session = null;
-		lockOptions = null;
+	public LockOperationContext(EventSourceProvider eventSourceProvider, LockOptions lockOptions) {
+		super( eventSourceProvider, EventType.LOCK, 0 );
+		this.lockOptions = lockOptions;;
 	}
 
 	public LockOptions getLockOptions() {
 		return lockOptions;
+	}
+
+	@Override
+	public OperationContextType getOperationContextType() {
+		return OperationContextType.LOCK;
 	}
 }

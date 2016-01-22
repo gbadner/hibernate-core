@@ -17,6 +17,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import org.hibernate.cfg.Configuration;
+import org.hibernate.engine.internal.EventSourceProvider;
 import org.hibernate.event.spi.EntityCopyObserver;
 import org.hibernate.event.spi.EventSource;
 import org.hibernate.testing.junit4.BaseCoreFunctionalTestCase;
@@ -61,7 +62,7 @@ public class MergeOperationContextTest extends BaseCoreFunctionalTestCase {
 
 	@Test
     public void testMergeToManagedEntityFillFollowedByInvertMapping() {
-		MergeOperationContext cache = new MergeOperationContext( session );
+		MergeOperationContext cache = new MergeOperationContext( getEntitySourceProvider() );
 
         Object mergeEntity = new Simple( 1 );
         Object managedEntity = new Simple( 2 );
@@ -78,7 +79,7 @@ public class MergeOperationContextTest extends BaseCoreFunctionalTestCase {
         assertFalse( cache.invertMap().containsKey( mergeEntity ) );
 		assertTrue( cache.invertMap().containsValue( mergeEntity ) );
 
-		cache.cleanup();
+		cache.clear();
 
 		checkCacheConsistency( cache, 0 );
 
@@ -88,16 +89,16 @@ public class MergeOperationContextTest extends BaseCoreFunctionalTestCase {
 
 	@Test
     public void testMergeToManagedEntityFillFollowedByInvert() {
-		MergeOperationContext cache = new MergeOperationContext( session );
+		MergeOperationContext cache = new MergeOperationContext( getEntitySourceProvider() );
 
         Object mergeEntity = new Simple( 1 );
         Object managedEntity = new Simple( 2 );
         
-        cache.put(mergeEntity, managedEntity);
+        cache.put( mergeEntity, managedEntity );
 
 		checkCacheConsistency( cache, 1 );
 
-		assertTrue(cache.containsMergeEntity( mergeEntity ));
+		assertTrue( cache.containsMergeEntity( mergeEntity ) );
         assertFalse( cache.containsMergeEntity( managedEntity ) );
         
         assertTrue( cache.invertMap().containsKey( managedEntity ) );
@@ -106,7 +107,7 @@ public class MergeOperationContextTest extends BaseCoreFunctionalTestCase {
 
 	@Test
     public void testMergeToManagedEntityFillFollowedByInvertUsingPutWithSetOperatedOnArg() {
-		MergeOperationContext cache = new MergeOperationContext( session );
+		MergeOperationContext cache = new MergeOperationContext( getEntitySourceProvider() );
 
         Object mergeEntity = new Simple( 1 );
         Object managedEntity = new Simple( 2 );
@@ -121,11 +122,11 @@ public class MergeOperationContextTest extends BaseCoreFunctionalTestCase {
         assertTrue( cache.invertMap().containsKey( managedEntity ) );
         assertFalse( cache.invertMap().containsKey( mergeEntity ) );
         
-        cache.cleanup();
+        cache.clear();
 
 		checkCacheConsistency( cache, 0 );
 
-		cache.put(mergeEntity, managedEntity, false);
+		cache.put( mergeEntity, managedEntity, false );
 		assertFalse( cache.isOperatedOn( mergeEntity ) );
 
 		checkCacheConsistency( cache, 1 );
@@ -136,7 +137,7 @@ public class MergeOperationContextTest extends BaseCoreFunctionalTestCase {
 
 	@Test
 	public void testReplaceManagedEntity() {
-		MergeOperationContext cache = new MergeOperationContext( session );
+		MergeOperationContext cache = new MergeOperationContext( getEntitySourceProvider() );
 
 		Simple mergeEntity = new Simple( 1 );
 		Simple managedEntity = new Simple( 0 );
@@ -153,7 +154,7 @@ public class MergeOperationContextTest extends BaseCoreFunctionalTestCase {
 
 	@Test
 	public void testManagedEntityAssociatedWithNewAndExistingMergeEntities() {
-		MergeOperationContext cache = new MergeOperationContext( session );
+		MergeOperationContext cache = new MergeOperationContext( getEntitySourceProvider() );
 
 		session.getTransaction().begin();
 		Simple mergeEntity = new Simple( 1 );
@@ -164,7 +165,7 @@ public class MergeOperationContextTest extends BaseCoreFunctionalTestCase {
 
 	@Test
 	public void testManagedAssociatedWith2ExistingMergeEntities() {
-		MergeOperationContext cache = new MergeOperationContext( session );
+		MergeOperationContext cache = new MergeOperationContext( getEntitySourceProvider() );
 
 		session.getTransaction().begin();
 		Simple mergeEntity1 = new Simple( 1 );
@@ -202,6 +203,15 @@ public class MergeOperationContextTest extends BaseCoreFunctionalTestCase {
 			assertTrue( cacheValues.contains( mapEntry.getValue() ) );
 			assertSame( mapEntry.getKey(), invertedMap.get( mapEntry.getValue() ) );
 		}
+	}
+
+	private EventSourceProvider getEntitySourceProvider() {
+		return new EventSourceProvider() {
+			@Override
+			public EventSource getSession() {
+				return session;
+			}
+		};
 	}
 
 	@Entity

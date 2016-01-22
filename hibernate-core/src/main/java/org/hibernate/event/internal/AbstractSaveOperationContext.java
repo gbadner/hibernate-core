@@ -6,48 +6,30 @@
  */
 package org.hibernate.event.internal;
 
-import java.util.Set;
-
-import org.hibernate.engine.spi.OperationContext;
+import org.hibernate.HibernateException;
+import org.hibernate.engine.internal.EventSourceProvider;
 import org.hibernate.event.spi.EventSource;
-import org.hibernate.internal.util.collections.IdentitySet;
+import org.hibernate.event.spi.EventType;
 
 /**
  * @author Gail Badner
  */
-public abstract class AbstractSaveOperationContext implements OperationContext {
-	private EventSource session;
+public abstract class AbstractSaveOperationContext extends AbstractEventOperationContext {
 
-	AbstractSaveOperationContext(EventSource session) {
-		if ( session.getPersistenceContext().getCascadeLevel() != 0 ) {
-			throw new IllegalStateException(
-					"Initiating operation with cascade level " +
-							session.getPersistenceContext().getCascadeLevel()
-			);
-		}
+	AbstractSaveOperationContext(
+			EventSourceProvider eventSourceProvider,
+			EventType eventType,
+			int requiredCascadeLevel) {
+		super( eventSourceProvider, eventType, requiredCascadeLevel );
+		final EventSource session = eventSourceProvider.getSession();
 		if ( session.getActionQueue().hasUnresolvedEntityInsertActions() ) {
 			throw new IllegalStateException( "There are delayed insert actions when MergeContext is being initiated." );
 		}
-		this.session = session;
 	}
 
 	@Override
 	public void afterOperation() {
-		if ( session.getPersistenceContext().getCascadeLevel() != 0 ) {
-			throw new IllegalStateException(
-					"Cascade level is not 0 after completing merge operation; it is " +
-							session.getPersistenceContext().getCascadeLevel()
-			);
-		}
-		session.getActionQueue().checkNoUnresolvedActionsAfterOperation();
-	}
-
-	@Override
-	public void cleanup() {
-		session = null;
-	}
-
-	protected EventSource getSession() {
-		return session;
+		getSession().getActionQueue().checkNoUnresolvedActionsAfterOperation();
 	}
 }
+                                               ;

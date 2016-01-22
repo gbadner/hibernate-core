@@ -8,7 +8,9 @@ package org.hibernate.event.internal;
 
 import java.util.Set;
 
+import org.hibernate.engine.internal.EventSourceProvider;
 import org.hibernate.event.spi.EventSource;
+import org.hibernate.event.spi.EventType;
 import org.hibernate.internal.util.collections.IdentitySet;
 
 /**
@@ -17,14 +19,22 @@ import org.hibernate.internal.util.collections.IdentitySet;
 public class SaveOperationContext extends AbstractSaveOperationContext {
 	private Set createCache = new IdentitySet(10);
 
-	public SaveOperationContext(EventSource source) {
-		super( source );
+	public SaveOperationContext(EventSourceProvider eventSourceProvider, EventType eventType) {
+		super( eventSourceProvider, eventType, getRequiredCascadeLevel( eventSourceProvider.getSession() ) );
+	}
+
+	private static int getRequiredCascadeLevel(EventSource session) {
+		return session.getPersistenceContext().isFlushing() ? 1 : 0;
 	}
 
 	@Override
-	public void cleanup() {
+	public OperationContextType getOperationContextType() {
+		return OperationContextType.SAVE_UPDATE;
+	}
+
+	@Override
+	public void clear() {
 		createCache.clear();
-		super.cleanup();
 	}
 
 	@SuppressWarnings({ "unchecked" })

@@ -8,49 +8,33 @@ package org.hibernate.event.internal;
 
 import java.util.Set;
 
-import org.hibernate.engine.spi.OperationContext;
-import org.hibernate.event.spi.EventSource;
+import org.hibernate.engine.internal.EventSourceProvider;
+import org.hibernate.event.spi.EventType;
 import org.hibernate.internal.util.collections.IdentitySet;
 
 /**
  * @author Gail Badner
  */
-public class DeleteOperationContext implements OperationContext {
+public class DeleteOperationContext extends AbstractEventOperationContext {
 	// A cache of already visited transient entities (to avoid infinite recursion)
 	private Set transientEntities = new IdentitySet(10);
-	private EventSource session;
-	private final int initialCascadeLevel;
 
-	public DeleteOperationContext(EventSource session) {
-		initialCascadeLevel = session.getPersistenceContext().getCascadeLevel();
-		this.session = session;
+	public DeleteOperationContext(EventSourceProvider eventSourceProvider ) {
+		super( eventSourceProvider, EventType.DELETE, -1);
 	}
 
 	@Override
-	public void afterOperation() {
-		if ( session.getPersistenceContext().getCascadeLevel() != initialCascadeLevel ) {
-			throw new IllegalStateException(
-					String.format(
-							"Cascade level is not %d after completing merge operation; it is %d",
-							initialCascadeLevel,
-							session.getPersistenceContext().getCascadeLevel()
-					)
-			);
-		}
+	public OperationContextType getOperationContextType() {
+		return OperationContextType.DELETE;
 	}
 
 	@Override
-	public void cleanup() {
-		session = null;
+	public void clear() {
 		transientEntities.clear();
 	}
 
 	@SuppressWarnings({ "unchecked" })
 	public boolean addTransientEntity(Object transientEntity) {
 		return transientEntities.add( transientEntity );
-	}
-
-	protected EventSource getSession() {
-		return session;
 	}
 }

@@ -8,49 +8,35 @@ package org.hibernate.event.internal;
 
 import java.util.Set;
 
+import org.hibernate.HibernateException;
+import org.hibernate.engine.internal.EventSourceProvider;
 import org.hibernate.engine.spi.OperationContext;
 import org.hibernate.event.spi.EventSource;
+import org.hibernate.event.spi.EventType;
 import org.hibernate.internal.util.collections.IdentitySet;
 
 /**
  * @author Gail Badner
  */
-public class RefreshOperationContext implements OperationContext {
+public class RefreshOperationContext extends AbstractEventOperationContext {
 	private Set refreshedEntities = new IdentitySet(10);
-	private EventSource session;
 
-	public RefreshOperationContext(EventSource session) {
-		if ( session.getPersistenceContext().getCascadeLevel() != 0 ) {
-			throw new IllegalStateException(
-					"Initiating operation with cascade level " +
-							session.getPersistenceContext().getCascadeLevel()
-			);
-		}
-		this.session = session;
+	public RefreshOperationContext(EventSourceProvider eventSourceProvider) {
+		super( eventSourceProvider, EventType.REFRESH, 0 );
 	}
 
 	@Override
-	public void afterOperation() {
-		if ( session.getPersistenceContext().getCascadeLevel() != 0 ) {
-			throw new IllegalStateException(
-					"Cascade level is not 0 after completing operation; it is " +
-							session.getPersistenceContext().getCascadeLevel()
-			);
-		}
+	public OperationContextType getOperationContextType() {
+		return OperationContextType.REFRESH;
 	}
 
 	@Override
-	public void cleanup() {
-		session = null;
+	public void clear() {
 		refreshedEntities.clear();
 	}
 
 	@SuppressWarnings({ "unchecked" })
 	public boolean addRefreshedEntity(Object refreshedEntity) {
 		return refreshedEntities.add( refreshedEntity );
-	}
-
-	protected EventSource getSession() {
-		return session;
 	}
 }
