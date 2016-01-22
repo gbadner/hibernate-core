@@ -8,6 +8,7 @@ package org.hibernate.event.internal;
 
 import org.hibernate.engine.internal.EventSourceProvider;
 import org.hibernate.engine.spi.AbstractOperationContext;
+import org.hibernate.event.spi.AbstractEvent;
 import org.hibernate.event.spi.EventOperationContext;
 import org.hibernate.event.spi.EventType;
 
@@ -16,6 +17,7 @@ import org.hibernate.event.spi.EventType;
  */
 public abstract class AbstractEventOperationContext extends AbstractOperationContext implements EventOperationContext {
 	private final EventType eventType;
+	private final AbstractEvent event;
 	private final int initialCascadeLevel;
 
 	@Override
@@ -26,9 +28,11 @@ public abstract class AbstractEventOperationContext extends AbstractOperationCon
 	AbstractEventOperationContext(
 			EventSourceProvider eventSourceProvider,
 			EventType eventType,
+			AbstractEvent event,
 			int requiredCascadeLevel) {
 		super( eventSourceProvider );
 		this.eventType = eventType;
+		this.event = event;
 		this.initialCascadeLevel = getCascadeLevel( eventSourceProvider.getSession() );
 //		if ( requiredCascadeLevel >= 0 && initialCascadeLevel != requiredCascadeLevel ) {
 //			throw new HibernateException(
@@ -39,6 +43,10 @@ public abstract class AbstractEventOperationContext extends AbstractOperationCon
 //					)
 //			);
 //		}
+	}
+
+	public AbstractEvent getEvent() {
+		return event;
 	}
 
 	@Override

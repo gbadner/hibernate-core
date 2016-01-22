@@ -664,17 +664,17 @@ public final class SessionImpl extends AbstractSessionImpl implements EventSourc
 	private void fireSaveOrUpdateTopLevel(SaveOrUpdateEvent event, EventType<SaveOrUpdateEventListener> actualEventType) {
 		errorIfClosed();
 		checkTransactionSynchStatus();
-		final OperationContext operationContext =
-				operationContextManager.pushEventOperationContext( actualEventType, event );
+		operationContextManager.beforeOperation( actualEventType, event );
+		boolean success = false;
 		try {
 			for ( SaveOrUpdateEventListener listener : listeners( actualEventType ) ) {
 				listener.onSaveOrUpdate( event );
 			}
 			delayedAfterCompletion();
-			operationContext.afterOperation();
+			success = true;
 		}
 		finally {
-			operationContextManager.popAndClearOperationContext( operationContext );
+			operationContextManager.afterOperation( actualEventType, event, success );
 		}
 	}
 
@@ -760,17 +760,17 @@ public final class SessionImpl extends AbstractSessionImpl implements EventSourc
 	private void fireLockTopLevel(LockEvent event) {
 		errorIfClosed();
 		checkTransactionSynchStatus();
-		final OperationContext operationContext =
-				operationContextManager.pushEventOperationContext( EventType.LOCK, event );
+		operationContextManager.beforeOperation( EventType.LOCK, event );
+		boolean success = false;
 		try {
 			for ( LockEventListener listener : listeners( EventType.LOCK ) ) {
 				listener.onLock( event );
 			}
 			delayedAfterCompletion();
-			operationContext.afterOperation();
+			success = true;
 		}
 		finally {
-			operationContextManager.popAndClearOperationContext( operationContext );
+			operationContextManager.afterOperation( EventType.LOCK, event, success );
 		}
 	}
 
@@ -815,17 +815,17 @@ public final class SessionImpl extends AbstractSessionImpl implements EventSourc
 	private void firePersistTopLevel(PersistEvent event, EventType<PersistEventListener> actualEventType) {
 		errorIfClosed();
 		checkTransactionSynchStatus();
-		final OperationContext operationContext =
-				operationContextManager.pushEventOperationContext( actualEventType, event );
+		operationContextManager.beforeOperation( actualEventType, event );
+		boolean success = false;
 		try {
 			for ( PersistEventListener listener : listeners( actualEventType ) ) {
 				listener.onPersist( event );
 			}
 			delayedAfterCompletion();
-			operationContext.afterOperation();
+			success = true;
 		}
 		finally {
-			operationContextManager.popAndClearOperationContext( operationContext );
+			operationContextManager.afterOperation( actualEventType, event, success );
 		}
 	}
 
@@ -887,17 +887,17 @@ public final class SessionImpl extends AbstractSessionImpl implements EventSourc
 	private Object fireMergeTopLevel(MergeEvent event) {
 		errorIfClosed();
 		checkTransactionSynchStatus();
-		final OperationContext operationContext =
-				operationContextManager.pushEventOperationContext( EventType.MERGE, event );
+		operationContextManager.beforeOperation( EventType.MERGE, event );
+		boolean success = false;
 		try {
 			for ( MergeEventListener listener : listeners( EventType.MERGE ) ) {
 				listener.onMerge( event );
 			}
 			delayedAfterCompletion();
-			operationContext.afterOperation();
+			success = true;
 		}
 		finally {
-			operationContextManager.popAndClearOperationContext( operationContext );
+			operationContextManager.afterOperation( EventType.MERGE, event, success );
 		}
 		return event.getResult();
 	}
@@ -991,19 +991,17 @@ public final class SessionImpl extends AbstractSessionImpl implements EventSourc
 	private void fireDeleteTopLevel(DeleteEvent event) {
 		errorIfClosed();
 		checkTransactionSynchStatus();
-		errorIfClosed();
-		checkTransactionSynchStatus();
-		final OperationContext operationContext =
-				operationContextManager.pushEventOperationContext( EventType.DELETE, event );
+		operationContextManager.beforeOperation( EventType.DELETE, event );
+		boolean success = false;
 		try {
 			for ( DeleteEventListener listener : listeners( EventType.DELETE ) ) {
 				listener.onDelete( event );
 			}
 			delayedAfterCompletion();
-			operationContext.afterOperation();
+			success = true;
 		}
 		finally {
-			operationContextManager.popAndClearOperationContext( operationContext );
+			operationContextManager.afterOperation( EventType.DELETE, event, success );
 		}
 	}
 
@@ -1280,18 +1278,18 @@ public final class SessionImpl extends AbstractSessionImpl implements EventSourc
 	private void fireRefreshTopLevel(RefreshEvent event) {
 		errorIfClosed();
 		checkTransactionSynchStatus();
-		final OperationContext operationContext =
-				operationContextManager.pushEventOperationContext( EventType.REFRESH, event );
+		operationContextManager.beforeOperation( EventType.REFRESH, event );
+		boolean success = false;
 		try {
 			for ( RefreshEventListener listener : listeners( EventType.REFRESH ) ) {
 				listener.onRefresh( event );
 			}
 			delayedAfterCompletion();
 			delayedAfterCompletion();
-			operationContext.afterOperation();
+			success = true;
 		}
 		finally {
-			operationContextManager.popAndClearOperationContext( operationContext );
+			operationContextManager.afterOperation( EventType.REFRESH, event, success );
 		}
 	}
 
@@ -1331,17 +1329,17 @@ public final class SessionImpl extends AbstractSessionImpl implements EventSourc
 	private void fireTopLevelReplicate(ReplicationMode replicationMode, ReplicateEvent event) {
 		errorIfClosed();
 		checkTransactionSynchStatus();
-		final OperationContext operationContext =
-				operationContextManager.pushEventOperationContext( EventType.REPLICATE, event );
+		operationContextManager.beforeOperation( EventType.REPLICATE, event );
+		boolean success = false;
 		try {
 			for ( ReplicateEventListener listener : listeners( EventType.REPLICATE ) ) {
 				listener.onReplicate( event );
 			}
 			delayedAfterCompletion();
-			operationContext.afterOperation();
+			success = true;
 		}
 		finally {
-			operationContextManager.popAndClearOperationContext( operationContext );
+			operationContextManager.afterOperation( EventType.REPLICATE, event, success );
 		}
 	}
 
@@ -1378,17 +1376,17 @@ public final class SessionImpl extends AbstractSessionImpl implements EventSourc
 		}
 		// autoFlush is always a top-level operation.
 		AutoFlushEvent event = new AutoFlushEvent( querySpaces, this );
-		final OperationContext operationContext =
-				operationContextManager.pushEventOperationContext( EventType.AUTO_FLUSH, event );
+		operationContextManager.beforeOperation( EventType.AUTO_FLUSH, event );
+		boolean success = false;
 		try {
 			for ( AutoFlushEventListener listener : listeners( EventType.AUTO_FLUSH ) ) {
 				listener.onAutoFlush( event );
 			}
-			operationContext.afterOperation();
+			success = true;
 			return event.isFlushRequired();
 		}
 		finally {
-			operationContextManager.popAndClearOperationContext( operationContext );
+			operationContextManager.afterOperation( EventType.AUTO_FLUSH, event, success );
 		}
 	}
 
@@ -1418,17 +1416,17 @@ public final class SessionImpl extends AbstractSessionImpl implements EventSourc
 		}
 		// flush() is always a top-level operation.
 		FlushEvent flushEvent = new FlushEvent( this );
-		final OperationContext operationContext =
-				operationContextManager.pushEventOperationContext( EventType.FLUSH, flushEvent );
+		operationContextManager.beforeOperation( EventType.FLUSH, flushEvent );
+		boolean success = false;
 		try {
 			for ( FlushEventListener listener : listeners( EventType.FLUSH ) ) {
 				listener.onFlush( flushEvent );
 			}
 			delayedAfterCompletion();
-			operationContext.afterOperation();
+			success = true;
 		}
 		finally {
-			operationContextManager.popAndClearOperationContext( operationContext );
+			operationContextManager.afterOperation( EventType.FLUSH, flushEvent, success );
 		}
 	}
 

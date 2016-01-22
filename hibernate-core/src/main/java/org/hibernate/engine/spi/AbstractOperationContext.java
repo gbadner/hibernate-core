@@ -13,14 +13,6 @@ public abstract class AbstractOperationContext implements OperationContext {
 		this.eventSourceProvider = eventSourceProvider;
 	}
 
-	@Override
-	public void afterOperation() {
-	}
-
-	@Override
-	public void clear() {
-	}
-
 	protected EventSource getSession() {
 		return eventSourceProvider.getSession();
 	}

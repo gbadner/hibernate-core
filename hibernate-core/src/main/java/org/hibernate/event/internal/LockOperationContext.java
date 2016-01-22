@@ -9,25 +9,29 @@ package org.hibernate.event.internal;
 import org.hibernate.LockOptions;
 import org.hibernate.engine.internal.EventSourceProvider;
 import org.hibernate.engine.spi.OperationContext;
+import org.hibernate.event.spi.AbstractEvent;
 import org.hibernate.event.spi.EventType;
+import org.hibernate.event.spi.LockEvent;
 
 /**
  * @author Gail Badner
  */
 public class LockOperationContext extends AbstractEventOperationContext {
-	private final LockOptions lockOptions;
 
-	public LockOperationContext(EventSourceProvider eventSourceProvider, LockOptions lockOptions) {
-		super( eventSourceProvider, EventType.LOCK, 0 );
-		this.lockOptions = lockOptions;;
+	public LockOperationContext(EventSourceProvider eventSourceProvider, LockEvent event) {
+		super( eventSourceProvider, EventType.LOCK, event, 0 );
 	}
 
 	public LockOptions getLockOptions() {
-		return lockOptions;
+		return ( (LockEvent) getEvent() ).getLockOptions();
 	}
 
 	@Override
 	public OperationContextType getOperationContextType() {
 		return OperationContextType.LOCK;
+	}
+
+	@Override
+	public void clear() {
 	}
 }

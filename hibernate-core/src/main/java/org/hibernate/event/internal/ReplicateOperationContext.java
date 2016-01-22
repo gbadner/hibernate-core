@@ -11,26 +11,32 @@ import java.util.Set;
 import org.hibernate.ReplicationMode;
 import org.hibernate.engine.internal.EventSourceProvider;
 import org.hibernate.engine.spi.OperationContext;
+import org.hibernate.event.spi.AbstractEvent;
 import org.hibernate.event.spi.EventType;
+import org.hibernate.event.spi.ReplicateEvent;
 import org.hibernate.internal.util.collections.IdentitySet;
 
 /**
  * @author Gail Badner
  */
 public class ReplicateOperationContext extends AbstractEventOperationContext {
-	private final ReplicationMode replicationMode;
 
-	public ReplicateOperationContext(EventSourceProvider eventSourceProvider, ReplicationMode replicationMode) {
-		super( eventSourceProvider, EventType.REPLICATE, 0 );
-		this.replicationMode = replicationMode;
+	public ReplicateOperationContext(
+			EventSourceProvider eventSourceProvider,
+			ReplicateEvent event) {
+		super( eventSourceProvider, EventType.REPLICATE, event, 0 );
 	}
 
 	public ReplicationMode getReplicationMode() {
-		return replicationMode;
+		return ( (ReplicateEvent) getEvent() ).getReplicationMode();
 	}
 
 	@Override
 	public OperationContextType getOperationContextType() {
 		return OperationContextType.REPLICATE;
+	}
+
+	@Override
+	public void clear() {
 	}
 }

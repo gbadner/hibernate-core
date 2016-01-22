@@ -14,6 +14,7 @@ import java.util.Map;
 import org.hibernate.AssertionFailure;
 import org.hibernate.HibernateException;
 import org.hibernate.engine.spi.OperationContext;
+import org.hibernate.event.internal.AbstractEventOperationContext;
 import org.hibernate.event.internal.DeleteOperationContext;
 import org.hibernate.event.internal.LockOperationContext;
 import org.hibernate.event.internal.MergeOperationContext;
@@ -21,9 +22,13 @@ import org.hibernate.event.internal.RefreshOperationContext;
 import org.hibernate.event.internal.ReplicateOperationContext;
 import org.hibernate.event.internal.SaveOperationContext;
 import org.hibernate.event.spi.AbstractEvent;
+import org.hibernate.event.spi.DeleteEvent;
+import org.hibernate.event.spi.EventOperationContext;
 import org.hibernate.event.spi.EventSource;
 import org.hibernate.event.spi.EventType;
 import org.hibernate.event.spi.LockEvent;
+import org.hibernate.event.spi.MergeEvent;
+import org.hibernate.event.spi.RefreshEvent;
 import org.hibernate.event.spi.ReplicateEvent;
 
 import static org.hibernate.engine.spi.OperationContext.*;
@@ -87,52 +92,77 @@ public class OperationContextManager implements EventSourceProvider {
 				currentOperationContext.getOperationContextType().equals( operationContextType );
 	}
 
-	public OperationContext pushEventOperationContext(EventType eventType, AbstractEvent event) {
+	public void beforeOperation(EventType eventType, AbstractEvent event) {
 		if ( eventType == null || event == null ) {
 			throw new IllegalArgumentException( "eventType and event must be non-null" );
 		}
-		final OperationContext operationContext = createOperationContext( eventType, event );
-		operationContextStack.addLast( operationContext );
-		return operationContext;
+		operationContextStack.addLast( createOperationContext( eventType, event ) );
 	}
 
 	private OperationContext createOperationContext(EventType eventType, AbstractEvent event) {
 		final OperationContextType operationContextType = OPERATION_CONTEXT_TYPE_BY_EVENT_TYPE.get( eventType );
 		switch ( operationContextType ) {
 			case SAVE_UPDATE:
-				return new SaveOperationContext( this, eventType );
+				return new SaveOperationContext( this, eventType, event );
 			case LOCK:
-				return new LockOperationContext( this, ( (LockEvent) event ).getLockOptions() );
+				return new LockOperationContext( this, (LockEvent) event );
 			case DELETE:
-				return new DeleteOperationContext( this );
+				return new DeleteOperationContext( this, (DeleteEvent) event);
 			case REFRESH:
-				return new RefreshOperationContext( this );
+				return new RefreshOperationContext( this, (RefreshEvent) event );
 			case MERGE:
-				return new MergeOperationContext( this );
+				return new MergeOperationContext( this, (MergeEvent) event );
 			case REPLICATE:
-				return new ReplicateOperationContext( this, ( (ReplicateEvent) event ).getReplicationMode() );
+				return new ReplicateOperationContext( this, ( (ReplicateEvent) event ) );
 			default:
 				throw new HibernateException( "unexpected OperationContextType: " + operationContextType.name() );
 		}
 	}
 
-	public void popAndClearOperationContext(OperationContext operationContext) {
-		if ( operationContext == null ) {
-			throw new IllegalArgumentException( "operationContext must be non-null." );
+	public void afterOperation(EventType eventType, AbstractEvent event, boolean success) {
+		if ( eventType == null || event == null ) {
+			throw new IllegalArgumentException( "eventType and event must be non-null." );
 		}
 		if ( operationContextStack.isEmpty() ) {
 			throw new IllegalStateException( "Cannot remove OperationContext because there is no OperationContext in process." );
 		}
-		if ( operationContext != operationContextStack.peekLast() ) {
-			throw new IllegalStateException( "Provided operationContext is not at top of stack." );
+		final OperationContext operationContext = operationContextStack.peekLast();
+		if ( !AbstractEventOperationContext.class.isAssignableFrom( operationContext.getClass() ) ) {
+			throw new IllegalStateException(
+				String.format(
+						"Unexpected OperationContext; expected %s; found %s",
+						AbstractEventOperationContext.class.getName(),
+						operationContext.getClass().getName()
+				)
+			);
 		}
-		operationContextStack.removeLast().clear();
+
+		final AbstractEventOperationContext eventOperationContext = (AbstractEventOperationContext) operationContext;
+		if ( eventType != eventOperationContext.getEventType() ) {
+			throw new IllegalStateException(
+					String.format(
+							"Inconsistent EventOperationContext; expected EventType [%s]; found [%s]",
+							eventType,
+							eventOperationContext.getEventType()
+					)
+			);
+		}
+		if ( event != eventOperationContext.getEvent() ) {
+			throw new IllegalStateException( "Inconsistent event in EventOperationContext" );
+		}
+		try {
+			if ( success ) {
+				eventOperationContext.afterOperation();
+			}
+		}
+		finally {
+			operationContextStack.removeLast().clear();
+		}
 	}
 
 	public void clear() {
 		while ( !operationContextStack.isEmpty() ) {
-			OperationContext operationContext = operationContextStack.removeLast();
-			operationContext.clear();
+			operationContextStack.removeLast().clear();
 		}
 	}
 }

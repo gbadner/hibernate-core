@@ -11,8 +11,10 @@ import java.util.Set;
 import org.hibernate.HibernateException;
 import org.hibernate.engine.internal.EventSourceProvider;
 import org.hibernate.engine.spi.OperationContext;
+import org.hibernate.event.spi.AbstractEvent;
 import org.hibernate.event.spi.EventSource;
 import org.hibernate.event.spi.EventType;
+import org.hibernate.event.spi.RefreshEvent;
 import org.hibernate.internal.util.collections.IdentitySet;
 
 /**
@@ -21,8 +23,8 @@ import org.hibernate.internal.util.collections.IdentitySet;
 public class RefreshOperationContext extends AbstractEventOperationContext {
 	private Set refreshedEntities = new IdentitySet(10);
 
-	public RefreshOperationContext(EventSourceProvider eventSourceProvider) {
-		super( eventSourceProvider, EventType.REFRESH, 0 );
+	public RefreshOperationContext(EventSourceProvider eventSourceProvider, RefreshEvent event) {
+		super( eventSourceProvider, EventType.REFRESH, event, 0 );
 	}
 
 	@Override
