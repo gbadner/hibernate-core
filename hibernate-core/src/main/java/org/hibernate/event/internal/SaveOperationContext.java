@@ -8,10 +8,7 @@ package org.hibernate.event.internal;
 
 import java.util.Set;
 
-import org.hibernate.engine.internal.EventSourceProvider;
 import org.hibernate.engine.spi.OperationContextType;
-import org.hibernate.event.spi.AbstractEvent;
-import org.hibernate.event.spi.EventType;
 import org.hibernate.internal.util.collections.IdentitySet;
 
 /**
@@ -19,10 +16,6 @@ import org.hibernate.internal.util.collections.IdentitySet;
  */
 public class SaveOperationContext extends AbstractSaveOperationContext {
 	private Set createCache = new IdentitySet(10);
-
-	public SaveOperationContext(EventSourceProvider eventSourceProvider) {
-		super( eventSourceProvider, 0 );
-	}
 
 	@Override
 	public OperationContextType getOperationContextType() {

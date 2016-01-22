@@ -21,13 +21,12 @@ import org.hibernate.event.internal.RefreshOperationContext;
 import org.hibernate.event.internal.ReplicateOperationContext;
 import org.hibernate.event.internal.SaveOperationContext;
 import org.hibernate.event.spi.AbstractEvent;
-import org.hibernate.event.spi.EventSource;
 import org.hibernate.event.spi.EventType;
 
 /**
  * @author Gail Badner
  */
-public class OperationContextManager implements EventSourceProvider {
+public class OperationContextManager {
 
 	private static Map<EventType, OperationContextType> OPERATION_CONTEXT_TYPE_BY_EVENT_TYPE =
 			new HashMap<EventType, OperationContextType>( EventType.values().size() );
@@ -38,8 +37,6 @@ public class OperationContextManager implements EventSourceProvider {
 		OPERATION_CONTEXT_TYPE_BY_EVENT_TYPE.put( EventType.UPDATE, OperationContextType.SAVE_UPDATE );
 		OPERATION_CONTEXT_TYPE_BY_EVENT_TYPE.put( EventType.PERSIST, OperationContextType.SAVE_UPDATE );
 		OPERATION_CONTEXT_TYPE_BY_EVENT_TYPE.put( EventType.PERSIST_ONFLUSH, OperationContextType.SAVE_UPDATE );
-		//OPERATION_CONTEXT_TYPE_BY_EVENT_TYPE.put( EventType.FLUSH, OperationContextType.SAVE_UPDATE );
-		//OPERATION_CONTEXT_TYPE_BY_EVENT_TYPE.put( EventType.AUTO_FLUSH, OperationContextType.SAVE_UPDATE );
 		OPERATION_CONTEXT_TYPE_BY_EVENT_TYPE.put( EventType.LOCK, OperationContextType.LOCK );
 		OPERATION_CONTEXT_TYPE_BY_EVENT_TYPE.put( EventType.DELETE, OperationContextType.DELETE );
 		OPERATION_CONTEXT_TYPE_BY_EVENT_TYPE.put( EventType.REFRESH, OperationContextType.REFRESH );
@@ -49,17 +46,6 @@ public class OperationContextManager implements EventSourceProvider {
 
 	private final Map<OperationContextType, AbstractEventOperationContext> cachedOperationContextByType =
 			new HashMap<OperationContextType, AbstractEventOperationContext>( OperationContextType.values().length );
-
-	private EventSource session;
-
-	public OperationContextManager(EventSource session) {
-		this.session = session;
-	}
-
-	@Override
-	public EventSource getSession() {
-		return session;
-	}
 
 	public OperationContext getOperationContext(OperationContextType operationContextType) {
 		return getValidEventOperationContext( operationContextType );
@@ -137,22 +123,22 @@ public class OperationContextManager implements EventSourceProvider {
 		final AbstractEventOperationContext operationContext;
 		switch ( operationContextType ) {
 			case SAVE_UPDATE:
-				operationContext = new SaveOperationContext( this );
+				operationContext = new SaveOperationContext();
 				break;
 			case LOCK:
-				operationContext = new LockOperationContext( this );
+				operationContext = new LockOperationContext();
 				break;
 			case DELETE:
-				operationContext = new DeleteOperationContext( this );
+				operationContext = new DeleteOperationContext();
 				break;
 			case REFRESH:
-				operationContext = new RefreshOperationContext( this );
+				operationContext = new RefreshOperationContext();
 				break;
 			case MERGE:
-				operationContext = new MergeOperationContext( this );
+				operationContext = new MergeOperationContext();
 				break;
 			case REPLICATE:
-				operationContext = new ReplicateOperationContext( this );
+				operationContext = new ReplicateOperationContext();
 				break;
 			default:
 				throw new HibernateException( "unexpected OperationContextType: " + operationContextType.name() );

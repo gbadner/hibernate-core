@@ -8,14 +8,9 @@ package org.hibernate.event.internal;
 
 import java.util.Set;
 
-import org.hibernate.HibernateException;
-import org.hibernate.engine.internal.EventSourceProvider;
-import org.hibernate.engine.spi.OperationContext;
 import org.hibernate.engine.spi.OperationContextType;
 import org.hibernate.event.spi.AbstractEvent;
-import org.hibernate.event.spi.EventSource;
 import org.hibernate.event.spi.EventType;
-import org.hibernate.event.spi.RefreshEvent;
 import org.hibernate.internal.util.collections.IdentitySet;
 
 /**
@@ -23,10 +18,6 @@ import org.hibernate.internal.util.collections.IdentitySet;
  */
 public class RefreshOperationContext extends AbstractEventOperationContext {
 	private Set refreshedEntities = new IdentitySet(10);
-
-	public RefreshOperationContext(EventSourceProvider eventSourceProvider) {
-		super( eventSourceProvider, 0 );
-	}
 
 	@Override
 	public OperationContextType getOperationContextType() {
@@ -39,6 +30,11 @@ public class RefreshOperationContext extends AbstractEventOperationContext {
 	}
 
 	@Override
+	public void afterOperation() {
+		// do nothing
+	}
+
+	@Override
 	public void clear() {
 		refreshedEntities.clear();
 		super.clear();
@@ -46,6 +42,7 @@ public class RefreshOperationContext extends AbstractEventOperationContext {
 
 	@SuppressWarnings({ "unchecked" })
 	public boolean addRefreshedEntity(Object refreshedEntity) {
+		checkValid();
 		return refreshedEntities.add( refreshedEntity );
 	}
 }

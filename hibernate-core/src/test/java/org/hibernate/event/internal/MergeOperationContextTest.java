@@ -17,7 +17,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 import org.hibernate.cfg.Configuration;
-import org.hibernate.engine.internal.EventSourceProvider;
 import org.hibernate.event.spi.EntityCopyObserver;
 import org.hibernate.event.spi.EventSource;
 import org.hibernate.event.spi.EventType;
@@ -66,7 +65,7 @@ public class MergeOperationContextTest extends BaseCoreFunctionalTestCase {
     public void testMergeToManagedEntityFillFollowedByInvertMapping() {
 
         Object mergeEntity = new Simple( 1 );
-		MergeOperationContext cache = new MergeOperationContext( getEntitySourceProvider() );
+		MergeOperationContext cache = new MergeOperationContext();
 		cache.beforeOperation( EventType.MERGE, new MergeEvent( mergeEntity, session ) );
 
         Object managedEntity = new Simple( 2 );
@@ -87,7 +86,7 @@ public class MergeOperationContextTest extends BaseCoreFunctionalTestCase {
 
 		checkCacheConsistency( cache, 0 );
 
-		assertFalse(cache.containsMergeEntity( mergeEntity ));
+		assertFalse( cache.containsMergeEntity( mergeEntity ) );
         assertFalse(cache.invertMap().containsKey(managedEntity));
 	}
 
@@ -95,7 +94,7 @@ public class MergeOperationContextTest extends BaseCoreFunctionalTestCase {
     public void testMergeToManagedEntityFillFollowedByInvert() {
 
         Object mergeEntity = new Simple( 1 );
-		MergeOperationContext cache = new MergeOperationContext( getEntitySourceProvider() );
+		MergeOperationContext cache = new MergeOperationContext();
 		cache.beforeOperation( EventType.MERGE, new MergeEvent( mergeEntity, session ) );
 
 		Object managedEntity = new Simple( 2 );
@@ -115,7 +114,8 @@ public class MergeOperationContextTest extends BaseCoreFunctionalTestCase {
     public void testMergeToManagedEntityFillFollowedByInvertUsingPutWithSetOperatedOnArg() {
 
         Object mergeEntity = new Simple( 1 );
-		MergeOperationContext cache = new MergeOperationContext( getEntitySourceProvider() );
+
+		MergeOperationContext cache = new MergeOperationContext();
 		cache.beforeOperation( EventType.MERGE, new MergeEvent( mergeEntity, session ) );
 
         Object managedEntity = new Simple( 2 );
@@ -147,7 +147,7 @@ public class MergeOperationContextTest extends BaseCoreFunctionalTestCase {
 	public void testReplaceManagedEntity() {
 
 		Simple mergeEntity = new Simple( 1 );
-		MergeOperationContext cache = new MergeOperationContext( getEntitySourceProvider() );
+		MergeOperationContext cache = new MergeOperationContext();
 		cache.beforeOperation( EventType.MERGE, new MergeEvent( mergeEntity, session ) );
 
 		Simple managedEntity = new Simple( 0 );
@@ -165,11 +165,12 @@ public class MergeOperationContextTest extends BaseCoreFunctionalTestCase {
 	@Test
 	public void testManagedEntityAssociatedWithNewAndExistingMergeEntities() {
 
-		session.getTransaction().begin();
 		Simple mergeEntity = new Simple( 1 );
-		MergeOperationContext cache = new MergeOperationContext( getEntitySourceProvider() );
-
 		Simple managedEntity = new Simple( 0 );
+
+		MergeOperationContext cache = new MergeOperationContext();
+		cache.beforeOperation( EventType.MERGE, new MergeEvent( managedEntity, session ) );
+
 		cache.put(mergeEntity, managedEntity);
 		cache.put( new Simple( 1 ), managedEntity );
 	}
@@ -177,14 +178,14 @@ public class MergeOperationContextTest extends BaseCoreFunctionalTestCase {
 	@Test
 	public void testManagedAssociatedWith2ExistingMergeEntities() {
 
-		session.getTransaction().begin();
 		Simple mergeEntity1 = new Simple( 1 );
-		MergeOperationContext cache = new MergeOperationContext( getEntitySourceProvider() );
-
-		session.persist( mergeEntity1 );
 		Simple managedEntity1 = new Simple( 1 );
-		cache.put( mergeEntity1, managedEntity1 );
 		Simple managedEntity2 = new Simple( 2 );
+
+		MergeOperationContext cache = new MergeOperationContext();
+		cache.beforeOperation( EventType.MERGE, new MergeEvent( mergeEntity1, session ) );
+
+		cache.put( mergeEntity1, managedEntity1 );
 
 		try {
 			cache.put( mergeEntity1, managedEntity2 );
@@ -192,9 +193,6 @@ public class MergeOperationContextTest extends BaseCoreFunctionalTestCase {
 		}
 		catch( IllegalArgumentException ex ) {
 			// expected; cannot change managed entity associated with a merge entity
-		}
-		finally {
-			session.getTransaction().rollback();
 		}
 	}
 
@@ -215,15 +213,6 @@ public class MergeOperationContextTest extends BaseCoreFunctionalTestCase {
 			assertTrue( cacheValues.contains( mapEntry.getValue() ) );
 			assertSame( mapEntry.getKey(), invertedMap.get( mapEntry.getValue() ) );
 		}
-	}
-
-	private EventSourceProvider getEntitySourceProvider() {
-		return new EventSourceProvider() {
-			@Override
-			public EventSource getSession() {
-				return session;
-			}
-		};
 	}
 
 	@Entity

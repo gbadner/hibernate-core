@@ -213,7 +213,7 @@ public final class SessionImpl extends AbstractSessionImpl implements EventSourc
 	private transient AfterCompletionAction afterCompletionAction;
 	private transient LoadEvent loadEvent; //cached LoadEvent instance
 
-	private transient OperationContextManager operationContextManager;
+	private transient OperationContextManager operationContextManager = new OperationContextManager();;
 
 	/**
 	 * Constructor used for openSession(...) processing, as well as construction
@@ -343,8 +343,6 @@ public final class SessionImpl extends AbstractSessionImpl implements EventSourc
 		}
 
 		loadQueryInfluencers = new LoadQueryInfluencers( factory );
-
-		operationContextManager = new OperationContextManager( this );
 
 		if ( factory.getStatistics().isStatisticsEnabled() ) {
 			factory.getStatisticsImplementor().openSession();
@@ -2391,6 +2389,7 @@ public final class SessionImpl extends AbstractSessionImpl implements EventSourc
 		ois.defaultReadObject();
 
 		entityNameResolver = new CoordinatingEntityNameResolver();
+		operationContextManager = new OperationContextManager();
 
 		connectionReleaseMode = ConnectionReleaseMode.parse( (String) ois.readObject() );
 		autoClear = ois.readBoolean();
@@ -2425,8 +2424,6 @@ public final class SessionImpl extends AbstractSessionImpl implements EventSourc
 		for ( String filterName : loadQueryInfluencers.getEnabledFilterNames() ) {
 			( (FilterImpl) loadQueryInfluencers.getEnabledFilter( filterName ) ).afterDeserialize( factory );
 		}
-
-		operationContextManager = new OperationContextManager( this );
 	}
 
 	/**

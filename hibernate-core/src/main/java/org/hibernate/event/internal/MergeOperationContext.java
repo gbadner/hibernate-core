@@ -16,12 +16,11 @@ import org.jboss.logging.Logger;
 
 import org.hibernate.boot.registry.selector.spi.StrategySelector;
 import org.hibernate.engine.config.spi.ConfigurationService;
-import org.hibernate.engine.internal.EventSourceProvider;
 import org.hibernate.engine.spi.OperationContextType;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
+import org.hibernate.event.spi.AbstractEvent;
 import org.hibernate.event.spi.EntityCopyObserver;
 import org.hibernate.event.spi.EventType;
-import org.hibernate.event.spi.MergeEvent;
 import org.hibernate.pretty.MessageHelper;
 import org.hibernate.service.ServiceRegistry;
 
@@ -82,7 +81,7 @@ import org.hibernate.service.ServiceRegistry;
 public class MergeOperationContext extends AbstractSaveOperationContext {
 	private static final Logger LOG = Logger.getLogger( MergeOperationContext.class );
 
-	private final EntityCopyObserver entityCopyObserver;
+	private EntityCopyObserver entityCopyObserver;
 
 	private Map<Object,Object> mergeToManagedEntityXref = new IdentityHashMap<Object,Object>(10);
 		// key is an entity to be merged;
@@ -102,14 +101,17 @@ public class MergeOperationContext extends AbstractSaveOperationContext {
 	    // key is a merge entity;
 	    // value is a flag indicating if the merge entity is currently in the merge process.
 
-	public MergeOperationContext(EventSourceProvider eventSourceProvider){
-		super( eventSourceProvider, 0 );
-		this.entityCopyObserver = createEntityCopyObserver( eventSourceProvider.getSession().getFactory() );
-	}
-
 	@Override
 	public OperationContextType getOperationContextType() {
 		return OperationContextType.MERGE;
+	}
+
+	@Override
+	public void beforeOperation(EventType eventType, AbstractEvent event) {
+		if ( entityCopyObserver == null ) {
+			entityCopyObserver = createEntityCopyObserver( event.getSession().getFactory() );
+		}
+		super.beforeOperation( eventType, event );
 	}
 
 	@Override
@@ -204,13 +206,6 @@ public class MergeOperationContext extends AbstractSaveOperationContext {
 		return mergeToManagedEntityXref.get( mergeEntity );
 	}
 
-	/**
-	 * Returns true if this MergeContext contains no merge-to-managed entity cross-references.
-	 * @return true if this MergeContext contains no merge-to-managed entity cross-references.
-	 */
-	public boolean isEmpty() {
-		return mergeToManagedEntityXref.isEmpty();
-	}
 
 	/**
 	 * Should only be used for testing.

@@ -8,14 +8,12 @@ package org.hibernate.event.spi;
 
 import java.io.Serializable;
 
-import org.hibernate.engine.internal.EventSourceProvider;
-
 /**
  * Defines a base class for Session generated events.
  *
  * @author Steve Ebersole
  */
-public abstract class AbstractEvent implements Serializable, EventSourceProvider {
+public abstract class AbstractEvent implements Serializable {
 
 	private final EventSource session;
 

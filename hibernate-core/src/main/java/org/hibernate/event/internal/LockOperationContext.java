@@ -7,11 +7,7 @@
 package org.hibernate.event.internal;
 
 import org.hibernate.LockOptions;
-import org.hibernate.engine.internal.EventSourceProvider;
-import org.hibernate.engine.spi.OperationContext;
 import org.hibernate.engine.spi.OperationContextType;
-import org.hibernate.event.spi.AbstractEvent;
-import org.hibernate.event.spi.EventType;
 import org.hibernate.event.spi.LockEvent;
 
 /**
@@ -19,11 +15,8 @@ import org.hibernate.event.spi.LockEvent;
  */
 public class LockOperationContext extends AbstractEventOperationContext {
 
-	public LockOperationContext(EventSourceProvider eventSourceProvider) {
-		super( eventSourceProvider, 0 );
-	}
-
 	public LockOptions getLockOptions() {
+		checkValid();
 		return ( (LockEvent) getEvent() ).getLockOptions();
 	}
 
@@ -33,6 +26,7 @@ public class LockOperationContext extends AbstractEventOperationContext {
 	}
 
 	@Override
-	public void clear() {
+	public void afterOperation() {
+		// do nothing
 	}
 }
