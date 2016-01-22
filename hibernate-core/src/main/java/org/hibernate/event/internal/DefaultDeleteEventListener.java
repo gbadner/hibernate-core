@@ -23,6 +23,7 @@ import org.hibernate.engine.internal.Nullability;
 import org.hibernate.engine.spi.CascadingActions;
 import org.hibernate.engine.spi.EntityEntry;
 import org.hibernate.engine.spi.EntityKey;
+import org.hibernate.engine.spi.OperationContextType;
 import org.hibernate.engine.spi.PersistenceContext;
 import org.hibernate.engine.spi.Status;
 import org.hibernate.event.spi.DeleteEvent;
@@ -365,6 +366,7 @@ public class DefaultDeleteEventListener implements DeleteEventListener {
 	}
 
 	private static boolean addTransientEntity(EventSource session, Object transientEntity) {
-		return ( (DeleteOperationContext) session.getOperationContext() ).addTransientEntity( transientEntity );
+		return ( (DeleteOperationContext) session.getOperationContext( OperationContextType.DELETE ) )
+				.addTransientEntity( transientEntity );
 	}
 }

@@ -9,6 +9,7 @@ package org.hibernate.event.internal;
 import java.util.Set;
 
 import org.hibernate.engine.internal.EventSourceProvider;
+import org.hibernate.engine.spi.OperationContextType;
 import org.hibernate.event.spi.AbstractEvent;
 import org.hibernate.event.spi.DeleteEvent;
 import org.hibernate.event.spi.EventType;
@@ -21,8 +22,8 @@ public class DeleteOperationContext extends AbstractEventOperationContext {
 	// A cache of already visited transient entities (to avoid infinite recursion)
 	private Set transientEntities = new IdentitySet(10);
 
-	public DeleteOperationContext(EventSourceProvider eventSourceProvider, DeleteEvent event ) {
-		super( eventSourceProvider, EventType.DELETE, event, -1);
+	public DeleteOperationContext(EventSourceProvider eventSourceProvider) {
+		super( eventSourceProvider, -1);
 	}
 
 	@Override

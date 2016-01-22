@@ -39,6 +39,7 @@ import org.hibernate.engine.spi.EntityKey;
 import org.hibernate.engine.spi.NamedQueryDefinition;
 import org.hibernate.engine.spi.NamedSQLQueryDefinition;
 import org.hibernate.engine.spi.OperationContext;
+import org.hibernate.engine.spi.OperationContextType;
 import org.hibernate.engine.spi.QueryParameters;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.engine.spi.SessionImplementor;
@@ -100,7 +101,12 @@ public abstract class AbstractSessionImpl
 	public abstract boolean shouldAutoJoinTransaction();
 
 	@Override
-	public OperationContext getOperationContext() {
+	public boolean isOperationInProgress(OperationContextType operationContextType) {
+		return false;
+	}
+
+	@Override
+	public OperationContext getOperationContext(OperationContextType operationContextType) {
 		return null;
 	}
 

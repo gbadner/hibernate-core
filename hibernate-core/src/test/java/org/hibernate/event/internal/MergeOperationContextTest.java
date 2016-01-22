@@ -66,10 +66,8 @@ public class MergeOperationContextTest extends BaseCoreFunctionalTestCase {
     public void testMergeToManagedEntityFillFollowedByInvertMapping() {
 
         Object mergeEntity = new Simple( 1 );
-		MergeOperationContext cache = new MergeOperationContext(
-				getEntitySourceProvider(),
-				new MergeEvent(  mergeEntity, session )
-		);
+		MergeOperationContext cache = new MergeOperationContext( getEntitySourceProvider() );
+		cache.beforeOperation( EventType.MERGE, new MergeEvent( mergeEntity, session ) );
 
         Object managedEntity = new Simple( 2 );
         
@@ -97,10 +95,8 @@ public class MergeOperationContextTest extends BaseCoreFunctionalTestCase {
     public void testMergeToManagedEntityFillFollowedByInvert() {
 
         Object mergeEntity = new Simple( 1 );
-		MergeOperationContext cache = new MergeOperationContext(
-				getEntitySourceProvider(),
-				new MergeEvent(  mergeEntity, session )
-		);
+		MergeOperationContext cache = new MergeOperationContext( getEntitySourceProvider() );
+		cache.beforeOperation( EventType.MERGE, new MergeEvent( mergeEntity, session ) );
 
 		Object managedEntity = new Simple( 2 );
         
@@ -119,10 +115,8 @@ public class MergeOperationContextTest extends BaseCoreFunctionalTestCase {
     public void testMergeToManagedEntityFillFollowedByInvertUsingPutWithSetOperatedOnArg() {
 
         Object mergeEntity = new Simple( 1 );
-		MergeOperationContext cache = new MergeOperationContext(
-				getEntitySourceProvider(),
-				new MergeEvent(  mergeEntity, session )
-		);
+		MergeOperationContext cache = new MergeOperationContext( getEntitySourceProvider() );
+		cache.beforeOperation( EventType.MERGE, new MergeEvent( mergeEntity, session ) );
 
         Object managedEntity = new Simple( 2 );
         
@@ -153,10 +147,8 @@ public class MergeOperationContextTest extends BaseCoreFunctionalTestCase {
 	public void testReplaceManagedEntity() {
 
 		Simple mergeEntity = new Simple( 1 );
-		MergeOperationContext cache = new MergeOperationContext(
-				getEntitySourceProvider(),
-				new MergeEvent(  mergeEntity, session )
-		);
+		MergeOperationContext cache = new MergeOperationContext( getEntitySourceProvider() );
+		cache.beforeOperation( EventType.MERGE, new MergeEvent( mergeEntity, session ) );
 
 		Simple managedEntity = new Simple( 0 );
 		cache.put(mergeEntity, managedEntity);
@@ -175,10 +167,7 @@ public class MergeOperationContextTest extends BaseCoreFunctionalTestCase {
 
 		session.getTransaction().begin();
 		Simple mergeEntity = new Simple( 1 );
-		MergeOperationContext cache = new MergeOperationContext(
-				getEntitySourceProvider(),
-				new MergeEvent(  mergeEntity, session )
-		);
+		MergeOperationContext cache = new MergeOperationContext( getEntitySourceProvider() );
 
 		Simple managedEntity = new Simple( 0 );
 		cache.put(mergeEntity, managedEntity);
@@ -190,10 +179,7 @@ public class MergeOperationContextTest extends BaseCoreFunctionalTestCase {
 
 		session.getTransaction().begin();
 		Simple mergeEntity1 = new Simple( 1 );
-		MergeOperationContext cache = new MergeOperationContext(
-				getEntitySourceProvider(),
-				new MergeEvent(  mergeEntity1, session )
-		);
+		MergeOperationContext cache = new MergeOperationContext( getEntitySourceProvider() );
 
 		session.persist( mergeEntity1 );
 		Simple managedEntity1 = new Simple( 1 );

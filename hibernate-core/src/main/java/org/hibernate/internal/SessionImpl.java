@@ -82,6 +82,7 @@ import org.hibernate.engine.spi.EntityEntry;
 import org.hibernate.engine.spi.EntityKey;
 import org.hibernate.engine.spi.LoadQueryInfluencers;
 import org.hibernate.engine.spi.OperationContext;
+import org.hibernate.engine.spi.OperationContextType;
 import org.hibernate.engine.spi.PersistenceContext;
 import org.hibernate.engine.spi.QueryParameters;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
@@ -626,8 +627,13 @@ public final class SessionImpl extends AbstractSessionImpl implements EventSourc
 	}
 
 	@Override
-	public OperationContext getOperationContext() {
-		return operationContextManager.getCurrentOperationContext();
+	public boolean isOperationInProgress(OperationContextType operationContextType) {
+		return operationContextManager.isOperationInProgress( operationContextType );
+	}
+
+	@Override
+	public OperationContext getOperationContext(OperationContextType operationContextType) {
+		return operationContextManager.getOperationContext( operationContextType );
 	}
 
 	// saveOrUpdate() operations ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1376,18 +1382,18 @@ public final class SessionImpl extends AbstractSessionImpl implements EventSourc
 		}
 		// autoFlush is always a top-level operation.
 		AutoFlushEvent event = new AutoFlushEvent( querySpaces, this );
-		operationContextManager.beforeOperation( EventType.AUTO_FLUSH, event );
-		boolean success = false;
-		try {
+		//operationContextManager.beforeOperation( EventType.AUTO_FLUSH, event );
+		//boolean success = false;
+		//try {
 			for ( AutoFlushEventListener listener : listeners( EventType.AUTO_FLUSH ) ) {
 				listener.onAutoFlush( event );
 			}
-			success = true;
+		//	success = true;
 			return event.isFlushRequired();
-		}
-		finally {
-			operationContextManager.afterOperation( EventType.AUTO_FLUSH, event, success );
-		}
+		//}
+		//finally {
+		//	operationContextManager.afterOperation( EventType.AUTO_FLUSH, event, success );
+		//}
 	}
 
 	@Override
@@ -1416,18 +1422,18 @@ public final class SessionImpl extends AbstractSessionImpl implements EventSourc
 		}
 		// flush() is always a top-level operation.
 		FlushEvent flushEvent = new FlushEvent( this );
-		operationContextManager.beforeOperation( EventType.FLUSH, flushEvent );
-		boolean success = false;
-		try {
+		//operationContextManager.beforeOperation( EventType.FLUSH, flushEvent );
+		//boolean success = false;
+		//try {
 			for ( FlushEventListener listener : listeners( EventType.FLUSH ) ) {
 				listener.onFlush( flushEvent );
 			}
 			delayedAfterCompletion();
-			success = true;
-		}
-		finally {
-			operationContextManager.afterOperation( EventType.FLUSH, flushEvent, success );
-		}
+		//	success = true;
+		//}
+		//finally {
+		//	operationContextManager.afterOperation( EventType.FLUSH, flushEvent, success );
+		//}
 	}
 
 	@Override

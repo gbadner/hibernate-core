@@ -11,6 +11,7 @@ import java.util.Set;
 import org.hibernate.ReplicationMode;
 import org.hibernate.engine.internal.EventSourceProvider;
 import org.hibernate.engine.spi.OperationContext;
+import org.hibernate.engine.spi.OperationContextType;
 import org.hibernate.event.spi.AbstractEvent;
 import org.hibernate.event.spi.EventType;
 import org.hibernate.event.spi.ReplicateEvent;
@@ -21,10 +22,8 @@ import org.hibernate.internal.util.collections.IdentitySet;
  */
 public class ReplicateOperationContext extends AbstractEventOperationContext {
 
-	public ReplicateOperationContext(
-			EventSourceProvider eventSourceProvider,
-			ReplicateEvent event) {
-		super( eventSourceProvider, EventType.REPLICATE, event, 0 );
+	public ReplicateOperationContext(EventSourceProvider eventSourceProvider) {
+		super( eventSourceProvider, 0 );
 	}
 
 	public ReplicationMode getReplicationMode() {
@@ -34,9 +33,5 @@ public class ReplicateOperationContext extends AbstractEventOperationContext {
 	@Override
 	public OperationContextType getOperationContextType() {
 		return OperationContextType.REPLICATE;
-	}
-
-	@Override
-	public void clear() {
 	}
 }

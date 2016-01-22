@@ -9,8 +9,6 @@ package org.hibernate.engine.spi;
 /**
  * @author Gail Badner
  */
-public interface OperationContext {
-	OperationContextType getOperationContextType();
-	void afterOperation();
-	void clear();
+public enum OperationContextType {
+	SAVE_UPDATE, MERGE, LOCK, DELETE, REFRESH, REPLICATE
 }

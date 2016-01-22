@@ -17,6 +17,7 @@ import org.hibernate.engine.internal.CascadePoint;
 import org.hibernate.engine.spi.CascadingAction;
 import org.hibernate.engine.spi.CascadingActions;
 import org.hibernate.engine.spi.EntityKey;
+import org.hibernate.engine.spi.OperationContextType;
 import org.hibernate.engine.spi.SessionImplementor;
 import org.hibernate.engine.spi.Status;
 import org.hibernate.event.spi.EventSource;
@@ -220,6 +221,7 @@ public class DefaultReplicateEventListener extends AbstractSaveEventListener imp
 	}
 
 	private static ReplicationMode getReplicationMode(EventSource session) {
-		return ( (ReplicateOperationContext) session.getOperationContext() ).getReplicationMode();
+		return ( (ReplicateOperationContext) session.getOperationContext( OperationContextType.REPLICATE) )
+				.getReplicationMode();
 	}
 }

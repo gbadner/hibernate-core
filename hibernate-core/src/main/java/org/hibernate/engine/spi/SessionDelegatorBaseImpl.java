@@ -118,8 +118,13 @@ public class SessionDelegatorBaseImpl implements SessionImplementor, Session {
 	}
 
 	@Override
-	public OperationContext getOperationContext() {
-		return sessionImplementor.getOperationContext();
+	public boolean isOperationInProgress(OperationContextType operationContextType) {
+		return sessionImplementor.isOperationInProgress( operationContextType );
+	}
+
+	@Override
+	public OperationContext getOperationContext(OperationContextType operationContextType) {
+		return sessionImplementor.getOperationContext( operationContextType );
 	}
 
 	@Override

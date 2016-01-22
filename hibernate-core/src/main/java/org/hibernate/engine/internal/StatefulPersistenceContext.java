@@ -45,6 +45,7 @@ import org.hibernate.engine.spi.EntityEntry;
 import org.hibernate.engine.spi.EntityKey;
 import org.hibernate.engine.spi.EntityUniqueKey;
 import org.hibernate.engine.spi.ManagedEntity;
+import org.hibernate.engine.spi.OperationContextType;
 import org.hibernate.engine.spi.PersistenceContext;
 import org.hibernate.engine.spi.PersistentAttributeInterceptable;
 import org.hibernate.engine.spi.PersistentAttributeInterceptor;
@@ -1154,8 +1155,8 @@ public class StatefulPersistenceContext implements PersistenceContext {
 		// operation.  It represents a map of the detached entity instances pointing
 		// to the corresponding managed instance.
 		Map mergeMap = null;
-		if ( MergeOperationContext.class.isInstance( session.getOperationContext() ) ) {
-			mergeMap = ( (MergeOperationContext) session.getOperationContext() ).invertMap();
+		if ( session.isOperationInProgress( OperationContextType.MERGE ) ) {
+			mergeMap = ( (MergeOperationContext) session.getOperationContext( OperationContextType.MERGE) ).invertMap();
 		}
 
 		//not found in case, proceed
@@ -1271,8 +1272,8 @@ public class StatefulPersistenceContext implements PersistenceContext {
 		// operation.  It represents a map of the detached entity instances pointing
 		// to the corresponding managed instance.
 		Map mergeMap = null;
-		if ( MergeOperationContext.class.isInstance( session.getOperationContext() ) ) {
-			mergeMap = ( (MergeOperationContext) session.getOperationContext() ).invertMap();
+		if ( session.isOperationInProgress( OperationContextType.MERGE ) ) {
+			mergeMap = ( (MergeOperationContext) session.getOperationContext( OperationContextType.MERGE) ).invertMap();
 		}
 
 		// try cache lookup first

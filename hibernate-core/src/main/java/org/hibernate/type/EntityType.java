@@ -18,6 +18,7 @@ import org.hibernate.MappingException;
 import org.hibernate.engine.internal.ForeignKeys;
 import org.hibernate.engine.spi.EntityUniqueKey;
 import org.hibernate.engine.spi.Mapping;
+import org.hibernate.engine.spi.OperationContextType;
 import org.hibernate.engine.spi.PersistenceContext;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.engine.spi.SessionImplementor;
@@ -295,7 +296,9 @@ public abstract class EntityType extends AbstractType implements AssociationType
 		if ( original == null ) {
 			return null;
 		}
-		MergeOperationContext copyCache = (MergeOperationContext) session.getOperationContext();
+		MergeOperationContext copyCache = (MergeOperationContext) session.getOperationContext(
+				OperationContextType.MERGE
+		);
 		Object cached = copyCache.get( original );
 		if ( cached != null ) {
 			return cached;

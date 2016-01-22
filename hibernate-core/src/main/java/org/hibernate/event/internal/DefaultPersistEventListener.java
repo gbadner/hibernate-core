@@ -14,6 +14,7 @@ import org.hibernate.PersistentObjectException;
 import org.hibernate.engine.spi.CascadingAction;
 import org.hibernate.engine.spi.CascadingActions;
 import org.hibernate.engine.spi.EntityEntry;
+import org.hibernate.engine.spi.OperationContextType;
 import org.hibernate.engine.spi.SessionImplementor;
 import org.hibernate.engine.spi.Status;
 import org.hibernate.event.spi.EventSource;
@@ -209,7 +210,9 @@ public class DefaultPersistEventListener extends AbstractSaveEventListener imple
 	}
 
 	private static boolean addEntityToPersistContext(EventSource source, Object entity) {
-		final SaveOperationContext saveOperationContext = (SaveOperationContext) source.getOperationContext();
+		final SaveOperationContext saveOperationContext = (SaveOperationContext) source.getOperationContext(
+				OperationContextType.SAVE_UPDATE
+		);
 		return saveOperationContext.addEntity( entity );
 
 	}

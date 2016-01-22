@@ -16,12 +16,8 @@ import org.hibernate.event.spi.EventType;
  */
 public abstract class AbstractSaveOperationContext extends AbstractEventOperationContext {
 
-	AbstractSaveOperationContext(
-			EventSourceProvider eventSourceProvider,
-			EventType eventType,
-			AbstractEvent event,
-			int requiredCascadeLevel) {
-		super( eventSourceProvider, eventType, event, requiredCascadeLevel );
+	AbstractSaveOperationContext(EventSourceProvider eventSourceProvider, int requiredCascadeLevel) {
+		super( eventSourceProvider, requiredCascadeLevel );
 		final EventSource session = eventSourceProvider.getSession();
 		if ( session.getActionQueue().hasUnresolvedEntityInsertActions() ) {
 			throw new IllegalStateException( "There are delayed insert actions when MergeContext is being initiated." );

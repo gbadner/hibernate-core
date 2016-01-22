@@ -20,6 +20,7 @@ import org.hibernate.engine.spi.CascadingAction;
 import org.hibernate.engine.spi.CascadingActions;
 import org.hibernate.engine.spi.EntityEntry;
 import org.hibernate.engine.spi.EntityKey;
+import org.hibernate.engine.spi.OperationContextType;
 import org.hibernate.engine.spi.SelfDirtinessTracker;
 import org.hibernate.engine.spi.SessionImplementor;
 import org.hibernate.event.spi.EventSource;
@@ -51,7 +52,9 @@ public class DefaultMergeEventListener extends AbstractSaveEventListener impleme
 	 */
 	public void onMerge(MergeEvent event) throws HibernateException {
 
-		final MergeOperationContext copyCache = (MergeOperationContext) event.getSession().getOperationContext();
+		final MergeOperationContext copyCache = (MergeOperationContext) event.getSession().getOperationContext(
+				OperationContextType.MERGE
+		);
 		final EventSource source = event.getSession();
 		final Object original = event.getOriginal();
 
@@ -154,7 +157,7 @@ public class DefaultMergeEventListener extends AbstractSaveEventListener impleme
 		final EventSource source = event.getSession();
 		final EntityPersister persister = source.getEntityPersister( event.getEntityName(), entity );
 
-		( (MergeOperationContext) event.getSession().getOperationContext() ).put( entity, entity, true );  //before cascade!
+		getMergeOperationContext( source ).put( entity, entity, true );  //before cascade!
 
 		cascadeOnMerge( source, persister, entity );
 		copyValues( persister, entity, entity, source );
@@ -175,7 +178,7 @@ public class DefaultMergeEventListener extends AbstractSaveEventListener impleme
 		final Serializable id = persister.hasIdentifierProperty() ?
 				persister.getIdentifier( entity, source ) :
 				null;
-		final MergeOperationContext copyCache = ( (MergeOperationContext) event.getSession().getOperationContext() );
+		final MergeOperationContext copyCache = getMergeOperationContext( source );
 		if ( copyCache.containsMergeEntity( entity ) ) {
 			persister.setIdentifier( copyCache.get( entity ), id, source );
 		}
@@ -258,7 +261,7 @@ public class DefaultMergeEventListener extends AbstractSaveEventListener impleme
 			entityIsTransient( event );
 		}
 		else {
-			( (MergeOperationContext) event.getSession().getOperationContext() ).put( entity, result, true ); //before cascade!
+			getMergeOperationContext( source ).put( entity, result, true ); //before cascade!
 
 			final Object target = source.getPersistenceContext().unproxy( result );
 			if ( target == entity ) {
@@ -446,5 +449,9 @@ public class DefaultMergeEventListener extends AbstractSaveEventListener impleme
 	@Override
 	protected void cascadeBeforeSave(EventSource source, EntityPersister persister, Object entity)
 			throws HibernateException {
+	}
+
+	private static MergeOperationContext getMergeOperationContext(EventSource session) {
+		return (MergeOperationContext) session.getOperationContext( OperationContextType.MERGE );
 	}
 }

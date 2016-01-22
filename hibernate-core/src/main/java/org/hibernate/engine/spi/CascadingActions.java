@@ -89,7 +89,8 @@ public class CascadingActions {
 			LOG.tracev( "Cascading to lock: {0}", entityName );
 			LockMode lockMode = LockMode.NONE;
 			LockOptions lr = new LockOptions();
-			final LockOperationContext lockOperationContext = ( (LockOperationContext) session.getOperationContext() );
+			final LockOperationContext lockOperationContext =
+					( (LockOperationContext) session.getOperationContext(OperationContextType.LOCK) );
 			final LockOptions lockOptions = lockOperationContext.getLockOptions();
 			if ( lockOptions != null ) {
 				lr.setTimeOut( lockOptions.getTimeOut() );
@@ -415,7 +416,7 @@ public class CascadingActions {
 			session.replicate(
 					entityName,
 					child,
-					( (ReplicateOperationContext) session.getOperationContext() ).getReplicationMode()
+					( (ReplicateOperationContext) session.getOperationContext( OperationContextType.REPLICATE ) ).getReplicationMode()
 			);
 		}
 
