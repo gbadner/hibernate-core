@@ -40,6 +40,11 @@ public class RefreshOperationContext extends AbstractEventOperationContext {
 		super.clear();
 	}
 
+	public boolean isRefreshed(Object entity) {
+		checkValid();
+		return refreshedEntities.contains( entity );
+	}
+
 	@SuppressWarnings({ "unchecked" })
 	public boolean addRefreshedEntity(Object refreshedEntity) {
 		checkValid();

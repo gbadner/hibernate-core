@@ -7,7 +7,6 @@
 package org.hibernate.event.internal;
 
 import java.io.Serializable;
-import java.util.IdentityHashMap;
 import java.util.Map;
 
 import org.hibernate.HibernateException;
@@ -19,6 +18,7 @@ import org.hibernate.engine.internal.CascadePoint;
 import org.hibernate.engine.spi.CascadingActions;
 import org.hibernate.engine.spi.EntityEntry;
 import org.hibernate.engine.spi.EntityKey;
+import org.hibernate.engine.spi.OperationContextType;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.event.spi.EventSource;
 import org.hibernate.event.spi.RefreshEvent;
@@ -40,8 +40,14 @@ import org.hibernate.type.Type;
 public class DefaultRefreshEventListener implements RefreshEventListener {
 	private static final CoreMessageLogger LOG = CoreLogging.messageLogger( DefaultRefreshEventListener.class );
 
-	public void onRefresh(RefreshEvent event) throws HibernateException {
-		onRefresh( event, new IdentityHashMap( 10 ) );
+	/**
+	 * Handle the given refresh event.
+	 *
+	 * @param event The refresh event to be handled.
+	 */
+	@Deprecated
+	public void onRefresh(RefreshEvent event, Map refreshedAlready) {
+		onRefresh( event );
 	}
 
 	/**
@@ -49,7 +55,7 @@ public class DefaultRefreshEventListener implements RefreshEventListener {
 	 *
 	 * @param event The refresh event to be handled.
 	 */
-	public void onRefresh(RefreshEvent event, Map refreshedAlready) {
+	public void onRefresh(RefreshEvent event) {
 
 		final EventSource source = event.getSession();
 
@@ -63,7 +69,7 @@ public class DefaultRefreshEventListener implements RefreshEventListener {
 
 		final Object object = source.getPersistenceContext().unproxyAndReassociate( event.getObject() );
 
-		if ( refreshedAlready.containsKey( object ) ) {
+		if ( getRefreshOperationContext( source ).isRefreshed( object ) ) {
 			LOG.trace( "Already refreshed" );
 			return;
 		}
@@ -117,7 +123,7 @@ public class DefaultRefreshEventListener implements RefreshEventListener {
 		}
 
 		// cascade the refresh prior to refreshing this entity
-		refreshedAlready.put( object, object );
+		getRefreshOperationContext( source ).addRefreshedEntity( object );
 		Cascade.cascade(
 				CascadingActions.REFRESH,
 				CascadePoint.BEFORE_REFRESH,
@@ -182,5 +188,9 @@ public class DefaultRefreshEventListener implements RefreshEventListener {
 				evictCachedCollections( actype.getSubtypes(), id, factory );
 			}
 		}
+	}
+
+	private static RefreshOperationContext getRefreshOperationContext(EventSource session) {
+		return (RefreshOperationContext) session.getOperationContext( OperationContextType.REFRESH );
 	}
 }
