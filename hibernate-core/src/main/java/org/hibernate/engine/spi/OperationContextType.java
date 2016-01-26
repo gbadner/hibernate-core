@@ -10,5 +10,5 @@ package org.hibernate.engine.spi;
  * @author Gail Badner
  */
 public enum OperationContextType {
-	SAVE_UPDATE, MERGE, LOCK, DELETE, REFRESH, REPLICATE
+	PERSIST, SAVE_UPDATE, MERGE, LOCK, DELETE, REFRESH, REPLICATE
 }

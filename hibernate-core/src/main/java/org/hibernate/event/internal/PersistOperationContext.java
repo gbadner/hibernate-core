@@ -9,17 +9,22 @@ package org.hibernate.event.internal;
 import java.util.Set;
 
 import org.hibernate.engine.spi.OperationContextType;
+import org.hibernate.event.spi.PersistEvent;
 import org.hibernate.internal.util.collections.IdentitySet;
 
 /**
  * @author Gail Badner
  */
-public class SaveOperationContext extends AbstractSaveOperationContext {
+public class PersistOperationContext extends AbstractSaveOperationContext<PersistEvent> {
 	private Set createCache = new IdentitySet(10);
+
+	public PersistOperationContext() {
+		super( PersistEvent.class );
+	}
 
 	@Override
 	public OperationContextType getOperationContextType() {
-		return OperationContextType.SAVE_UPDATE;
+		return OperationContextType.PERSIST;
 	}
 
 	@Override

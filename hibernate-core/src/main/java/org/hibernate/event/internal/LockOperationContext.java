@@ -13,7 +13,11 @@ import org.hibernate.event.spi.LockEvent;
 /**
  * @author Gail Badner
  */
-public class LockOperationContext extends AbstractEventOperationContext {
+public class LockOperationContext extends AbstractEventOperationContext<LockEvent> {
+
+	public LockOperationContext() {
+		super( LockEvent.class );
+	}
 
 	public LockOptions getLockOptions() {
 		checkValid();
@@ -25,8 +29,4 @@ public class LockOperationContext extends AbstractEventOperationContext {
 		return OperationContextType.LOCK;
 	}
 
-	@Override
-	public void afterOperation() {
-		// do nothing
-	}
 }

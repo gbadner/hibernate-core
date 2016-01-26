@@ -8,28 +8,27 @@ package org.hibernate.event.internal;
 
 import org.hibernate.event.spi.AbstractEvent;
 import org.hibernate.event.spi.EventSource;
-import org.hibernate.event.spi.EventType;
 
 /**
  * @author Gail Badner
  */
-public abstract class AbstractSaveOperationContext extends AbstractEventOperationContext {
+public abstract class AbstractSaveOperationContext<T extends AbstractEvent> extends AbstractEventOperationContext<T> {
 
-	AbstractSaveOperationContext() {
-		super();
+	AbstractSaveOperationContext(Class<T> entityClass) {
+		super( entityClass );
 	}
 
 	@Override
-	public void beforeOperation(EventType eventType, AbstractEvent event) {
+	public void beforeOperation(T event) {
 		final EventSource session = event.getSession();
 		if ( session.getActionQueue().hasUnresolvedEntityInsertActions() ) {
 			throw new IllegalStateException( "There are delayed insert actions when MergeContext is being initiated." );
 		}
-		super.beforeOperation( eventType, event );
+		super.beforeOperation( event );
 	}
 
 	@Override
-	public void afterOperation() {
+	public void afterOperation(T event) {
 		getSession().getActionQueue().checkNoUnresolvedActionsAfterOperation();
 	}
 }

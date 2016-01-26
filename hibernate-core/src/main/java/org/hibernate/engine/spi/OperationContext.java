@@ -11,6 +11,5 @@ package org.hibernate.engine.spi;
  */
 public interface OperationContext {
 	OperationContextType getOperationContextType();
-	void afterOperation();
 	void clear();
 }

@@ -12,5 +12,4 @@ import org.hibernate.engine.spi.OperationContext;
  * @author Gail Badner
  */
 public interface EventOperationContext extends OperationContext {
-	EventType getEventType();
 }

@@ -9,34 +9,32 @@ package org.hibernate.event.internal;
 import java.util.Set;
 
 import org.hibernate.engine.spi.OperationContextType;
-import org.hibernate.event.spi.DeleteEvent;
+import org.hibernate.event.spi.SaveOrUpdateEvent;
 import org.hibernate.internal.util.collections.IdentitySet;
 
 /**
  * @author Gail Badner
  */
-public class DeleteOperationContext extends AbstractEventOperationContext<DeleteEvent> {
-	// A cache of already visited transient entities (to avoid infinite recursion)
-	private Set transientEntities = new IdentitySet(10);
+public class SaveOrUpdateOperationContext extends AbstractSaveOperationContext<SaveOrUpdateEvent> {
+	private Set createCache = new IdentitySet(10);
 
-	public DeleteOperationContext() {
-		super( DeleteEvent.class );
+	public SaveOrUpdateOperationContext() {
+		super( SaveOrUpdateEvent.class );
 	}
 
 	@Override
 	public OperationContextType getOperationContextType() {
-		return OperationContextType.DELETE;
+		return OperationContextType.SAVE_UPDATE;
 	}
 
 	@Override
 	public void clear() {
-		transientEntities.clear();
+		createCache.clear();
 		super.clear();
 	}
 
 	@SuppressWarnings({ "unchecked" })
-	public boolean addTransientEntity(Object transientEntity) {
-		checkValid();
-		return transientEntities.add( transientEntity );
+	public boolean addEntity(Object entity) {
+		return createCache.add( entity );
 	}
 }

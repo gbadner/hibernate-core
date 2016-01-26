@@ -21,6 +21,7 @@ import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.event.spi.AbstractEvent;
 import org.hibernate.event.spi.EntityCopyObserver;
 import org.hibernate.event.spi.EventType;
+import org.hibernate.event.spi.MergeEvent;
 import org.hibernate.pretty.MessageHelper;
 import org.hibernate.service.ServiceRegistry;
 
@@ -78,7 +79,7 @@ import org.hibernate.service.ServiceRegistry;
  *
  * @author Gail Badner
  */
-public class MergeOperationContext extends AbstractSaveOperationContext {
+public class MergeOperationContext extends AbstractSaveOperationContext<MergeEvent> {
 	private static final Logger LOG = Logger.getLogger( MergeOperationContext.class );
 
 	private EntityCopyObserver entityCopyObserver;
@@ -98,7 +99,12 @@ public class MergeOperationContext extends AbstractSaveOperationContext {
 	// TODO: merge mergeEntityToOperatedOnFlagMap into mergeToManagedEntityXref, since they have the same key.
 	//       need to check if this would hurt performance.
 	private Map<Object,Boolean> mergeEntityToOperatedOnFlagMap = new IdentityHashMap<Object,Boolean>( 10 );
-	    // key is a merge entity;
+
+	public MergeOperationContext() {
+		super( MergeEvent.class );
+	}
+
+	// key is a merge entity;
 	    // value is a flag indicating if the merge entity is currently in the merge process.
 
 	@Override
@@ -107,17 +113,17 @@ public class MergeOperationContext extends AbstractSaveOperationContext {
 	}
 
 	@Override
-	public void beforeOperation(EventType eventType, AbstractEvent event) {
+	public void beforeOperation(MergeEvent event) {
 		if ( entityCopyObserver == null ) {
 			entityCopyObserver = createEntityCopyObserver( event.getSession().getFactory() );
 		}
-		super.beforeOperation( eventType, event );
+		super.beforeOperation( event );
 	}
 
 	@Override
-	public void afterOperation() {
+	public void afterOperation(MergeEvent event) {
 		entityCopyObserver.topLevelMergeComplete( getSession() );
-		super.afterOperation();
+		super.afterOperation( event );
 	}
 
 	private static EntityCopyObserver createEntityCopyObserver(SessionFactoryImplementor sessionFactory) {

@@ -9,7 +9,6 @@ package org.hibernate.engine.internal;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.hibernate.AssertionFailure;
 import org.hibernate.HibernateException;
 import org.hibernate.engine.spi.OperationContext;
 import org.hibernate.engine.spi.OperationContextType;
@@ -17,53 +16,22 @@ import org.hibernate.event.internal.AbstractEventOperationContext;
 import org.hibernate.event.internal.DeleteOperationContext;
 import org.hibernate.event.internal.LockOperationContext;
 import org.hibernate.event.internal.MergeOperationContext;
+import org.hibernate.event.internal.PersistOperationContext;
 import org.hibernate.event.internal.RefreshOperationContext;
 import org.hibernate.event.internal.ReplicateOperationContext;
-import org.hibernate.event.internal.SaveOperationContext;
+import org.hibernate.event.internal.SaveOrUpdateOperationContext;
 import org.hibernate.event.spi.AbstractEvent;
-import org.hibernate.event.spi.EventType;
 
 /**
  * @author Gail Badner
  */
 public class OperationContextManager {
 
-	private static Map<EventType, OperationContextType> OPERATION_CONTEXT_TYPE_BY_EVENT_TYPE =
-			new HashMap<EventType, OperationContextType>( EventType.values().size() );
-
-	static {
-		OPERATION_CONTEXT_TYPE_BY_EVENT_TYPE.put( EventType.SAVE, OperationContextType.SAVE_UPDATE );
-		OPERATION_CONTEXT_TYPE_BY_EVENT_TYPE.put( EventType.SAVE_UPDATE, OperationContextType.SAVE_UPDATE );
-		OPERATION_CONTEXT_TYPE_BY_EVENT_TYPE.put( EventType.UPDATE, OperationContextType.SAVE_UPDATE );
-		OPERATION_CONTEXT_TYPE_BY_EVENT_TYPE.put( EventType.PERSIST, OperationContextType.SAVE_UPDATE );
-		OPERATION_CONTEXT_TYPE_BY_EVENT_TYPE.put( EventType.PERSIST_ONFLUSH, OperationContextType.SAVE_UPDATE );
-		OPERATION_CONTEXT_TYPE_BY_EVENT_TYPE.put( EventType.LOCK, OperationContextType.LOCK );
-		OPERATION_CONTEXT_TYPE_BY_EVENT_TYPE.put( EventType.DELETE, OperationContextType.DELETE );
-		OPERATION_CONTEXT_TYPE_BY_EVENT_TYPE.put( EventType.REFRESH, OperationContextType.REFRESH );
-		OPERATION_CONTEXT_TYPE_BY_EVENT_TYPE.put( EventType.MERGE, OperationContextType.MERGE );
-		OPERATION_CONTEXT_TYPE_BY_EVENT_TYPE.put( EventType.REPLICATE, OperationContextType.REPLICATE );
-	}
-
 	private final Map<OperationContextType, AbstractEventOperationContext> cachedOperationContextByType =
 			new HashMap<OperationContextType, AbstractEventOperationContext>( OperationContextType.values().length );
 
 	public OperationContext getOperationContext(OperationContextType operationContextType) {
 		return getValidEventOperationContext( operationContextType );
-	}
-
-	public boolean isOperationInProgress(EventType eventType) {
-		if ( eventType == null ) {
-			throw new IllegalArgumentException( "eventType must be non-null." );
-		}
-		return isOperationInProgress( getOperationContextType( eventType ) );
-	}
-
-	private OperationContextType getOperationContextType(EventType eventType) {
-		final OperationContextType operationContextType = OPERATION_CONTEXT_TYPE_BY_EVENT_TYPE.get( eventType );
-		if ( operationContextType == null ) {
-			throw new AssertionFailure( "No OperationContextType for EventType: " + eventType.eventName() );
-		}
-		return operationContextType;
 	}
 
 	public boolean isOperationInProgress(OperationContextType operationContextType) {
@@ -76,19 +44,34 @@ public class OperationContextManager {
 				operationContext.isValid();
 	}
 
-	public void beforeOperation(EventType eventType, AbstractEvent event) {
-		if ( eventType == null || event == null ) {
-			throw new IllegalArgumentException( "eventType and event must be non-null" );
+	public <T extends AbstractEvent> void beforeOperation(OperationContextType operationContextType, T event) {
+		if ( operationContextType == null || event == null ) {
+			throw new IllegalArgumentException( "operationContextType and event must be non-null" );
 		}
-		AbstractEventOperationContext operationContext = getOrCreateInvalidEventOperationContext(
-				getOperationContextType(
-						eventType
-				)
+		AbstractEventOperationContext<T> operationContext = getOrCreateInvalidEventOperationContext(
+				operationContextType
 		);
-		operationContext.beforeOperation( eventType, event );
+		operationContext.beforeOperation( operationContext.getEventClass().cast( event ) );
 	}
 
-	private AbstractEventOperationContext getValidEventOperationContext(OperationContextType operationContextType) {
+	public <T extends AbstractEvent> void afterOperation(OperationContextType operationContextType, T event, boolean success) {
+		if ( event == null ) {
+			throw new IllegalArgumentException( "eventType and event must be non-null." );
+		}
+
+		final AbstractEventOperationContext<T>  operationContext = getValidEventOperationContext( operationContextType );
+		try {
+			if ( success ) {
+				operationContext.afterOperation( operationContext.getEventClass().cast( event) );
+			}
+		}
+		finally {
+			operationContext.clear();
+		}
+	}
+
+	@SuppressWarnings( value = {"unchecked"} )
+	private <T extends AbstractEvent> AbstractEventOperationContext<T> getValidEventOperationContext(OperationContextType operationContextType) {
 		AbstractEventOperationContext operationContext = cachedOperationContextByType.get( operationContextType );
 		if ( operationContext == null || !operationContext.isValid() ) {
 			throw new IllegalStateException(
@@ -101,7 +84,8 @@ public class OperationContextManager {
 		return operationContext;
 	}
 
-	private AbstractEventOperationContext getOrCreateInvalidEventOperationContext(OperationContextType operationContextType) {
+	@SuppressWarnings( value = {"unchecked"} )
+	private <T extends AbstractEvent> AbstractEventOperationContext<T> getOrCreateInvalidEventOperationContext(OperationContextType operationContextType) {
 		AbstractEventOperationContext operationContext = cachedOperationContextByType.get( operationContextType );
 		if ( operationContext == null ) {
 			operationContext = createOperationContext( operationContextType );
@@ -116,14 +100,16 @@ public class OperationContextManager {
 			);
 		}
 		return operationContext;
-
 	}
 
 	private AbstractEventOperationContext createOperationContext(OperationContextType operationContextType) {
 		final AbstractEventOperationContext operationContext;
 		switch ( operationContextType ) {
+			case PERSIST:
+				operationContext = new PersistOperationContext();
+				break;
 			case SAVE_UPDATE:
-				operationContext = new SaveOperationContext();
+				operationContext = new SaveOrUpdateOperationContext();
 				break;
 			case LOCK:
 				operationContext = new LockOperationContext();
@@ -149,45 +135,6 @@ public class OperationContextManager {
 			);
 		}
 		return operationContext;
-	}
-
-	public void afterOperation(EventType eventType, AbstractEvent event, boolean success) {
-		if ( eventType == null || event == null ) {
-			throw new IllegalArgumentException( "eventType and event must be non-null." );
-		}
-
-		final OperationContext operationContext = getValidEventOperationContext( getOperationContextType( eventType ) );
-		if ( !AbstractEventOperationContext.class.isAssignableFrom( operationContext.getClass() ) ) {
-			throw new IllegalStateException(
-				String.format(
-						"Unexpected OperationContext; expected %s; found %s",
-						AbstractEventOperationContext.class.getName(),
-						operationContext.getClass().getName()
-				)
-			);
-		}
-
-		final AbstractEventOperationContext eventOperationContext = (AbstractEventOperationContext) operationContext;
-		if ( eventType != eventOperationContext.getEventType() ) {
-			throw new IllegalStateException(
-					String.format(
-							"Inconsistent EventOperationContext; expected EventType [%s]; found [%s]",
-							eventType,
-							eventOperationContext.getEventType()
-					)
-			);
-		}
-		if ( event != eventOperationContext.getEvent() ) {
-			throw new IllegalStateException( "Inconsistent event in EventOperationContext" );
-		}
-		try {
-			if ( success ) {
-				eventOperationContext.afterOperation();
-			}
-		}
-		finally {
-			eventOperationContext.clear();
-		}
 	}
 
 	public void clear() {

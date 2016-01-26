@@ -9,21 +9,19 @@ package org.hibernate.event.internal;
 import org.hibernate.event.spi.AbstractEvent;
 import org.hibernate.event.spi.EventOperationContext;
 import org.hibernate.event.spi.EventSource;
-import org.hibernate.event.spi.EventType;
 
 /**
  * @author Gail Badner
  */
-public abstract class AbstractEventOperationContext implements EventOperationContext {
-	private EventType eventType;
-	private AbstractEvent event;
+public abstract class AbstractEventOperationContext<T extends AbstractEvent> implements EventOperationContext {
+	private T event;
+	private Class<T> eventClass;
 
-	@Override
-	public EventType getEventType() {
-		return eventType;
+	protected AbstractEventOperationContext(Class<T> eventClass) {
+		this.eventClass = eventClass;
 	}
 
-	public void beforeOperation(EventType eventType, AbstractEvent event) {
+	public void beforeOperation( T event) {
 		if ( isValid() ) {
 			throw new IllegalStateException(
 					String.format(
@@ -32,25 +30,49 @@ public abstract class AbstractEventOperationContext implements EventOperationCon
 					)
 			);
 		}
-		if ( eventType == null || event == null ) {
-			throw new IllegalArgumentException( "eventType and event must be non-null" );
+		if ( event == null ) {
+			throw new IllegalArgumentException( "event must be non-null" );
 		}
-		this.eventType = eventType;
 		this.event = event;
 	}
 
-	public AbstractEvent getEvent() {
+	public void afterOperation( T event) {
+		if ( this.event != event ) {
+			throw new IllegalStateException(
+					String.format( "Inconsistent event for OperationContext [%s]", getOperationContextType() )
+			);
+		}
+
+		if ( !isValid() ) {
+			throw new IllegalStateException(
+					String.format(
+							"OperationContext [%s] is not valid.",
+							getOperationContextType()
+					)
+			);
+		}
+		if ( event == null ) {
+			throw new IllegalArgumentException( "event must be non-null" );
+		}
+		this.event = event;
+	}
+
+
+	public final T getEvent() {
 		checkValid();
 		return event;
 	}
 
+	public final Class<T> getEventClass() {
+		return eventClass;
+	}
+
 	public void clear() {
-		eventType = null;
 		event = null;
 	}
 
 	public boolean isValid() {
-		return eventType != null && event != null;
+		return event != null;
 	}
 
 	protected void checkValid() {

@@ -11,13 +11,18 @@ import java.util.Set;
 import org.hibernate.engine.spi.OperationContextType;
 import org.hibernate.event.spi.AbstractEvent;
 import org.hibernate.event.spi.EventType;
+import org.hibernate.event.spi.RefreshEvent;
 import org.hibernate.internal.util.collections.IdentitySet;
 
 /**
  * @author Gail Badner
  */
-public class RefreshOperationContext extends AbstractEventOperationContext {
+public class RefreshOperationContext extends AbstractEventOperationContext<RefreshEvent> {
 	private Set refreshedEntities = new IdentitySet(10);
+
+	public RefreshOperationContext() {
+		super( RefreshEvent.class );
+	}
 
 	@Override
 	public OperationContextType getOperationContextType() {
@@ -25,13 +30,8 @@ public class RefreshOperationContext extends AbstractEventOperationContext {
 	}
 
 	@Override
-	public void beforeOperation(EventType eventType, AbstractEvent event) {
-		super.beforeOperation( eventType, event );
-	}
-
-	@Override
-	public void afterOperation() {
-		// do nothing
+	public void beforeOperation(RefreshEvent event) {
+		super.beforeOperation( event );
 	}
 
 	@Override

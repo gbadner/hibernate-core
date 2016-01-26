@@ -210,10 +210,9 @@ public class DefaultPersistEventListener extends AbstractSaveEventListener imple
 	}
 
 	private static boolean addEntityToPersistContext(EventSource source, Object entity) {
-		final SaveOperationContext saveOperationContext = (SaveOperationContext) source.getOperationContext(
-				OperationContextType.SAVE_UPDATE
+		final PersistOperationContext operationContext = (PersistOperationContext) source.getOperationContext(
+				OperationContextType.PERSIST
 		);
-		return saveOperationContext.addEntity( entity );
-
+		return operationContext.addEntity( entity );
 	}
 }

@@ -13,20 +13,19 @@ import org.hibernate.event.spi.ReplicateEvent;
 /**
  * @author Gail Badner
  */
-public class ReplicateOperationContext extends AbstractEventOperationContext {
+public class ReplicateOperationContext extends AbstractEventOperationContext<ReplicateEvent> {
+
+	public ReplicateOperationContext() {
+		super( ReplicateEvent.class );
+	}
 
 	public ReplicationMode getReplicationMode() {
 		checkValid();
-		return ( (ReplicateEvent) getEvent() ).getReplicationMode();
+		return getEvent().getReplicationMode();
 	}
 
 	@Override
 	public OperationContextType getOperationContextType() {
 		return OperationContextType.REPLICATE;
-	}
-
-	@Override
-	public void afterOperation() {
-		// do nothing
 	}
 }
