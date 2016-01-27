@@ -39,6 +39,8 @@ import org.hibernate.UnknownProfileException;
 import org.hibernate.collection.spi.PersistentCollection;
 import org.hibernate.engine.jdbc.connections.spi.JdbcConnectionAccess;
 import org.hibernate.engine.jdbc.spi.JdbcCoordinator;
+import org.hibernate.engine.operationContext.spi.OperationContext;
+import org.hibernate.engine.operationContext.spi.OperationContextType;
 import org.hibernate.engine.query.spi.sql.NativeSQLQuerySpecification;
 import org.hibernate.jdbc.ReturningWork;
 import org.hibernate.jdbc.Work;

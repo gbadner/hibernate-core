@@ -11,10 +11,11 @@ import java.util.Map;
 import org.hibernate.HibernateException;
 import org.hibernate.ObjectDeletedException;
 import org.hibernate.PersistentObjectException;
+import org.hibernate.engine.operationContext.spi.PersistOperationContext;
 import org.hibernate.engine.spi.CascadingAction;
 import org.hibernate.engine.spi.CascadingActions;
 import org.hibernate.engine.spi.EntityEntry;
-import org.hibernate.engine.spi.OperationContextType;
+import org.hibernate.engine.operationContext.spi.OperationContextType;
 import org.hibernate.engine.spi.SessionImplementor;
 import org.hibernate.engine.spi.Status;
 import org.hibernate.event.spi.EventSource;
@@ -160,7 +161,7 @@ public class DefaultPersistEventListener extends AbstractSaveEventListener imple
 		final Object entity = source.getPersistenceContext().unproxy( event.getObject() );
 		final EntityPersister persister = source.getEntityPersister( event.getEntityName(), entity );
 
-		if ( addEntityToPersistContext( source, entity ) ) {
+		if ( getPersistOperationContext( source).addEntity( entity ) ) {
 			justCascade( source, entity, persister );
 		}
 	}
@@ -183,7 +184,7 @@ public class DefaultPersistEventListener extends AbstractSaveEventListener imple
 		final EventSource source = event.getSession();
 		final Object entity = source.getPersistenceContext().unproxy( event.getObject() );
 
-		if ( addEntityToPersistContext( source, entity ) ) {
+		if ( getPersistOperationContext( source).addEntity( entity ) ) {
 			saveWithGeneratedId( entity, event.getEntityName(), source, false );
 		}
 	}
@@ -204,15 +205,12 @@ public class DefaultPersistEventListener extends AbstractSaveEventListener imple
 				)
 		);
 
-		if ( addEntityToPersistContext( source, entity ) ) {
+		if ( getPersistOperationContext( source).addEntity( entity ) ) {
 			justCascade( source, entity, persister );
 		}
 	}
 
-	private static boolean addEntityToPersistContext(EventSource source, Object entity) {
-		final PersistOperationContext operationContext = (PersistOperationContext) source.getOperationContext(
-				OperationContextType.PERSIST
-		);
-		return operationContext.addEntity( entity );
+	private static PersistOperationContext getPersistOperationContext(EventSource source) {
+		return (PersistOperationContext) source.getOperationContext( OperationContextType.PERSIST );
 	}
 }

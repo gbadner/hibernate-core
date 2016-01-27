@@ -4,7 +4,7 @@
  * License: GNU Lesser General Public License (LGPL), version 2.1 or later.
  * See the lgpl.txt file in the root directory or <http://www.gnu.org/licenses/lgpl-2.1.html>.
  */
-package org.hibernate.event.internal;
+package org.hibernate.engine.operationContext.internal;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -16,11 +16,10 @@ import org.jboss.logging.Logger;
 
 import org.hibernate.boot.registry.selector.spi.StrategySelector;
 import org.hibernate.engine.config.spi.ConfigurationService;
-import org.hibernate.engine.spi.OperationContextType;
+import org.hibernate.engine.operationContext.spi.OperationContextType;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
-import org.hibernate.event.spi.AbstractEvent;
+import org.hibernate.event.internal.EntityCopyNotAllowedObserver;
 import org.hibernate.event.spi.EntityCopyObserver;
-import org.hibernate.event.spi.EventType;
 import org.hibernate.event.spi.MergeEvent;
 import org.hibernate.pretty.MessageHelper;
 import org.hibernate.service.ServiceRegistry;
@@ -70,17 +69,18 @@ import org.hibernate.service.ServiceRegistry;
  * classes) in the same package to add a merge entity and its corresponding
  * managed entity to a MergeContext and indicate if the merge operation is
  * being performed on the merge entity yet.<p/>
- * {@link MergeOperationContext#put(Object mergeEntity, Object managedEntity, boolean isOperatedOn)}
+ * {@link MergeOperationContextImpl#put(Object mergeEntity, Object managedEntity, boolean isOperatedOn)}
  * <p/>
  * The following method is intended to be used by a merge event listener (and other
  * classes) in the same package to indicate whether the merge operation is being
  * performed on a merge entity already in the MergeContext:
- * {@link MergeOperationContext#setOperatedOn(Object mergeEntity, boolean isOperatedOn)
+ * {@link MergeOperationContextImpl#setOperatedOn(Object mergeEntity, boolean isOperatedOn)
  *
  * @author Gail Badner
  */
-public class MergeOperationContext extends AbstractSaveOperationContext<MergeEvent> {
-	private static final Logger LOG = Logger.getLogger( MergeOperationContext.class );
+public class MergeOperationContextImpl extends AbstractSaveOperationContextImpl<MergeEvent>
+		implements org.hibernate.engine.operationContext.spi.MergeOperationContext {
+	private static final Logger LOG = Logger.getLogger( MergeOperationContextImpl.class );
 
 	private EntityCopyObserver entityCopyObserver;
 
@@ -100,7 +100,7 @@ public class MergeOperationContext extends AbstractSaveOperationContext<MergeEve
 	//       need to check if this would hurt performance.
 	private Map<Object,Boolean> mergeEntityToOperatedOnFlagMap = new IdentityHashMap<Object,Boolean>( 10 );
 
-	public MergeOperationContext() {
+	public MergeOperationContextImpl() {
 		super( MergeEvent.class );
 	}
 
@@ -156,29 +156,15 @@ public class MergeOperationContext extends AbstractSaveOperationContext<MergeEve
 		super.clear();
 	}
 
-	/**
-	 * Returns true if this MergeContext contains a cross-reference for the specified merge entity
-	 * to a managed entity result.
-	 *
-	 * @param mergeEntity must be non-null
-	 * @return true if this MergeContext contains a cross-reference for the specified merge entity
-	 * @throws NullPointerException if mergeEntity is null
-	 */
-	boolean containsMergeEntity(Object mergeEntity) {
+	@Override
+	public boolean containsMergeEntity(Object mergeEntity) {
 		if ( mergeEntity == null ) {
 			throw new NullPointerException( "null entities are not supported by " + getClass().getName() );
 		}
 		return mergeToManagedEntityXref.containsKey( mergeEntity );
 	}
 
-	/**
-	 * Returns true if this MergeContext contains a cross-reference from the specified managed entity
-	 * to a merge entity.
-	 * @param managedEntity must be non-null
-	 * @return true if this MergeContext contains a cross-reference from the specified managed entity
-	 * to a merge entity
-	 * @throws NullPointerException if managedEntity is null
-	 */
+	@Override
 	public boolean containsValue(Object managedEntity) {
 		if ( managedEntity == null ) {
 			throw new NullPointerException( "null copies are not supported by " + getClass().getName() );
@@ -199,12 +185,7 @@ public class MergeOperationContext extends AbstractSaveOperationContext<MergeEve
 		return Collections.unmodifiableSet( mergeToManagedEntityXref.entrySet() );
 	}
 
-	/**
-	 * Returns the managed entity associated with the specified merge Entity.
-	 * @param mergeEntity the merge entity; must be non-null
-	 * @return  the managed entity associated with the specified merge Entity
-	 * @throws NullPointerException if mergeEntity is null
-	 */
+	@Override
 	public Object get(Object mergeEntity) {
 		if ( mergeEntity == null ) {
 			throw new NullPointerException( "null entities are not supported by " + getClass().getName() );
@@ -225,47 +206,13 @@ public class MergeOperationContext extends AbstractSaveOperationContext<MergeEve
 		return Collections.unmodifiableSet( mergeToManagedEntityXref.keySet() );
 	}
 
-	/**
-	 * Associates the specified merge entity with the specified managed entity result in this MergeContext.
-	 * If this MergeContext already contains a cross-reference for <code>mergeEntity</code> when this
-	 * method is called, then <code>managedEntity</code> must be the same as what is already associated
-	 * with <code>mergeEntity</code>.
-	 * <p/>
-	 * This method assumes that the merge process is not yet operating on <code>mergeEntity</code>.
-	 * Later when <code>mergeEntity</code> enters the merge process, {@link #setOperatedOn(Object, boolean)}
-	 * should be called.
-	 * <p/>
-	 * @param mergeEntity the merge entity; must be non-null
-	 * @param managedEntity the managed entity result; must be non-null
-	 * @return previous managed entity associated with specified merge entity, or null if
-	 * there was no mapping for mergeEntity.
-	 * @throws NullPointerException if mergeEntity or managedEntity is null
-	 * @throws IllegalArgumentException if <code>managedEntity</code> is not the same as the previous
-	 * managed entity associated with <code>merge entity</code>
-	 * @throws IllegalStateException if internal cross-references are out of sync,
-	 */
+	@Override
 	public Object put(Object mergeEntity, Object managedEntity) {
 		return put( mergeEntity, managedEntity, Boolean.FALSE );
 	}
 
-	/**
-	 * Associates the specified merge entity with the specified managed entity in this MergeContext.
-	 * If this MergeContext already contains a cross-reference for <code>mergeEntity</code> when this
-	 * method is called, then <code>managedEntity</code> must be the same as what is already associated
-	 * with <code>mergeEntity</code>.
-	 *
-	 * @param mergeEntity the mergge entity; must be non-null
-	 * @param managedEntity the managed entity; must be non-null
-	 * @param isOperatedOn indicates if the merge operation is performed on the mergeEntity.
-	 *
-	 * @return previous managed entity associated with specified merge entity, or null if
-	 * there was no mapping for mergeEntity.
-	 * @throws NullPointerException if mergeEntity or managedEntity is null
-	 * @throws IllegalArgumentException if <code>managedEntity</code> is not the same as the previous
-	 * managed entity associated with <code>mergeEntity</code>
-	 * @throws IllegalStateException if internal cross-references are out of sync,
-	 */
-	/* package-private */ Object put(Object mergeEntity, Object managedEntity, boolean isOperatedOn) {
+	@Override
+	public Object put(Object mergeEntity, Object managedEntity, boolean isOperatedOn) {
 		if ( mergeEntity == null || managedEntity == null ) {
 			throw new NullPointerException( "null merge and managed entities are not supported by " + getClass().getName() );
 		}
@@ -335,13 +282,7 @@ public class MergeOperationContext extends AbstractSaveOperationContext<MergeEve
 		return Collections.unmodifiableSet( managedToMergeEntityXref.keySet() );
 	}
 
-	/**
-	 * Returns true if the listener is performing the merge operation on the specified merge entity.
-	 * @param mergeEntity the merge entity; must be non-null
-	 * @return true if the listener is performing the merge operation on the specified merge entity;
-	 * false, if there is no mapping for mergeEntity.
-	 * @throws NullPointerException if mergeEntity is null
-	 */
+	@Override
 	public boolean isOperatedOn(Object mergeEntity) {
 		if ( mergeEntity == null ) {
 			throw new NullPointerException( "null merge entities are not supported by " + getClass().getName() );
@@ -350,14 +291,8 @@ public class MergeOperationContext extends AbstractSaveOperationContext<MergeEve
 		return isOperatedOn == null ? false : isOperatedOn;
 	}
 
-	/**
-	 * Set flag to indicate if the listener is performing the merge operation on the specified merge entity.
-	 * @param mergeEntity must be non-null and this MergeContext must contain a cross-reference for mergeEntity
-	 *                       to a managed entity
-	 * @throws NullPointerException if mergeEntity is null
-	 * @throws IllegalStateException if this MergeContext does not contain a a cross-reference for mergeEntity
-	 */
-	/* package-private */ void setOperatedOn(Object mergeEntity, boolean isOperatedOn) {
+	@Override
+	public void setOperatedOn(Object mergeEntity, boolean isOperatedOn) {
 		if ( mergeEntity == null ) {
 			throw new NullPointerException( "null entities are not supported by " + getClass().getName() );
 		}
@@ -368,17 +303,7 @@ public class MergeOperationContext extends AbstractSaveOperationContext<MergeEve
 		mergeEntityToOperatedOnFlagMap.put( mergeEntity, isOperatedOn );
 	}
 
-	/**
-	 * Returns an unmodifiable map view of the managed-to-merge entity
-	 * cross-references.
-	 *
-	 * The returned Map will contain a cross-reference from each managed entity
-	 * to the most recently associated merge entity that was most recently put in the MergeContext.
-	 *
-	 * @return an unmodifiable map view of the managed-to-merge entity cross-references.
-	 *
-	 * @see {@link Collections#unmodifiableMap(java.util.Map)}
-	 */
+	@Override
 	public Map invertMap() {
 		return Collections.unmodifiableMap( managedToMergeEntityXref );
 	}

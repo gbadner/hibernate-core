@@ -4,21 +4,23 @@
  * License: GNU Lesser General Public License (LGPL), version 2.1 or later.
  * See the lgpl.txt file in the root directory or <http://www.gnu.org/licenses/lgpl-2.1.html>.
  */
-package org.hibernate.event.internal;
+package org.hibernate.engine.operationContext.internal;
 
 import java.util.Set;
 
-import org.hibernate.engine.spi.OperationContextType;
+import org.hibernate.engine.operationContext.spi.OperationContextType;
+import org.hibernate.engine.operationContext.spi.SaveOrUpdateOperationContext;
 import org.hibernate.event.spi.SaveOrUpdateEvent;
 import org.hibernate.internal.util.collections.IdentitySet;
 
 /**
  * @author Gail Badner
  */
-public class SaveOrUpdateOperationContext extends AbstractSaveOperationContext<SaveOrUpdateEvent> {
+public class SaveOrUpdateOperationContextImpl extends AbstractSaveOperationContextImpl<SaveOrUpdateEvent>
+		implements SaveOrUpdateOperationContext {
 	private Set createCache = new IdentitySet(10);
 
-	public SaveOrUpdateOperationContext() {
+	public SaveOrUpdateOperationContextImpl() {
 		super( SaveOrUpdateEvent.class );
 	}
 
@@ -33,6 +35,7 @@ public class SaveOrUpdateOperationContext extends AbstractSaveOperationContext<S
 		super.clear();
 	}
 
+	@Override
 	@SuppressWarnings({ "unchecked" })
 	public boolean addEntity(Object entity) {
 		return createCache.add( entity );

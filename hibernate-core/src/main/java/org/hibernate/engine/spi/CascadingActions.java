@@ -14,8 +14,9 @@ import org.hibernate.LockOptions;
 import org.hibernate.TransientPropertyValueException;
 import org.hibernate.collection.spi.PersistentCollection;
 import org.hibernate.engine.internal.ForeignKeys;
-import org.hibernate.event.internal.LockOperationContext;
-import org.hibernate.event.internal.ReplicateOperationContext;
+import org.hibernate.engine.operationContext.spi.LockOperationContext;
+import org.hibernate.engine.operationContext.spi.OperationContextType;
+import org.hibernate.engine.operationContext.spi.ReplicateOperationContext;
 import org.hibernate.event.spi.EventSource;
 import org.hibernate.internal.CoreMessageLogger;
 import org.hibernate.persister.entity.EntityPersister;
@@ -90,7 +91,7 @@ public class CascadingActions {
 			LockMode lockMode = LockMode.NONE;
 			LockOptions lr = new LockOptions();
 			final LockOperationContext lockOperationContext =
-					( (LockOperationContext) session.getOperationContext(OperationContextType.LOCK) );
+					( (LockOperationContext) session.getOperationContext( OperationContextType.LOCK) );
 			final LockOptions lockOptions = lockOperationContext.getLockOptions();
 			if ( lockOptions != null ) {
 				lr.setTimeOut( lockOptions.getTimeOut() );

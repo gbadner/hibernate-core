@@ -4,12 +4,12 @@
  * License: GNU Lesser General Public License (LGPL), version 2.1 or later.
  * See the lgpl.txt file in the root directory or <http://www.gnu.org/licenses/lgpl-2.1.html>.
  */
-package org.hibernate.event.spi;
-
-import org.hibernate.engine.spi.OperationContext;
+package org.hibernate.engine.operationContext.spi;
 
 /**
  * @author Gail Badner
  */
-public interface EventOperationContext extends OperationContext {
+public interface SaveOrUpdateOperationContext extends OperationContext {
+	@SuppressWarnings({ "unchecked" })
+	boolean addEntity(Object entity);
 }

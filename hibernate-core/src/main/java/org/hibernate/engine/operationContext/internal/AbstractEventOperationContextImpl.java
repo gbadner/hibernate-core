@@ -4,20 +4,20 @@
  * License: GNU Lesser General Public License (LGPL), version 2.1 or later.
  * See the lgpl.txt file in the root directory or <http://www.gnu.org/licenses/lgpl-2.1.html>.
  */
-package org.hibernate.event.internal;
+package org.hibernate.engine.operationContext.internal;
 
+import org.hibernate.engine.operationContext.spi.OperationContext;
 import org.hibernate.event.spi.AbstractEvent;
-import org.hibernate.event.spi.EventOperationContext;
 import org.hibernate.event.spi.EventSource;
 
 /**
  * @author Gail Badner
  */
-public abstract class AbstractEventOperationContext<T extends AbstractEvent> implements EventOperationContext {
+public abstract class AbstractEventOperationContextImpl<T extends AbstractEvent> implements OperationContext {
 	private T event;
 	private Class<T> eventClass;
 
-	protected AbstractEventOperationContext(Class<T> eventClass) {
+	protected AbstractEventOperationContextImpl(Class<T> eventClass) {
 		this.eventClass = eventClass;
 	}
 
@@ -58,7 +58,7 @@ public abstract class AbstractEventOperationContext<T extends AbstractEvent> imp
 	}
 
 
-	public final T getEvent() {
+	protected final T getEvent() {
 		checkValid();
 		return event;
 	}

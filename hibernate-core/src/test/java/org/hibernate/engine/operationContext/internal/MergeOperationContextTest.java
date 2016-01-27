@@ -4,7 +4,7 @@
  * License: GNU Lesser General Public License (LGPL), version 2.1 or later.
  * See the lgpl.txt file in the root directory or <http://www.gnu.org/licenses/lgpl-2.1.html>.
  */
-package org.hibernate.event.internal;
+package org.hibernate.engine.operationContext.internal;
 
 import java.util.Collection;
 import java.util.Map;
@@ -13,22 +13,15 @@ import javax.persistence.Entity;
 import javax.persistence.Id;
 
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
 import org.hibernate.cfg.Configuration;
-import org.hibernate.engine.spi.OperationContextType;
 import org.hibernate.event.spi.EntityCopyObserver;
 import org.hibernate.event.spi.EventSource;
-import org.hibernate.event.spi.EventType;
 import org.hibernate.event.spi.MergeEvent;
 import org.hibernate.testing.junit4.BaseCoreFunctionalTestCase;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 /**
  * 2011/10/20 Unit test for code added in MergeContext for performance improvement.
@@ -38,7 +31,6 @@ import static org.junit.Assert.fail;
 public class MergeOperationContextTest extends BaseCoreFunctionalTestCase {
 	private EventSource session = null;
 
-	@Override
 	protected Class<?>[] getAnnotatedClasses() {
 		return new Class<?>[] { Simple.class };
 	}
@@ -66,36 +58,36 @@ public class MergeOperationContextTest extends BaseCoreFunctionalTestCase {
     public void testMergeToManagedEntityFillFollowedByInvertMapping() {
 
         Object mergeEntity = new Simple( 1 );
-		MergeOperationContext cache = new MergeOperationContext();
+		MergeOperationContextImpl cache = new MergeOperationContextImpl();
 		cache.beforeOperation( new MergeEvent( mergeEntity, session ) );
 
         Object managedEntity = new Simple( 2 );
         
-        cache.put(mergeEntity, managedEntity);
+        cache.put( mergeEntity, managedEntity );
 
 		checkCacheConsistency( cache, 1 );
 
-		assertTrue( cache.containsMergeEntity( mergeEntity ) );
-        assertFalse( cache.containsMergeEntity( managedEntity ) );
-		assertTrue( cache.containsValue( managedEntity ) );
+		Assert.assertTrue( cache.containsMergeEntity( mergeEntity ) );
+        Assert.assertFalse( cache.containsMergeEntity( managedEntity ) );
+		Assert.assertTrue( cache.containsValue( managedEntity ) );
 
-		assertTrue( cache.invertMap().containsKey( managedEntity ) );
-        assertFalse( cache.invertMap().containsKey( mergeEntity ) );
-		assertTrue( cache.invertMap().containsValue( mergeEntity ) );
+		Assert.assertTrue( cache.invertMap().containsKey( managedEntity ) );
+        Assert.assertFalse( cache.invertMap().containsKey( mergeEntity ) );
+		Assert.assertTrue( cache.invertMap().containsValue( mergeEntity ) );
 
 		cache.clear();
 
 		checkCacheConsistency( cache, 0 );
 
-		assertFalse( cache.containsMergeEntity( mergeEntity ) );
-        assertFalse(cache.invertMap().containsKey(managedEntity));
+		Assert.assertFalse( cache.containsMergeEntity( mergeEntity ) );
+        Assert.assertFalse( cache.invertMap().containsKey( managedEntity ) );
 	}
 
 	@Test
     public void testMergeToManagedEntityFillFollowedByInvert() {
 
         Object mergeEntity = new Simple( 1 );
-		MergeOperationContext cache = new MergeOperationContext();
+		MergeOperationContextImpl cache = new MergeOperationContextImpl();
 		cache.beforeOperation( new MergeEvent( mergeEntity, session ) );
 
 		Object managedEntity = new Simple( 2 );
@@ -104,11 +96,11 @@ public class MergeOperationContextTest extends BaseCoreFunctionalTestCase {
 
 		checkCacheConsistency( cache, 1 );
 
-		assertTrue( cache.containsMergeEntity( mergeEntity ) );
-        assertFalse( cache.containsMergeEntity( managedEntity ) );
+		Assert.assertTrue( cache.containsMergeEntity( mergeEntity ) );
+        Assert.assertFalse( cache.containsMergeEntity( managedEntity ) );
         
-        assertTrue( cache.invertMap().containsKey( managedEntity ) );
-        assertFalse( cache.invertMap().containsKey( mergeEntity ) );
+        Assert.assertTrue( cache.invertMap().containsKey( managedEntity ) );
+        Assert.assertFalse( cache.invertMap().containsKey( mergeEntity ) );
     }
 
 	@Test
@@ -116,7 +108,7 @@ public class MergeOperationContextTest extends BaseCoreFunctionalTestCase {
 
         Object mergeEntity = new Simple( 1 );
 
-		MergeOperationContext cache = new MergeOperationContext();
+		MergeOperationContextImpl cache = new MergeOperationContextImpl();
 		cache.beforeOperation( new MergeEvent( mergeEntity, session ) );
 
         Object managedEntity = new Simple( 2 );
@@ -125,30 +117,30 @@ public class MergeOperationContextTest extends BaseCoreFunctionalTestCase {
 
 		checkCacheConsistency( cache, 1 );
 
-		assertTrue(cache.containsMergeEntity( mergeEntity ));
-        assertFalse( cache.containsMergeEntity( managedEntity ) );
+		Assert.assertTrue( cache.containsMergeEntity( mergeEntity ) );
+        Assert.assertFalse( cache.containsMergeEntity( managedEntity ) );
 
-        assertTrue( cache.invertMap().containsKey( managedEntity ) );
-        assertFalse( cache.invertMap().containsKey( mergeEntity ) );
+        Assert.assertTrue( cache.invertMap().containsKey( managedEntity ) );
+        Assert.assertFalse( cache.invertMap().containsKey( mergeEntity ) );
         
         cache.clear();
 
 		checkCacheConsistency( cache, 0 );
 
 		cache.put( mergeEntity, managedEntity, false );
-		assertFalse( cache.isOperatedOn( mergeEntity ) );
+		Assert.assertFalse( cache.isOperatedOn( mergeEntity ) );
 
 		checkCacheConsistency( cache, 1 );
 
-		assertTrue(cache.containsMergeEntity( mergeEntity ));
-        assertFalse(cache.containsMergeEntity( managedEntity ));
+		Assert.assertTrue( cache.containsMergeEntity( mergeEntity ) );
+        Assert.assertFalse( cache.containsMergeEntity( managedEntity ) );
     }
 
 	@Test
 	public void testReplaceManagedEntity() {
 
 		Simple mergeEntity = new Simple( 1 );
-		MergeOperationContext cache = new MergeOperationContext();
+		MergeOperationContextImpl cache = new MergeOperationContextImpl();
 		cache.beforeOperation( new MergeEvent( mergeEntity, session ) );
 
 		Simple managedEntity = new Simple( 0 );
@@ -169,7 +161,7 @@ public class MergeOperationContextTest extends BaseCoreFunctionalTestCase {
 		Simple mergeEntity = new Simple( 1 );
 		Simple managedEntity = new Simple( 0 );
 
-		MergeOperationContext cache = new MergeOperationContext();
+		MergeOperationContextImpl cache = new MergeOperationContextImpl();
 		cache.beforeOperation( new MergeEvent( managedEntity, session ) );
 
 		cache.put(mergeEntity, managedEntity);
@@ -183,36 +175,36 @@ public class MergeOperationContextTest extends BaseCoreFunctionalTestCase {
 		Simple managedEntity1 = new Simple( 1 );
 		Simple managedEntity2 = new Simple( 2 );
 
-		MergeOperationContext cache = new MergeOperationContext();
+		MergeOperationContextImpl cache = new MergeOperationContextImpl();
 		cache.beforeOperation( new MergeEvent( mergeEntity1, session ) );
 
 		cache.put( mergeEntity1, managedEntity1 );
 
 		try {
 			cache.put( mergeEntity1, managedEntity2 );
-			fail( "should have thrown IllegalArgumentException");
+			Assert.fail( "should have thrown IllegalArgumentException" );
 		}
 		catch( IllegalArgumentException ex ) {
 			// expected; cannot change managed entity associated with a merge entity
 		}
 	}
 
-	private void checkCacheConsistency(MergeOperationContext cache, int expectedSize) {
+	private void checkCacheConsistency(MergeOperationContextImpl cache, int expectedSize) {
 		Set entrySet = cache.entrySet();
 		Set cacheKeys = cache.keySet();
 		Collection cacheValues = cache.values();
 		Map invertedMap = cache.invertMap();
 
-		assertEquals( expectedSize, entrySet.size() );
-		assertEquals( expectedSize, cache.size() );
-		assertEquals( expectedSize, invertedMap.size() );
+		Assert.assertEquals( expectedSize, entrySet.size() );
+		Assert.assertEquals( expectedSize, cache.size() );
+		Assert.assertEquals( expectedSize, invertedMap.size() );
 
 		for ( Object entry : cache.entrySet() ) {
 			Map.Entry mapEntry = ( Map.Entry ) entry;
-			assertSame( cache.get( mapEntry.getKey() ), mapEntry.getValue() );
-			assertTrue( cacheKeys.contains( mapEntry.getKey() ) );
-			assertTrue( cacheValues.contains( mapEntry.getValue() ) );
-			assertSame( mapEntry.getKey(), invertedMap.get( mapEntry.getValue() ) );
+			Assert.assertSame( cache.get( mapEntry.getKey() ), mapEntry.getValue() );
+			Assert.assertTrue( cacheKeys.contains( mapEntry.getKey() ) );
+			Assert.assertTrue( cacheValues.contains( mapEntry.getValue() ) );
+			Assert.assertSame( mapEntry.getKey(), invertedMap.get( mapEntry.getValue() ) );
 		}
 	}
 
