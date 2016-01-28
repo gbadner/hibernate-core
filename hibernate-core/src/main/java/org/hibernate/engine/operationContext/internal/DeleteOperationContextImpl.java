@@ -6,21 +6,24 @@
  */
 package org.hibernate.engine.operationContext.internal;
 
-import java.util.Set;
+import java.util.IdentityHashMap;
+import java.util.Map;
 
+import org.hibernate.engine.operationContext.spi.DeleteOperationContext;
 import org.hibernate.engine.operationContext.spi.OperationContextType;
 import org.hibernate.event.spi.DeleteEvent;
-import org.hibernate.internal.util.collections.IdentitySet;
 
 /**
+ * Implementation of {@link DeleteOperationContext}.
+ *
  * @author Gail Badner
  */
 public class DeleteOperationContextImpl extends AbstractEventOperationContextImpl<DeleteEvent>
 		implements org.hibernate.engine.operationContext.spi.DeleteOperationContext {
 	// A cache of already visited transient entities (to avoid infinite recursion)
-	private Set transientEntities = new IdentitySet(10);
+	private Map<Object, Object> transientEntities = new IdentityHashMap<Object,Object>(10);
 
-	public DeleteOperationContextImpl() {
+	DeleteOperationContextImpl() {
 		super( DeleteEvent.class );
 	}
 
@@ -36,9 +39,8 @@ public class DeleteOperationContextImpl extends AbstractEventOperationContextImp
 	}
 
 	@Override
-	@SuppressWarnings({ "unchecked" })
 	public boolean addTransientEntity(Object transientEntity) {
-		checkValid();
-		return transientEntities.add( transientEntity );
+		checkIsValid();
+		return transientEntities.put( transientEntity, transientEntity ) == null;
 	}
 }

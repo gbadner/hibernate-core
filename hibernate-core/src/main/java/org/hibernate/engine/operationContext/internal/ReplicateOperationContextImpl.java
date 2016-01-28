@@ -16,13 +16,13 @@ import org.hibernate.event.spi.ReplicateEvent;
 public class ReplicateOperationContextImpl extends AbstractEventOperationContextImpl<ReplicateEvent>
 		implements org.hibernate.engine.operationContext.spi.ReplicateOperationContext {
 
-	public ReplicateOperationContextImpl() {
+	ReplicateOperationContextImpl() {
 		super( ReplicateEvent.class );
 	}
 
 	@Override
 	public ReplicationMode getReplicationMode() {
-		checkValid();
+		checkIsValid();
 		return getEvent().getReplicationMode();
 	}
 

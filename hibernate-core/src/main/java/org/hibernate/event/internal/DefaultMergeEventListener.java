@@ -16,6 +16,7 @@ import org.hibernate.StaleObjectStateException;
 import org.hibernate.WrongClassException;
 import org.hibernate.engine.internal.Cascade;
 import org.hibernate.engine.internal.CascadePoint;
+import org.hibernate.engine.operationContext.spi.MergeData;
 import org.hibernate.engine.operationContext.spi.MergeOperationContext;
 import org.hibernate.engine.spi.CascadingAction;
 import org.hibernate.engine.spi.CascadingActions;
@@ -77,15 +78,14 @@ public class DefaultMergeEventListener extends AbstractSaveEventListener impleme
 				entity = original;
 			}
 
-			if ( copyCache.containsMergeEntity( entity ) &&
-					( copyCache.isOperatedOn( entity ) ) ) {
-				LOG.trace( "Already in merge process" );
+			final MergeData existingMergeData = copyCache.getMergeDataFromMergeEntity( entity );
+			if ( existingMergeData != null && existingMergeData.isInMergeProcess() ) {
+				LOG.trace( "Already merged" );
 				event.setResult( entity );
 			}
 			else {
-				if ( copyCache.containsMergeEntity( entity ) ) {
-					LOG.trace( "Already in copyCache; setting in merge process" );
-					copyCache.setOperatedOn( entity, true );
+				if ( existingMergeData != null ) {
+					existingMergeData.markInMergeProcess();
 				}
 				event.setEntity( entity );
 				EntityState entityState = null;
@@ -158,7 +158,7 @@ public class DefaultMergeEventListener extends AbstractSaveEventListener impleme
 		final EventSource source = event.getSession();
 		final EntityPersister persister = source.getEntityPersister( event.getEntityName(), entity );
 
-		getMergeOperationContext( source ).put( entity, entity, true );  //before cascade!
+		getMergeOperationContext( source ).addMergeData( new MergeData( entity, entity, true ) );  //before cascade!
 
 		cascadeOnMerge( source, persister, entity );
 		copyValues( persister, entity, entity, source );
@@ -180,13 +180,16 @@ public class DefaultMergeEventListener extends AbstractSaveEventListener impleme
 				persister.getIdentifier( entity, source ) :
 				null;
 		final MergeOperationContext copyCache = getMergeOperationContext( source );
-		if ( copyCache.containsMergeEntity( entity ) ) {
-			persister.setIdentifier( copyCache.get( entity ), id, source );
+		final MergeData existingMergeData = copyCache.getMergeDataFromMergeEntity( entity );
+		final Object copy;
+		if ( existingMergeData != null ) {
+			copy = existingMergeData.getEntityCopy();
+			persister.setIdentifier( copy, id, source );
 		}
 		else {
-			copyCache.put( entity, source.instantiate( persister, id ), true ); //before cascade!
+			copy = source.instantiate( persister, id );
+			copyCache.addMergeData( new MergeData( entity, copy, true ) ); //before cascade!
 		}
-		final Object copy = copyCache.get( entity );
 
 		// cascade first, so that all unsaved objects get their
 		// copy created before we actually copy
@@ -262,7 +265,7 @@ public class DefaultMergeEventListener extends AbstractSaveEventListener impleme
 			entityIsTransient( event );
 		}
 		else {
-			getMergeOperationContext( source ).put( entity, result, true ); //before cascade!
+			getMergeOperationContext( source ).addMergeData( new MergeData( entity, result, true ) ); //before cascade!
 
 			final Object target = source.getPersistenceContext().unproxy( result );
 			if ( target == entity ) {

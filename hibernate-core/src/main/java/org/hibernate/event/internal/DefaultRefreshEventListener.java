@@ -70,7 +70,7 @@ public class DefaultRefreshEventListener implements RefreshEventListener {
 
 		final Object object = source.getPersistenceContext().unproxyAndReassociate( event.getObject() );
 
-		if ( getRefreshOperationContext( source ).isRefreshed( object ) ) {
+		if ( !getRefreshOperationContext( source ).addEntity( object ) ) {
 			LOG.trace( "Already refreshed" );
 			return;
 		}
@@ -124,7 +124,6 @@ public class DefaultRefreshEventListener implements RefreshEventListener {
 		}
 
 		// cascade the refresh prior to refreshing this entity
-		getRefreshOperationContext( source ).addRefreshedEntity( object );
 		Cascade.cascade(
 				CascadingActions.REFRESH,
 				CascadePoint.BEFORE_REFRESH,

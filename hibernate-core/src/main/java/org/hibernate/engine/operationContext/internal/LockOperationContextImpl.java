@@ -7,22 +7,25 @@
 package org.hibernate.engine.operationContext.internal;
 
 import org.hibernate.LockOptions;
+import org.hibernate.engine.operationContext.spi.LockOperationContext;
 import org.hibernate.engine.operationContext.spi.OperationContextType;
 import org.hibernate.event.spi.LockEvent;
 
 /**
+ * Implementation of {@link LockOperationContext}.
+ *
  * @author Gail Badner
  */
 public class LockOperationContextImpl extends AbstractEventOperationContextImpl<LockEvent>
 		implements org.hibernate.engine.operationContext.spi.LockOperationContext {
 
-	public LockOperationContextImpl() {
+	LockOperationContextImpl() {
 		super( LockEvent.class );
 	}
 
 	@Override
 	public LockOptions getLockOptions() {
-		checkValid();
+		checkIsValid();
 		return getEvent().getLockOptions();
 	}
 

@@ -10,26 +10,37 @@ import org.hibernate.event.spi.AbstractEvent;
 import org.hibernate.event.spi.EventSource;
 
 /**
+ * An base class for "save" operations that provides integrity checking
+ * before and after saving an entity.
+ *
  * @author Gail Badner
  */
 public abstract class AbstractSaveOperationContextImpl<T extends AbstractEvent> extends AbstractEventOperationContextImpl<T> {
 
-	AbstractSaveOperationContextImpl(Class<T> entityClass) {
+	// TODO: Should code using UnresolvedEntityInsertActions be moved from ActionQueue to this class?
+
+	protected AbstractSaveOperationContextImpl(Class<T> entityClass) {
 		super( entityClass );
 	}
 
 	@Override
-	public void beforeOperation(T event) {
-		final EventSource session = event.getSession();
+	protected void doBeforeOperation() {
+		final EventSource session = getEvent().getSession();
 		if ( session.getActionQueue().hasUnresolvedEntityInsertActions() ) {
-			throw new IllegalStateException( "There are delayed insert actions when MergeContext is being initiated." );
+			throw new IllegalStateException(
+					String.format(
+							"There are delayed insert actions when OperationContext [%s] is being initiated.",
+							getOperationContextType()
+					)
+			);
 		}
-		super.beforeOperation( event );
+		super.doBeforeOperation();
 	}
 
 	@Override
-	public void afterOperation(T event) {
+	public void doAfterSuccessfulOperation() {
 		getSession().getActionQueue().checkNoUnresolvedActionsAfterOperation();
+		super.doAfterSuccessfulOperation();
 	}
 }
                                                ;

@@ -16,6 +16,7 @@ import org.jboss.logging.Logger;
 
 import org.hibernate.boot.registry.selector.spi.StrategySelector;
 import org.hibernate.engine.config.spi.ConfigurationService;
+import org.hibernate.engine.operationContext.spi.MergeData;
 import org.hibernate.engine.operationContext.spi.OperationContextType;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.event.internal.EntityCopyNotAllowedObserver;
@@ -39,7 +40,7 @@ import org.hibernate.service.ServiceRegistry;
  * A merge entity can be transient, detached, or managed. If it is managed, then it must be
  * the same as its associated entity result.
  *
- * If {@link #put(Object mergeEntity, Object managedEntity)} is called, and this
+ * If {@link #addMergeData(Object mergeEntity, Object managedEntity)} is called, and this
  * MergeContext already contains an entry with a different entity as the key, but
  * with the same (managedEntity) value, this means that multiple entity representations
  * for the same persistent entity are being merged. If this happens,
@@ -53,8 +54,8 @@ import org.hibernate.service.ServiceRegistry;
  *     <li>Methods that return collections (e.g., {@link #keySet()},
  *          {@link #values()}) return an
  *          unnmodifiable view of the collection;</li>
- *     <li>If {@link #put(Object mergeEntity, Object) managedEntity} or
- *         {@link #put(Object mergeEntity, Object managedEntity, boolean isOperatedOn)}
+ *     <li>If {@link #addMergeData(Object mergeEntity, Object) managedEntity} or
+ *         {@link #addMergeData(Object mergeEntity, Object managedEntity, boolean isOperatedOn)}
  *         is executed and this MergeMap already contains a cross-reference for
  *         <code>mergeEntity</code>, then <code>managedEntity</code> must be the
  *         same as what is already associated with <code>mergeEntity</code> in this
@@ -69,7 +70,7 @@ import org.hibernate.service.ServiceRegistry;
  * classes) in the same package to add a merge entity and its corresponding
  * managed entity to a MergeContext and indicate if the merge operation is
  * being performed on the merge entity yet.<p/>
- * {@link MergeOperationContextImpl#put(Object mergeEntity, Object managedEntity, boolean isOperatedOn)}
+ * {@link MergeOperationContextImpl#addMergeData(Object mergeEntity, Object managedEntity, boolean isOperatedOn)}
  * <p/>
  * The following method is intended to be used by a merge event listener (and other
  * classes) in the same package to indicate whether the merge operation is being
@@ -84,11 +85,11 @@ public class MergeOperationContextImpl extends AbstractSaveOperationContextImpl<
 
 	private EntityCopyObserver entityCopyObserver;
 
-	private Map<Object,Object> mergeToManagedEntityXref = new IdentityHashMap<Object,Object>(10);
+	private Map<Object,MergeData> mergeEntityToMergeDataXref = new IdentityHashMap<Object,MergeData>(10);
 		// key is an entity to be merged;
 		// value is the associated managed entity (result) in the persistence context.
 
-	private Map<Object,Object> managedToMergeEntityXref = new IdentityHashMap<Object,Object>( 10 );
+	private Map<Object,MergeData> entityCopyToMergeDataXref = new IdentityHashMap<Object,MergeData>( 10 );
 		// maintains the inverse of the mergeToManagedEntityXref for performance reasons.
 		// key is the managed entity result in the persistence context.
 		// value is the associated entity to be merged; if multiple
@@ -96,16 +97,12 @@ public class MergeOperationContextImpl extends AbstractSaveOperationContextImpl<
 		// value will be the most recently added merge entity that is
 		// associated with the managed entity.
 
-	// TODO: merge mergeEntityToOperatedOnFlagMap into mergeToManagedEntityXref, since they have the same key.
-	//       need to check if this would hurt performance.
-	private Map<Object,Boolean> mergeEntityToOperatedOnFlagMap = new IdentityHashMap<Object,Boolean>( 10 );
-
-	public MergeOperationContextImpl() {
+	MergeOperationContextImpl() {
 		super( MergeEvent.class );
 	}
 
 	// key is a merge entity;
-	    // value is a flag indicating if the merge entity is currently in the merge process.
+	// value is a flag indicating if the merge entity is currently in the merge process.
 
 	@Override
 	public OperationContextType getOperationContextType() {
@@ -113,17 +110,17 @@ public class MergeOperationContextImpl extends AbstractSaveOperationContextImpl<
 	}
 
 	@Override
-	public void beforeOperation(MergeEvent event) {
+	public void doBeforeOperation() {
 		if ( entityCopyObserver == null ) {
-			entityCopyObserver = createEntityCopyObserver( event.getSession().getFactory() );
+			entityCopyObserver = createEntityCopyObserver( getEvent().getSession().getFactory() );
 		}
-		super.beforeOperation( event );
+		super.doBeforeOperation();
 	}
 
 	@Override
-	public void afterOperation(MergeEvent event) {
+	public void doAfterSuccessfulOperation() {
 		entityCopyObserver.topLevelMergeComplete( getSession() );
-		super.afterOperation( event );
+		super.doAfterSuccessfulOperation();
 	}
 
 	private static EntityCopyObserver createEntityCopyObserver(SessionFactoryImplementor sessionFactory) {
@@ -149,27 +146,21 @@ public class MergeOperationContextImpl extends AbstractSaveOperationContextImpl<
 	 * Clears the MergeContext.
 	 */
 	public void clear() {
-		mergeToManagedEntityXref.clear();
-		managedToMergeEntityXref.clear();
-		mergeEntityToOperatedOnFlagMap.clear();
+		mergeEntityToMergeDataXref.clear();
+		entityCopyToMergeDataXref.clear();
 		entityCopyObserver.clear();
 		super.clear();
 	}
 
-	@Override
-	public boolean containsMergeEntity(Object mergeEntity) {
-		if ( mergeEntity == null ) {
-			throw new NullPointerException( "null entities are not supported by " + getClass().getName() );
-		}
-		return mergeToManagedEntityXref.containsKey( mergeEntity );
-	}
-
-	@Override
-	public boolean containsValue(Object managedEntity) {
+	/**
+	 * Used only for testing.
+	 */
+	/** package-private */ boolean containsValue(Object managedEntity) {
+		checkIsValid();
 		if ( managedEntity == null ) {
 			throw new NullPointerException( "null copies are not supported by " + getClass().getName() );
 		}
-		return managedToMergeEntityXref.containsKey( managedEntity );
+		return entityCopyToMergeDataXref.containsKey( managedEntity );
 	}
 
 	/**
@@ -182,130 +173,70 @@ public class MergeOperationContextImpl extends AbstractSaveOperationContextImpl<
 	 *
 	 */
 	/* package-private */ Set entrySet() {
-		return Collections.unmodifiableSet( mergeToManagedEntityXref.entrySet() );
+		checkIsValid();
+		return Collections.unmodifiableSet( mergeEntityToMergeDataXref.entrySet() );
 	}
 
 	@Override
-	public Object get(Object mergeEntity) {
+	public MergeData getMergeDataFromMergeEntity(Object mergeEntity) {
+		checkIsValid();
 		if ( mergeEntity == null ) {
 			throw new NullPointerException( "null entities are not supported by " + getClass().getName() );
 		}
-		return mergeToManagedEntityXref.get( mergeEntity );
-	}
-
-
-	/**
-	 * Should only be used for testing.
-	 *
-	 * Returns an unmodifiable set view of the merge entities contained in this MergeContext
-	 * @return an unmodifiable set view of the merge entities contained in this MergeContext
-	 *
-	 * @see {@link Collections#unmodifiableSet(java.util.Set)}
-	 */
-	/* package-private */ Set keySet() {
-		return Collections.unmodifiableSet( mergeToManagedEntityXref.keySet() );
+		return mergeEntityToMergeDataXref.get( mergeEntity );
 	}
 
 	@Override
-	public Object put(Object mergeEntity, Object managedEntity) {
-		return put( mergeEntity, managedEntity, Boolean.FALSE );
+	public MergeData getMergeDataFromEntityCopy(Object entityCopy) {
+		checkIsValid();
+		if ( entityCopy == null ) {
+			throw new NullPointerException( "null entities are not supported by " + getClass().getName() );
+		}
+		return entityCopyToMergeDataXref.get( entityCopy );
 	}
 
 	@Override
-	public Object put(Object mergeEntity, Object managedEntity, boolean isOperatedOn) {
-		if ( mergeEntity == null || managedEntity == null ) {
+	public boolean addMergeData(MergeData mergeData) {
+		checkIsValid();
+		if ( mergeData.getMergeEntity() == null || mergeData.getEntityCopy() == null ) {
 			throw new NullPointerException( "null merge and managed entities are not supported by " + getClass().getName() );
 		}
 
-		Object oldManagedEntity = mergeToManagedEntityXref.put( mergeEntity, managedEntity );
-		Boolean oldOperatedOn = mergeEntityToOperatedOnFlagMap.put( mergeEntity, isOperatedOn );
+		MergeData oldMergeDataByMergeEntity = mergeEntityToMergeDataXref.put(  mergeData.getMergeEntity(), mergeData );
 		// If managedEntity already corresponds with a different merge entity, that means
 		// that there are multiple entities being merged that correspond with managedEntity.
-		// In the following, oldMergeEntity will be replaced with mergeEntity in managedToMergeEntityXref.
-		Object oldMergeEntity = managedToMergeEntityXref.put( managedEntity, mergeEntity );
+		// In the following, oldMergeDataByEntityCopy will be replaced with mergeEntity in managedToMergeEntityXref.
+		MergeData oldMergeDataByEntityCopy = entityCopyToMergeDataXref.put( mergeData.getEntityCopy(), mergeData );
 
-		if ( oldManagedEntity == null ) {
+		if ( oldMergeDataByMergeEntity == null ) {
 			// this is a new mapping for mergeEntity in mergeToManagedEntityXref
-			if  ( oldMergeEntity != null ) {
-				// oldMergeEntity was a different merge entity with the same corresponding managed entity;
+			if  ( oldMergeDataByEntityCopy != null ) {
+				// oldMergeDataByEntityCopy was a different merge entity with the same corresponding managed entity;
 				entityCopyObserver.entityCopyDetected(
-						managedEntity,
-						mergeEntity,
-						oldMergeEntity,
+						mergeData.getEntityCopy(),
+						mergeData.getMergeEntity(),
+						oldMergeDataByEntityCopy.getMergeEntity(),
 						getSession()
-				);
-			}
-			if ( oldOperatedOn != null ) {
-				throw new IllegalStateException(
-						"MergeContext#mergeEntityToOperatedOnFlagMap contains an merge entity " + printEntity( mergeEntity )
-								+ ", but MergeContext#mergeToManagedEntityXref does not."
 				);
 			}
 		}
 		else {
 			// mergeEntity was already mapped in mergeToManagedEntityXref
-			if ( oldManagedEntity != managedEntity ) {
+			if ( oldMergeDataByMergeEntity.getEntityCopy() != mergeData.getEntityCopy() ) {
 				throw new IllegalArgumentException(
-						"Error occurred while storing a merge Entity " + printEntity( mergeEntity )
-								+ ". It was previously associated with managed entity " + printEntity( oldManagedEntity )
-								+ ". Attempted to replace managed entity with " + printEntity( managedEntity )
-				);
-			}
-			if ( oldOperatedOn == null ) {
-				throw new IllegalStateException(
-						"MergeContext#mergeToManagedEntityXref contained an mergeEntity " + printEntity( mergeEntity )
-								+ ", but MergeContext#mergeEntityToOperatedOnFlagMap did not."
+						"Error occurred while storing a merge Entity " + printEntity( mergeData.getMergeEntity() )
+								+ ". It was previously associated with managed entity " + printEntity( oldMergeDataByMergeEntity.getEntityCopy() )
+								+ ". Attempted to replace managed entity with " + printEntity( mergeData.getEntityCopy() )
 				);
 			}
 		}
 
-		return oldManagedEntity;
-	}
-
-	/**
-	 * Returns the number of merge-to-managed entity cross-references in this MergeContext
-	 * @return the number of merge-to-managed entity cross-references in this MergeContext
-	 */
-	public int size() {
-		return mergeToManagedEntityXref.size();
-	}
-
-	/**
-	 * Should only be used for testing.
-	 *
-	 * Returns an unmodifiable Set view of managed entities contained in this MergeContext.
-	 * @return an unmodifiable Set view of managed entities contained in this MergeContext
-	 *
-	 * @see {@link Collections#unmodifiableSet(java.util.Set)}
-	 */
-	/* package-private */ Collection values() {
-		return Collections.unmodifiableSet( managedToMergeEntityXref.keySet() );
+		return oldMergeDataByMergeEntity == null;
 	}
 
 	@Override
-	public boolean isOperatedOn(Object mergeEntity) {
-		if ( mergeEntity == null ) {
-			throw new NullPointerException( "null merge entities are not supported by " + getClass().getName() );
-		}
-		final Boolean isOperatedOn = mergeEntityToOperatedOnFlagMap.get( mergeEntity );
-		return isOperatedOn == null ? false : isOperatedOn;
-	}
-
-	@Override
-	public void setOperatedOn(Object mergeEntity, boolean isOperatedOn) {
-		if ( mergeEntity == null ) {
-			throw new NullPointerException( "null entities are not supported by " + getClass().getName() );
-		}
-		if ( ! mergeEntityToOperatedOnFlagMap.containsKey( mergeEntity ) ||
-			! mergeToManagedEntityXref.containsKey( mergeEntity ) ) {
-			throw new IllegalStateException( "called MergeContext#setOperatedOn() for mergeEntity not found in MergeContext" );
-		}
-		mergeEntityToOperatedOnFlagMap.put( mergeEntity, isOperatedOn );
-	}
-
-	@Override
-	public Map invertMap() {
-		return Collections.unmodifiableMap( managedToMergeEntityXref );
+	public Collection<MergeData> getMergeEntityData() {
+		return Collections.unmodifiableCollection( mergeEntityToMergeDataXref.values() );
 	}
 
 	private String printEntity(Object entity) {

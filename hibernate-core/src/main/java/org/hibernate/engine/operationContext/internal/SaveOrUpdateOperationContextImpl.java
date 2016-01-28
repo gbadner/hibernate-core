@@ -6,6 +6,8 @@
  */
 package org.hibernate.engine.operationContext.internal;
 
+import java.util.IdentityHashMap;
+import java.util.Map;
 import java.util.Set;
 
 import org.hibernate.engine.operationContext.spi.OperationContextType;
@@ -18,9 +20,9 @@ import org.hibernate.internal.util.collections.IdentitySet;
  */
 public class SaveOrUpdateOperationContextImpl extends AbstractSaveOperationContextImpl<SaveOrUpdateEvent>
 		implements SaveOrUpdateOperationContext {
-	private Set createCache = new IdentitySet(10);
+	private Map<Object, Object> entities = new IdentityHashMap<Object,Object>(10);
 
-	public SaveOrUpdateOperationContextImpl() {
+	SaveOrUpdateOperationContextImpl() {
 		super( SaveOrUpdateEvent.class );
 	}
 
@@ -31,13 +33,12 @@ public class SaveOrUpdateOperationContextImpl extends AbstractSaveOperationConte
 
 	@Override
 	public void clear() {
-		createCache.clear();
+		entities.clear();
 		super.clear();
 	}
 
 	@Override
-	@SuppressWarnings({ "unchecked" })
 	public boolean addEntity(Object entity) {
-		return createCache.add( entity );
+		return entities.put( entity, entity ) == null;
 	}
 }

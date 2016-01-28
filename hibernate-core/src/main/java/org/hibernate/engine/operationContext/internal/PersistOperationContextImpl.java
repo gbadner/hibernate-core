@@ -6,6 +6,8 @@
  */
 package org.hibernate.engine.operationContext.internal;
 
+import java.util.IdentityHashMap;
+import java.util.Map;
 import java.util.Set;
 
 import org.hibernate.engine.operationContext.spi.OperationContextType;
@@ -17,9 +19,9 @@ import org.hibernate.internal.util.collections.IdentitySet;
  */
 public class PersistOperationContextImpl extends AbstractSaveOperationContextImpl<PersistEvent>
 		implements org.hibernate.engine.operationContext.spi.PersistOperationContext {
-	private Set createCache = new IdentitySet(10);
+	private Map<Object, Object> entities = new IdentityHashMap<Object,Object>(10);
 
-	public PersistOperationContextImpl() {
+	PersistOperationContextImpl() {
 		super( PersistEvent.class );
 	}
 
@@ -30,13 +32,12 @@ public class PersistOperationContextImpl extends AbstractSaveOperationContextImp
 
 	@Override
 	public void clear() {
-		createCache.clear();
+		entities.clear();
 		super.clear();
 	}
 
 	@Override
-	@SuppressWarnings({ "unchecked" })
 	public boolean addEntity(Object entity) {
-		return createCache.add( entity );
+		return entities.put( entity, entity ) == null;
 	}
 }

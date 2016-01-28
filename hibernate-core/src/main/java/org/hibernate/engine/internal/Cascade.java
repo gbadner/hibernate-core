@@ -8,7 +8,6 @@ package org.hibernate.engine.internal;
 
 import java.io.Serializable;
 import java.util.Collection;
-import java.util.HashSet;
 import java.util.Iterator;
 
 import org.hibernate.HibernateException;
@@ -47,12 +46,11 @@ public final class Cascade {
 	}
 
 	/**
-	 * Cascade an action from the parent entity instance to all its children.  This
-	 * form is typically called from within cascade actions.
+	 * Cascade an action from the parent entity instance to all its children.
 	 *
 	 * @param persister The parent's entity persister
 	 * @param parent The parent reference.
-	 * which is specific to each CascadingAction type
+	 * @throws HibernateException
 	 */
 	public static void cascade(
 			final CascadingAction action, final CascadePoint cascadePoint,

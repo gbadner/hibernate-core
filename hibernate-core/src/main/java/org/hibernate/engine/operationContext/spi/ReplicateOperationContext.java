@@ -9,8 +9,21 @@ package org.hibernate.engine.operationContext.spi;
 import org.hibernate.ReplicationMode;
 
 /**
+ * An {@link OperationContext} of type {@link OperationContextType#REPLICATE}
+ * for entity replicate operations.
+
  * @author Gail Badner
  */
 public interface ReplicateOperationContext extends OperationContext {
+	/**
+	 * Gets the replication mode for the replicate operation.
+	 * <p/>
+	 * It is only valid to call this method if the replicate operation is currently
+	 * in progress (i.e., when {@link #isInProgress()} returns true).
+	 *
+	 * @return the replication mode.
+	 * @throws IllegalStateException if the replicate operation is not currently
+	 * in progress (i.e., when {@link #isInProgress()} returns false).
+	 */
 	ReplicationMode getReplicationMode();
 }

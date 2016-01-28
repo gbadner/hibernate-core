@@ -6,6 +6,8 @@
  */
 package org.hibernate.engine.operationContext.internal;
 
+import java.util.IdentityHashMap;
+import java.util.Map;
 import java.util.Set;
 
 import org.hibernate.engine.operationContext.spi.OperationContextType;
@@ -18,9 +20,9 @@ import org.hibernate.internal.util.collections.IdentitySet;
  */
 public class RefreshOperationContextImpl extends AbstractEventOperationContextImpl<RefreshEvent>
 		implements RefreshOperationContext {
-	private Set refreshedEntities = new IdentitySet(10);
+	private Map<Object, Object> entities = new IdentityHashMap<Object,Object>(10);
 
-	public RefreshOperationContextImpl() {
+	RefreshOperationContextImpl() {
 		super( RefreshEvent.class );
 	}
 
@@ -30,26 +32,14 @@ public class RefreshOperationContextImpl extends AbstractEventOperationContextIm
 	}
 
 	@Override
-	public void beforeOperation(RefreshEvent event) {
-		super.beforeOperation( event );
-	}
-
-	@Override
 	public void clear() {
-		refreshedEntities.clear();
+		entities.clear();
 		super.clear();
 	}
 
 	@Override
-	public boolean isRefreshed(Object entity) {
-		checkValid();
-		return refreshedEntities.contains( entity );
-	}
-
-	@Override
-	@SuppressWarnings({ "unchecked" })
-	public boolean addRefreshedEntity(Object refreshedEntity) {
-		checkValid();
-		return refreshedEntities.add( refreshedEntity );
+	public boolean addEntity(Object entity) {
+		checkIsValid();
+		return entities.put( entity, entity ) == null;
 	}
 }

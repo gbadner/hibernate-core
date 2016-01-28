@@ -19,8 +19,8 @@ import org.hibernate.event.spi.AbstractEvent;
  */
 public class OperationContextManager {
 
-	private final Map<OperationContextType, AbstractEventOperationContextImpl> cachedOperationContextByType =
-			new HashMap<OperationContextType, AbstractEventOperationContextImpl>( OperationContextType.values().length );
+	private final Map<OperationContextType, EventOperationContextImplementor> cachedOperationContextByType =
+			new HashMap<OperationContextType, EventOperationContextImplementor>( OperationContextType.values().length );
 
 	public OperationContext getOperationContext(OperationContextType operationContextType) {
 		return getValidEventOperationContext( operationContextType );
@@ -30,17 +30,17 @@ public class OperationContextManager {
 		if ( operationContextType == null ) {
 			throw new IllegalArgumentException( "operationContextType must be non-null." );
 		}
-		final AbstractEventOperationContextImpl operationContext =
+		final EventOperationContextImplementor operationContext =
 				cachedOperationContextByType.get( operationContextType );
 		return operationContext != null &&
-				operationContext.isValid();
+				operationContext.isInProgress();
 	}
 
 	public <T extends AbstractEvent> void beforeOperation(OperationContextType operationContextType, T event) {
 		if ( operationContextType == null || event == null ) {
 			throw new IllegalArgumentException( "operationContextType and event must be non-null" );
 		}
-		AbstractEventOperationContextImpl<T> operationContext = getOrCreateInvalidEventOperationContext(
+		EventOperationContextImplementor<T> operationContext = getOrCreateInvalidEventOperationContext(
 				operationContextType
 		);
 		operationContext.beforeOperation( operationContext.getEventClass().cast( event ) );
@@ -51,21 +51,14 @@ public class OperationContextManager {
 			throw new IllegalArgumentException( "eventType and event must be non-null." );
 		}
 
-		final AbstractEventOperationContextImpl<T> operationContext = getValidEventOperationContext( operationContextType );
-		try {
-			if ( success ) {
-				operationContext.afterOperation( operationContext.getEventClass().cast( event) );
-			}
-		}
-		finally {
-			operationContext.clear();
-		}
+		final EventOperationContextImplementor<T> operationContext = getValidEventOperationContext( operationContextType );
+		operationContext.afterOperation( operationContext.getEventClass().cast( event ), success );
 	}
 
 	@SuppressWarnings( value = {"unchecked"} )
-	private <T extends AbstractEvent> AbstractEventOperationContextImpl<T> getValidEventOperationContext(OperationContextType operationContextType) {
-		AbstractEventOperationContextImpl operationContext = cachedOperationContextByType.get( operationContextType );
-		if ( operationContext == null || !operationContext.isValid() ) {
+	private <T extends AbstractEvent> EventOperationContextImplementor<T> getValidEventOperationContext(OperationContextType operationContextType) {
+		EventOperationContextImplementor operationContext = cachedOperationContextByType.get( operationContextType );
+		if ( operationContext == null || !operationContext.isInProgress() ) {
 			throw new IllegalStateException(
 					String.format(
 							"Requested operation context [%s] is not in progress",
@@ -77,13 +70,13 @@ public class OperationContextManager {
 	}
 
 	@SuppressWarnings( value = {"unchecked"} )
-	private <T extends AbstractEvent> AbstractEventOperationContextImpl<T> getOrCreateInvalidEventOperationContext(OperationContextType operationContextType) {
-		AbstractEventOperationContextImpl operationContext = cachedOperationContextByType.get( operationContextType );
+	private <T extends AbstractEvent> EventOperationContextImplementor<T> getOrCreateInvalidEventOperationContext(OperationContextType operationContextType) {
+		EventOperationContextImplementor operationContext = cachedOperationContextByType.get( operationContextType );
 		if ( operationContext == null ) {
 			operationContext = createOperationContext( operationContextType );
 		}
 
-		if ( operationContext.isValid() ) {
+		if ( operationContext.isInProgress() ) {
 			throw new IllegalStateException(
 					String.format(
 							"Requested operation context [%s] is already in progress",
@@ -130,7 +123,7 @@ public class OperationContextManager {
 	}
 
 	public void clear() {
-		for ( AbstractEventOperationContextImpl operationContext : cachedOperationContextByType.values() ) {
+		for ( EventOperationContextImplementor operationContext : cachedOperationContextByType.values() ) {
 			operationContext.clear();
 		}
 		cachedOperationContextByType.clear();
