@@ -7,8 +7,18 @@
 package org.hibernate.engine.operationContext.spi;
 
 /**
- * An {@link OperationContext} of type {@link OperationContextType#DELETE}
- * for entity delete operations.
+ * DeleteOperationContext is an {@link OperationContext} of type
+ * {@link OperationContextType#DELETE} used to cache data while deleting
+ * and entity and cascading the delete operation. The methods in this
+ * interface are available only when a delete operation is in progress.
+ * <p/>
+ * To determine if a delete operation is in progress use this method:
+ * {@link org.hibernate.engine.spi.SessionImplementor#isOperationInProgress(OperationContextType)}.
+ * {@code SessionImplementor#isOperationInProgress(OperationContextType.DELETE)}
+ * will return true if a delete operation is in progress.
+ * <p/>
+ *
+ * @see org.hibernate.event.spi.EventSource#delete(Object)
  *
  * @author Gail Badner
  */
@@ -23,8 +33,8 @@ public interface DeleteOperationContext extends OperationContext {
 	 * @param transientEntity
 	 * @return true, if the transient entity was added to the cache (because
 	 * the cache did not already contain it); false, otherwise.
-	 * @throws IllegalStateException if the delete operation is not currently
-	 * in progress (i.e., when {@link #isInProgress()} returns false).
+	 * @throws IllegalStateException if a delete operation is not currently
+	 * in progress.
 	 */
 	boolean addTransientEntity(Object transientEntity);
 }

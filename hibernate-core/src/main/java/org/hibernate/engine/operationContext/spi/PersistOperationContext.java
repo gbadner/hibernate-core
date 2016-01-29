@@ -7,8 +7,16 @@
 package org.hibernate.engine.operationContext.spi;
 
 /**
- * An {@link OperationContext} of type {@link OperationContextType#PERSIST}
- * for entity persist operations.
+ * PersistOperationContext is an {@link OperationContext} of type
+ * {@link OperationContextType#PERSIST} used to cache data for
+ * persisting an entity and cascading the persist operation.
+ * The method in this interface is available only when a
+ * persist operation is in progress.
+ * <p/>
+ * To determine if a persist operation is in progress use this method:
+ * {@link org.hibernate.engine.spi.SessionImplementor#isOperationInProgress(OperationContextType)}.
+ * {@code SessionImplementor#isOperationInProgress(OperationContextType.PERSIST)}
+ * will return true if a persist operation is in progress.
  *
  * @author Gail Badner
  */
@@ -24,7 +32,7 @@ public interface PersistOperationContext extends OperationContext {
 	 * @return true, if the entity was added to the cache (because
 	 * the cache did not already contain it); false, otherwise.
 	 * @throws IllegalStateException if the persist operation is not currently
-	 * in progress (i.e., when {@link #isInProgress()} returns false).
+	 * in progress.
 	 */
 	boolean addEntity(Object entity);
 }

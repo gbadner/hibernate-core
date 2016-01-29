@@ -7,10 +7,22 @@
 package org.hibernate.engine.operationContext.spi;
 
 /**
+ * Provides a merge entity and its associated entity copy.
+ *
+ * @see MergeOperationContext
+ *
  * @author Gail Badner
  */
 public interface MergeData {
+	/**
+	 * Gets the merge entity.
+	 * @return the merge entity.
+	 */
 	Object getMergeEntity();
 
+	/**
+	 * Gets the entity copy.
+	 * @return the entity copy.
+	 */
 	Object getEntityCopy();
 }

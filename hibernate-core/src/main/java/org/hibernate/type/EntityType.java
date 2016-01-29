@@ -311,7 +311,7 @@ public abstract class EntityType extends AbstractType implements AssociationType
 					ForeignKeys.isTransient( associatedEntityName, original, Boolean.FALSE, session ) ) {
 				final Object copy = session.getEntityPersister( associatedEntityName, original )
 						.instantiate( null, session );
-				copyCache.addTransientMergeDataPlaceholder( original, copy );
+				copyCache.addMergeDataBeforeInMergeProcess( original, copy );
 				return copy;
 			}
 			else {

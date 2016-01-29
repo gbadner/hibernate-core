@@ -70,7 +70,6 @@ public class MergeOperationContextTest extends BaseCoreFunctionalTestCase {
 
 		Assert.assertNotNull( cache.getEntityCopyFromMergeEntity( mergeEntity ) );
         Assert.assertNull( cache.getEntityCopyFromMergeEntity( managedEntity ) );
-		Assert.assertTrue( cache.containsValue( managedEntity ) );
 
 		Assert.assertTrue( cache.getMergeEntityFromEntityCopy( managedEntity ) != null );
 		Assert.assertTrue( cache.getMergeEntityFromEntityCopy( mergeEntity ) == null );
@@ -128,9 +127,9 @@ public class MergeOperationContextTest extends BaseCoreFunctionalTestCase {
 
 		checkCacheConsistency( cache, 0 );
 
-		cache.addTransientMergeDataPlaceholder( mergeEntity, managedEntity );
+		cache.addMergeDataBeforeInMergeProcess( mergeEntity, managedEntity );
 		assertFalse( cache.isInMergeProcess( mergeEntity ) );
-		cache.markTransientMergeDataInProcess( mergeEntity, managedEntity );
+		cache.markMergeDataInMergeProcess( mergeEntity );
 
 		checkCacheConsistency( cache, 1 );
 

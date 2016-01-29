@@ -9,8 +9,16 @@ package org.hibernate.engine.operationContext.spi;
 import org.hibernate.LockOptions;
 
 /**
- * An {@link OperationContext} of type {@link OperationContextType#LOCK}
- * for entity lock operations.
+ * LockOperationContext is an {@link OperationContext} of type
+ * {@link OperationContextType#LOCK} used to cache data for
+ * the locking an entity and cascading the lock operation.
+ * The method in this interface is available only when a
+ * lock operation is in progress.
+ * <p/>
+ * To determine if a merge operation is in progress use this method:
+ * {@link org.hibernate.engine.spi.SessionImplementor#isOperationInProgress(OperationContextType)}.
+ * {@code SessionImplementor#isOperationInProgress(OperationContextType.LOCK)}
+ * will return true if a lock operation is in progress.
  *
  * @author Gail Badner
  */
@@ -25,7 +33,7 @@ public interface LockOperationContext extends OperationContext {
 	 * @return the lock options.
 	 *
 	 * @throws IllegalStateException if the lock operation is not currently
-	 * in progress (i.e., when {@link #isInProgress()} returns false).
+	 * in progress.
 	 */
 	LockOptions getLockOptions();
 }

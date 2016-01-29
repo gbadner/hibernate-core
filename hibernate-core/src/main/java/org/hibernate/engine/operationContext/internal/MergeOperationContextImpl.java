@@ -27,61 +27,7 @@ import org.hibernate.pretty.MessageHelper;
 import org.hibernate.service.ServiceRegistry;
 
 /**
- * MergeOperationContext is intended to be used to track each entity being
- * merged (called a "merge entity") and its corresponding "entity copy";
- * when a merge entity is new or detached, an entity copy is made of the merge
- * entity. It is this entity copy that ultimately becomes managed by the
- * {@link org.hibernate.engine.spi.PersistenceContext}.
- *
- * A merge entity may to be added to the MergeOperationContext before
- * the merge operation has cascaded to that entity.
- *
- * "Merge entity" and "mergeEntity" method parameter refer to an entity that is (or will be)
- * merged via {@link org.hibernate.event.spi.EventSource#merge(Object mergeEntity)}.
- *
- * "Entity copy" and "entityCopy" method parameter refer to the copy of a entity
- * entity that that ultimately becomes managed by the
- * {@link org.hibernate.engine.spi.PersistenceContext}
- *
- * A merge entity can be transient, detached, or managed. If it is managed, then the merge entity
- * and its entity copy must be the same.
- *
- * If {@link #addMergeData(Object mergeEntity, Object managedEntity)} is called, and this
- * MergeContext already contains an entry with a different entity as the key, but
- * with the same (managedEntity) value, this means that multiple entity representations
- * for the same persistent entity are being merged. If this happens,
- * {@link org.hibernate.event.spi.EntityCopyObserver#entityCopyDetected(
- * Object managedEntity, Object mergeEntity1, Object mergeEntity2, org.hibernate.event.spi.EventSource)}
- * will be called. It is up to that method to determine the property course of
- * action for this situation.
- *
- * There are several restrictions.
- * <ul>
- *     <li>Methods that return collections (e.g., {@link #keySet()},
- *          {@link #values()}) return an
- *          unnmodifiable view of the collection;</li>
- *     <li>If {@link #addMergeData(Object mergeEntity, Object) managedEntity} or
- *         {@link MergeOperationContext#addMergeData(Object, Object)}
- *         is executed and this MergeMap already contains a cross-reference for
- *         <code>mergeEntity</code>, then <code>managedEntity</code> must be the
- *         same as what is already associated with <code>mergeEntity</code> in this
- *         MergeContext.
- *     </li>
- *      <li>the Map returned by {@link #invertMap()} will only contain the
- *          managed-to-merge entity cross-reference to its "newest"
- *          (most recently added) merge entity.</li>
- * </ul>
- * <p>
- * The following method is intended to be used by a merge event listener (and other
- * classes) in the same package to add a merge entity and its corresponding
- * managed entity to a MergeContext and indicate if the merge operation is
- * being performed on the merge entity yet.<p/>
- * {@link MergeOperationContext#addMergeData(Object, Object)}
- * <p/>
- * The following method is intended to be used by a merge event listener (and other
- * classes) in the same package to indicate whether the merge operation is being
- * performed on a merge entity already in the MergeContext:
- * {@link MergeOperationContextImpl#setOperatedOn(Object mergeEntity, boolean isOperatedOn)
+ * Implementation of {@link MergeOperationContext}.
  *
  * @author Gail Badner
  */
@@ -158,36 +104,11 @@ public class MergeOperationContextImpl extends AbstractSaveOperationContextImpl<
 		super.clear();
 	}
 
-	/**
-	 * Used only for testing.
-	 */
-	/** package-private */ boolean containsValue(Object managedEntity) {
-		checkIsValid();
-		if ( managedEntity == null ) {
-			throw new NullPointerException( "null copies are not supported by " + getClass().getName() );
-		}
-		return entityCopyToMergeDataXref.containsKey( managedEntity );
-	}
-
-	/**
-	 * Should only be used for testing.
-	 *
-	 * Returns an unmodifiable set view of the merge-to-managed entity cross-references contained in this MergeContext.
-	 * @return an unmodifiable set view of the merge-to-managed entity cross-references contained in this MergeContext
-	 *
-	 * @see {@link Collections#unmodifiableSet(java.util.Set)}
-	 *
-	 */
-	/* package-private */ Set entrySet() {
-		checkIsValid();
-		return Collections.unmodifiableSet( mergeEntityToMergeDataXref.entrySet() );
-	}
-
 	@Override
 	public Object getEntityCopyFromMergeEntity(Object mergeEntity) {
 		checkIsValid();
 		if ( mergeEntity == null ) {
-			throw new NullPointerException( "null entities are not supported by " + getClass().getName() );
+			throw new IllegalArgumentException( "mergeEntity must be non-null" );
 		}
 		final MergeData mergeData = mergeEntityToMergeDataXref.get( mergeEntity );
 		return mergeData == null ? null : mergeData.getEntityCopy();
@@ -197,7 +118,7 @@ public class MergeOperationContextImpl extends AbstractSaveOperationContextImpl<
 	public Object getMergeEntityFromEntityCopy(Object entityCopy) {
 		checkIsValid();
 		if ( entityCopy == null ) {
-			throw new NullPointerException( "null entities are not supported by " + getClass().getName() );
+			throw new IllegalArgumentException( "entityCopy must be non-null" );
 		}
 		final MergeData mergeData = entityCopyToMergeDataXref.get( entityCopy );
 		return mergeData == null ? null : mergeData.getMergeEntity();
@@ -207,7 +128,7 @@ public class MergeOperationContextImpl extends AbstractSaveOperationContextImpl<
 	public boolean addMergeData(Object mergeEntity, Object entityCopy) {
 		checkIsValid();
 		if ( mergeEntity == null || entityCopy == null ) {
-			throw new NullPointerException( "null merge and managed entities are not supported by " + getClass().getName() );
+			throw new IllegalArgumentException( "null merge and managed entities are not supported by " + getClass().getName() );
 		}
 
 		MergeDataImpl oldMergeDataByMergeEntity = (MergeDataImpl) mergeEntityToMergeDataXref.get( mergeEntity );
@@ -257,7 +178,10 @@ public class MergeOperationContextImpl extends AbstractSaveOperationContextImpl<
 	}
 
 	@Override
-	public void addTransientMergeDataPlaceholder(Object mergeEntity, Object entityCopy) {
+	public void addMergeDataBeforeInMergeProcess(Object mergeEntity, Object entityCopy) {
+		if ( mergeEntity == null || entityCopy == null ) {
+			throw new IllegalArgumentException( "mergeEntity and entityCopy must be non-null." );
+		}
 		final MergeDataImpl transientMergeData = new MergeDataImpl( mergeEntity, entityCopy, false );
 		if ( mergeEntityToMergeDataXref.put( mergeEntity, transientMergeData ) != null ) {
 			throw new IllegalStateException( "mergeEntityToMergeDataXref already contained data for mergeData." );
@@ -269,16 +193,22 @@ public class MergeOperationContextImpl extends AbstractSaveOperationContextImpl<
 
 	@Override
 	public boolean isInMergeProcess(Object mergeEntity) {
+		if ( mergeEntity == null ) {
+			throw new IllegalArgumentException( "mergeEntity must be non-null." );
+		}
 		final MergeDataImpl mergeDataImpl = (MergeDataImpl) mergeEntityToMergeDataXref.get( mergeEntity );
 		return mergeDataImpl != null && mergeDataImpl.isInMergeProcess();
 	}
 
 	@Override
-	public void markTransientMergeDataInProcess(Object mergeEntity, Object entityCopy) {
+	public void markMergeDataInMergeProcess(Object mergeEntity) {
+		if ( mergeEntity == null ) {
+			throw new IllegalArgumentException( "mergeEntity must be non-null." );
+		}
 		final MergeDataImpl mergeDataImpl = (MergeDataImpl) mergeEntityToMergeDataXref.get( mergeEntity);
-		if ( entityCopy != mergeDataImpl.getEntityCopy() ) {
+		if ( mergeDataImpl == null ) {
 			throw new IllegalStateException(
-					"Stored entity copy is different from what is provided by mergeData.getEntityCopy()"
+					"mergeEntityToMergeDataXref does not contain mergeEntity."
 			);
 		}
 		mergeDataImpl.markInMergeProcess();

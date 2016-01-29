@@ -9,9 +9,17 @@ package org.hibernate.engine.operationContext.spi;
 import org.hibernate.ReplicationMode;
 
 /**
- * An {@link OperationContext} of type {@link OperationContextType#REPLICATE}
- * for entity replicate operations.
-
+ * ReplicateOperationContext is an {@link OperationContext} of type
+ * {@link OperationContextType#REPLICATE} used to cache data for
+ * replicating an entity and cascading the replicate operation.
+ * The method in this interface is available only when a
+ * replicate operation is in progress.
+ * <p/>
+ * To determine if a replicate operation is in progress use this method:
+ * {@link org.hibernate.engine.spi.SessionImplementor#isOperationInProgress(OperationContextType)}.
+ * {@code SessionImplementor#isOperationInProgress(OperationContextType.REPLICATE)}
+ * will return true if a replicate operation is in progress.
+ *
  * @author Gail Badner
  */
 public interface ReplicateOperationContext extends OperationContext {
@@ -23,7 +31,7 @@ public interface ReplicateOperationContext extends OperationContext {
 	 *
 	 * @return the replication mode.
 	 * @throws IllegalStateException if the replicate operation is not currently
-	 * in progress (i.e., when {@link #isInProgress()} returns false).
+	 * in progress.
 	 */
 	ReplicationMode getReplicationMode();
 }

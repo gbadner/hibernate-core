@@ -16,7 +16,6 @@ import org.hibernate.StaleObjectStateException;
 import org.hibernate.WrongClassException;
 import org.hibernate.engine.internal.Cascade;
 import org.hibernate.engine.internal.CascadePoint;
-import org.hibernate.engine.operationContext.spi.MergeData;
 import org.hibernate.engine.operationContext.spi.MergeOperationContext;
 import org.hibernate.engine.spi.CascadingAction;
 import org.hibernate.engine.spi.CascadingActions;
@@ -83,6 +82,12 @@ public class DefaultMergeEventListener extends AbstractSaveEventListener impleme
 				event.setResult( entity );
 			}
 			else {
+				if ( copyCache.getEntityCopyFromMergeEntity( entity ) != null ) {
+					// copyCache contains a cross-reference for entity, but
+					// it is not marked "in merge process" yet.
+					// Go ahead and mark it "in merge process".
+					copyCache.markMergeDataInMergeProcess( entity );
+				}
 				event.setEntity( entity );
 				EntityState entityState = null;
 
@@ -175,16 +180,15 @@ public class DefaultMergeEventListener extends AbstractSaveEventListener impleme
 		final Serializable id = persister.hasIdentifierProperty() ?
 				persister.getIdentifier( entity, source ) :
 				null;
-		// Get a MergeData placeholder for the transient entity, if there is one.
+		// check copyCache to find out if it already has a copy for entity.
 		final MergeOperationContext copyCache = getMergeOperationContext( source );
 		Object copy  = copyCache.getEntityCopyFromMergeEntity( entity );
 		if ( copy != null ) {
-			// let copyCache know that entity is now in the process of being merged.
-			copyCache.markTransientMergeDataInProcess( entity, copy );
 			persister.setIdentifier( copy, id, source );
 		}
 		else {
-			// no placeholder; need to instantiate the copy and add to copyCache.
+			// no cross-reference for entity;
+			// need to instantiate the copy and add to copyCache.
 			copy = source.instantiate( persister, id );
 			copyCache.addMergeData( entity, copy ); //before cascade!
 		}

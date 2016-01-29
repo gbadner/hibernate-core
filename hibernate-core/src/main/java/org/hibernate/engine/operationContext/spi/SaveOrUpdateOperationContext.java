@@ -7,8 +7,16 @@
 package org.hibernate.engine.operationContext.spi;
 
 /**
- * An {@link OperationContext} of type {@link OperationContextType#SAVE_UPDATE}
- * for entity save-or-update operations.
+ * SaveOrUpdateOperationContext is an {@link OperationContext} of type
+ * {@link OperationContextType#SAVE_UPDATE} used to cache data for
+ * entity save-or-update and cascading the save-or-update operation.
+ * The method in this interface is available only when a
+ * save-or-update operation is in progress.
+ * <p/>
+ * To determine if a save-or-update operation is in progress use this method:
+ * {@link org.hibernate.engine.spi.SessionImplementor#isOperationInProgress(OperationContextType)}.
+ * {@code SessionImplementor#isOperationInProgress(OperationContextType.SAVE_UPDATE)}
+ * will return true if a save-or-update operation is in progress.
  *
  * @author Gail Badner
  */
@@ -25,8 +33,7 @@ public interface SaveOrUpdateOperationContext extends OperationContext {
 	 * @return true, if the entity was added to the cache (because
 	 * the cache did not already contain it); false, otherwise.
 	 * @throws IllegalStateException if the save-or-update operation is not
-	 * currently in progress (i.e., when {@link #isInProgress()} returns
-	 * false).
+	 * currently in progress.
 	 */
 	boolean addEntity(Object entity);
 }
