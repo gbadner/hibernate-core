@@ -6,9 +6,6 @@
  */
 package org.hibernate.engine.operationContext.internal;
 
-import java.util.Collection;
-import java.util.Map;
-import java.util.Set;
 import javax.persistence.Entity;
 import javax.persistence.Id;
 
@@ -18,7 +15,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 import org.hibernate.cfg.Configuration;
-import org.hibernate.engine.operationContext.spi.MergeData;
 import org.hibernate.event.spi.EntityCopyObserver;
 import org.hibernate.event.spi.EventSource;
 import org.hibernate.event.spi.MergeEvent;
@@ -68,17 +64,17 @@ public class MergeOperationContextTest extends BaseCoreFunctionalTestCase {
 
         Object managedEntity = new Simple( 2 );
         
-        cache.addMergeData( new MergeData( mergeEntity, managedEntity, false ) );
+        cache.addMergeData( mergeEntity, managedEntity );
 
 		checkCacheConsistency( cache, 1 );
 
-		Assert.assertNotNull( cache.getMergeDataFromMergeEntity( mergeEntity ) );
-        Assert.assertNull( cache.getMergeDataFromMergeEntity( managedEntity ) );
+		Assert.assertNotNull( cache.getEntityCopyFromMergeEntity( mergeEntity ) );
+        Assert.assertNull( cache.getEntityCopyFromMergeEntity( managedEntity ) );
 		Assert.assertTrue( cache.containsValue( managedEntity ) );
 
-		Assert.assertTrue( cache.getMergeDataFromEntityCopy( managedEntity ) != null );
-		Assert.assertTrue( cache.getMergeDataFromEntityCopy( mergeEntity ) == null );
-		Assert.assertTrue( cache.getMergeDataFromEntityCopy( managedEntity ).getMergeEntity() == mergeEntity );
+		Assert.assertTrue( cache.getMergeEntityFromEntityCopy( managedEntity ) != null );
+		Assert.assertTrue( cache.getMergeEntityFromEntityCopy( mergeEntity ) == null );
+		Assert.assertTrue( cache.getMergeEntityFromEntityCopy( managedEntity ) == mergeEntity );
 
 		cache.afterOperation( mergeEvent, true );
 
@@ -94,15 +90,15 @@ public class MergeOperationContextTest extends BaseCoreFunctionalTestCase {
 
 		Object managedEntity = new Simple( 2 );
         
-        cache.addMergeData( new MergeData( mergeEntity, managedEntity, false ) );
+        cache.addMergeData( mergeEntity, managedEntity );
 
 		checkCacheConsistency( cache, 1 );
 
-		Assert.assertNotNull( cache.getMergeDataFromMergeEntity( mergeEntity ) );
-        Assert.assertNull( cache.getMergeDataFromMergeEntity( managedEntity ) );
+		Assert.assertNotNull( cache.getEntityCopyFromMergeEntity( mergeEntity ) );
+        Assert.assertNull( cache.getEntityCopyFromMergeEntity( managedEntity ) );
         
-        Assert.assertTrue( cache.getMergeDataFromEntityCopy( managedEntity ) != null );
-        assertTrue( cache.getMergeDataFromEntityCopy( mergeEntity ) == null );
+        Assert.assertTrue( cache.getMergeEntityFromEntityCopy( managedEntity ) != null );
+        assertTrue( cache.getMergeEntityFromEntityCopy( mergeEntity ) == null );
     }
 
 	@Test
@@ -116,15 +112,15 @@ public class MergeOperationContextTest extends BaseCoreFunctionalTestCase {
 
         Object managedEntity = new Simple( 2 );
         
-        cache.addMergeData( new MergeData( mergeEntity, managedEntity, true ) );
+        cache.addMergeData( mergeEntity, managedEntity );
 
 		checkCacheConsistency( cache, 1 );
 
-		Assert.assertNotNull( cache.getMergeDataFromMergeEntity( mergeEntity ) );
-        Assert.assertNull( cache.getMergeDataFromMergeEntity( managedEntity ) );
+		Assert.assertNotNull( cache.getEntityCopyFromMergeEntity( mergeEntity ) );
+        Assert.assertNull( cache.getEntityCopyFromMergeEntity( managedEntity ) );
 
-        Assert.assertTrue( cache.getMergeDataFromEntityCopy( managedEntity ) != null );
-        Assert.assertTrue( cache.getMergeDataFromEntityCopy( mergeEntity ) == null );
+        Assert.assertTrue( cache.getMergeEntityFromEntityCopy( managedEntity ) != null );
+        Assert.assertTrue( cache.getMergeEntityFromEntityCopy( mergeEntity ) == null );
         
         cache.afterOperation( mergeEvent, true );
 
@@ -132,13 +128,14 @@ public class MergeOperationContextTest extends BaseCoreFunctionalTestCase {
 
 		checkCacheConsistency( cache, 0 );
 
-		cache.addMergeData( new MergeData(mergeEntity, managedEntity, false ) );
-		assertFalse( cache.getMergeDataFromMergeEntity( mergeEntity ).isInMergeProcess() );
+		cache.addTransientMergeDataPlaceholder( mergeEntity, managedEntity );
+		assertFalse( cache.isInMergeProcess( mergeEntity ) );
+		cache.markTransientMergeDataInProcess( mergeEntity, managedEntity );
 
 		checkCacheConsistency( cache, 1 );
 
-		Assert.assertNotNull( cache.getMergeDataFromMergeEntity( mergeEntity ) );
-        Assert.assertNull( cache.getMergeDataFromMergeEntity( managedEntity ) );
+		Assert.assertNotNull( cache.getEntityCopyFromMergeEntity( mergeEntity ) );
+        Assert.assertNull( cache.getEntityCopyFromMergeEntity( managedEntity ) );
     }
 
 	@Test
@@ -149,11 +146,11 @@ public class MergeOperationContextTest extends BaseCoreFunctionalTestCase {
 		cache.beforeOperation( new MergeEvent( mergeEntity, session ) );
 
 		Simple managedEntity = new Simple( 0 );
-		cache.addMergeData( new MergeData( mergeEntity, managedEntity, false ) );
+		cache.addMergeData( mergeEntity, managedEntity );
 
 		Simple managedEntityNew = new Simple( 0 );
 		try {
-			cache.addMergeData( new MergeData( mergeEntity, managedEntityNew, false ) );
+			cache.addMergeData( mergeEntity, managedEntityNew );
 		}
 		catch( IllegalArgumentException ex) {
 			// expected; cannot replace the managed entity result for a particular merge entity.
@@ -169,8 +166,8 @@ public class MergeOperationContextTest extends BaseCoreFunctionalTestCase {
 		MergeOperationContextImpl cache = new MergeOperationContextImpl();
 		cache.beforeOperation( new MergeEvent( managedEntity, session ) );
 
-		cache.addMergeData( new MergeData( mergeEntity, managedEntity, false ) );
-		cache.addMergeData( new MergeData( new Simple( 1 ), managedEntity, false ) );
+		cache.addMergeData( mergeEntity, managedEntity );
+		cache.addMergeData( new Simple( 1 ), managedEntity );
 	}
 
 	@Test
@@ -183,10 +180,10 @@ public class MergeOperationContextTest extends BaseCoreFunctionalTestCase {
 		MergeOperationContextImpl cache = new MergeOperationContextImpl();
 		cache.beforeOperation( new MergeEvent( mergeEntity1, session ) );
 
-		cache.addMergeData( new MergeData( mergeEntity1, managedEntity1, false ) );
+		cache.addMergeData( mergeEntity1, managedEntity1 );
 
 		try {
-			cache.addMergeData( new MergeData( mergeEntity1, managedEntity2, false ) );
+			cache.addMergeData( mergeEntity1, managedEntity2 );
 			Assert.fail( "should have thrown IllegalArgumentException" );
 		}
 		catch( IllegalArgumentException ex ) {

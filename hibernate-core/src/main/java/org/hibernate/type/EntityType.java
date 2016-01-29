@@ -16,7 +16,6 @@ import org.hibernate.AssertionFailure;
 import org.hibernate.HibernateException;
 import org.hibernate.MappingException;
 import org.hibernate.engine.internal.ForeignKeys;
-import org.hibernate.engine.operationContext.spi.MergeData;
 import org.hibernate.engine.operationContext.spi.MergeOperationContext;
 import org.hibernate.engine.spi.EntityUniqueKey;
 import org.hibernate.engine.spi.Mapping;
@@ -300,9 +299,9 @@ public abstract class EntityType extends AbstractType implements AssociationType
 		MergeOperationContext copyCache = (MergeOperationContext) session.getOperationContext(
 				OperationContextType.MERGE
 		);
-		MergeData cachedMergedData = copyCache.getMergeDataFromMergeEntity( original );
-		if ( cachedMergedData != null ) {
-			return cachedMergedData.getEntityCopy();
+		final Object existingCopy = copyCache.getEntityCopyFromMergeEntity( original );
+		if ( existingCopy != null ) {
+			return existingCopy;
 		}
 		else {
 			if ( original == target ) {
@@ -312,7 +311,7 @@ public abstract class EntityType extends AbstractType implements AssociationType
 					ForeignKeys.isTransient( associatedEntityName, original, Boolean.FALSE, session ) ) {
 				final Object copy = session.getEntityPersister( associatedEntityName, original )
 						.instantiate( null, session );
-				copyCache.addMergeData( new MergeData( original, copy, false ) );
+				copyCache.addTransientMergeDataPlaceholder( original, copy );
 				return copy;
 			}
 			else {

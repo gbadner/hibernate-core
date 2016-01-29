@@ -38,6 +38,7 @@ import org.hibernate.collection.spi.PersistentCollection;
 import org.hibernate.engine.loading.internal.LoadContexts;
 import org.hibernate.engine.operationContext.spi.MergeData;
 import org.hibernate.engine.operationContext.spi.MergeOperationContext;
+import org.hibernate.engine.operationContext.spi.OperationContextType;
 import org.hibernate.engine.spi.AssociationKey;
 import org.hibernate.engine.spi.BatchFetchQueue;
 import org.hibernate.engine.spi.CachedNaturalIdValueSource;
@@ -47,7 +48,6 @@ import org.hibernate.engine.spi.EntityEntry;
 import org.hibernate.engine.spi.EntityKey;
 import org.hibernate.engine.spi.EntityUniqueKey;
 import org.hibernate.engine.spi.ManagedEntity;
-import org.hibernate.engine.operationContext.spi.OperationContextType;
 import org.hibernate.engine.spi.PersistenceContext;
 import org.hibernate.engine.spi.PersistentAttributeInterceptable;
 import org.hibernate.engine.spi.PersistentAttributeInterceptor;
@@ -387,7 +387,7 @@ public class StatefulPersistenceContext implements PersistenceContext {
 	public void addEntity(EntityKey key, Object entity) {
 		entitiesByKey.put( key, entity );
 		if( batchFetchQueue != null ) {
-			getBatchFetchQueue().removeBatchLoadableEntityKey(key);
+			getBatchFetchQueue().removeBatchLoadableEntityKey( key );
 		}
 	}
 
@@ -1152,10 +1152,7 @@ public class StatefulPersistenceContext implements PersistenceContext {
 			}
 		}
 
-		// mergeMap acts as a local copy cache managed for the duration of a merge
-		// operation.  It represents a map of the detached entity instances pointing
-		// to the corresponding managed instance.
-		final MergeOperationContext mergeOperationContext = getMergeOperationContext();
+		final MergeOperationContext mergeOperationContext = getMergeOperationContext( session );
 
 		//not found in case, proceed
 		// iterate all the entities currently associated with the persistence context.
@@ -1176,19 +1173,17 @@ public class StatefulPersistenceContext implements PersistenceContext {
 
 				if ( !found && mergeOperationContext != null ) {
 					//check if the detached object being merged is the parent
-					final MergeData instanceMergeData = mergeOperationContext.getMergeDataFromEntityCopy(
+					final Object unmergedInstance = mergeOperationContext.getMergeEntityFromEntityCopy(
 							entityEntryInstance
 					);
-					final MergeData childMergeData = mergeOperationContext.getMergeDataFromEntityCopy(
-							childEntity
-					);
-					if ( instanceMergeData != null && childMergeData != null ) {
+					final Object unmergedChild = mergeOperationContext.getMergeEntityFromEntityCopy( childEntity );
+					if ( unmergedInstance != null && unmergedChild != null ) {
 						found = isFoundInParent(
 								propertyName,
-								childMergeData.getMergeEntity(),
+								unmergedChild,
 								persister,
 								collectionPersister,
-								instanceMergeData.getMergeEntity()
+								unmergedInstance
 						);
 						LOG.debugf(
 								"Detached object being merged (corresponding with a managed entity) has a collection that [%s] the detached child.",
@@ -1208,7 +1203,7 @@ public class StatefulPersistenceContext implements PersistenceContext {
 		// 		NOTE: decided to put this here rather than in the above loop as I was nervous about the performance
 		//		of the loop-in-loop especially considering this is far more likely the 'edge case'
 		if ( mergeOperationContext != null ) {
-			for ( MergeData mergeData : mergeOperationContext.getMergeEntityData() ) {
+			for ( MergeData mergeData : mergeOperationContext.getAllMergeData() ) {
 				if ( mergeData.getEntityCopy() instanceof HibernateProxy ) {
 					final HibernateProxy proxy = (HibernateProxy) mergeData.getEntityCopy();
 					if ( persister.isSubclassEntityName( proxy.getHibernateLazyInitializer().getEntityName() ) ) {
@@ -1226,7 +1221,7 @@ public class StatefulPersistenceContext implements PersistenceContext {
 						if ( !found ) {
 							found = isFoundInParent(
 									propertyName,
-									mergeOperationContext.getMergeDataFromEntityCopy( childEntity ).getMergeEntity(),
+									mergeOperationContext.getMergeEntityFromEntityCopy( childEntity ),
 									persister,
 									collectionPersister,
 									mergeData.getMergeEntity()
@@ -1260,8 +1255,8 @@ public class StatefulPersistenceContext implements PersistenceContext {
 	}
 
 	@Override
-	public Object getIndexInOwner(String entity, String property, Object childEntity, Map mergeMap) {
-		return getIndexInOwner( entity, property, childEntity );
+	public Object getIndexInOwner(String entity, String property, Object childObject, Map mergeMap) {
+		return getIndexInOwner( entity, property, childObject );
 	}
 
 	@Override
@@ -1269,12 +1264,9 @@ public class StatefulPersistenceContext implements PersistenceContext {
 		final EntityPersister persister = session.getFactory().getEntityPersister( entity );
 		final CollectionPersister cp = session.getFactory().getCollectionPersister( entity + '.' + property );
 
-		// mergeMap acts as a local copy cache managed for the duration of a merge
-		// operation.  It represents a map of the detached entity instances pointing
-		// to the corresponding managed instance.
-		MergeOperationContext mergeOperationContext = getMergeOperationContext();
+		final MergeOperationContext mergeOperationContext = getMergeOperationContext( session );
 
-		// try cache lookup first
+	    // try cache lookup first
 		final Object parent = parentsByChild.get( childEntity );
 		if ( parent != null ) {
 			final EntityEntry entityEntry = entityEntryContext.getEntityEntry( parent );
@@ -1283,19 +1275,10 @@ public class StatefulPersistenceContext implements PersistenceContext {
 				Object index = getIndexInParent( property, childEntity, persister, cp, parent );
 
 				if (index==null && mergeOperationContext!=null) {
-					final MergeData instanceMergeData = mergeOperationContext.getMergeDataFromEntityCopy(
-							parent
-					);
-					final MergeData childMergeData = mergeOperationContext.getMergeDataFromEntityCopy(
-							childEntity
-					);
-					if ( instanceMergeData != null && childMergeData != null ) {
-						index = getIndexInParent(
-								property,
-								childMergeData.getMergeEntity(),
-								persister,
-								cp,
-								instanceMergeData.getMergeEntity() );
+					final Object unMergedInstance = mergeOperationContext.getMergeEntityFromEntityCopy( parent );
+					final Object unMergedChild = mergeOperationContext.getMergeEntityFromEntityCopy( childEntity );
+					if ( unMergedInstance != null && unMergedChild != null ) {
+						index = getIndexInParent( property, unMergedChild, persister, cp, unMergedInstance );
 						LOG.debugf(
 								"A detached object being merged (corresponding to a parent in parentsByChild) has an indexed collection that [%s] the detached child being merged. ",
 								( index != null ? "contains" : "does not contain" )
@@ -1320,19 +1303,10 @@ public class StatefulPersistenceContext implements PersistenceContext {
 
 				Object index = getIndexInParent( property, childEntity, persister, cp, instance );
 				if ( index==null && mergeOperationContext!=null ) {
-					final MergeData instanceMergeData = mergeOperationContext.getMergeDataFromEntityCopy(
-							instance
-					);
-					final MergeData childMergeData = mergeOperationContext.getMergeDataFromEntityCopy(
-							childEntity
-					);
-					if ( instanceMergeData != null && childMergeData != null ) {
-						index = getIndexInParent(
-								property,
-								childMergeData.getMergeEntity(),
-								persister,
-								cp,
-								instanceMergeData.getMergeEntity() );
+					final Object unMergedInstance = mergeOperationContext.getMergeEntityFromEntityCopy( instance );
+					final Object unMergedChild = mergeOperationContext.getMergeEntityFromEntityCopy( childEntity );
+					if ( unMergedInstance != null && unMergedChild!=null ) {
+						index = getIndexInParent( property, unMergedChild, persister, cp, unMergedInstance );
 						LOG.debugf(
 								"A detached object being merged (corresponding to a managed entity) has an indexed collection that [%s] the detached child being merged. ",
 								(index != null ? "contains" : "does not contain" )
@@ -1346,16 +1320,6 @@ public class StatefulPersistenceContext implements PersistenceContext {
 			}
 		}
 		return null;
-	}
-
-	private MergeOperationContext getMergeOperationContext() {
-		// TODO: Rework MergeOperationContext SPI to be more descriptive.
-		if ( session.isOperationInProgress( OperationContextType.MERGE ) ) {
-			return ( (MergeOperationContext) session.getOperationContext( OperationContextType.MERGE) );
-		}
-		else {
-			return null;
-		}
 	}
 
 	private Object getIndexInParent(
@@ -1697,6 +1661,15 @@ public class StatefulPersistenceContext implements PersistenceContext {
 		}
 
 		return rtn;
+	}
+
+	private static MergeOperationContext getMergeOperationContext(SessionImplementor session) {
+		if ( session.isOperationInProgress( OperationContextType.MERGE ) ) {
+			return (MergeOperationContext) session.getOperationContext( OperationContextType.MERGE );
+		}
+		else {
+			return null;
+		}
 	}
 
 	@Override
