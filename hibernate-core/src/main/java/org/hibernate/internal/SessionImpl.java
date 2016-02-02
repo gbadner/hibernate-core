@@ -133,7 +133,6 @@ import org.hibernate.jdbc.WorkExecutorVisitable;
 import org.hibernate.loader.criteria.CriteriaLoader;
 import org.hibernate.loader.custom.CustomLoader;
 import org.hibernate.loader.custom.CustomQuery;
-import org.hibernate.loader.entity.DynamicBatchingEntityLoaderBuilder;
 import org.hibernate.persister.collection.CollectionPersister;
 import org.hibernate.persister.entity.EntityPersister;
 import org.hibernate.persister.entity.MultiLoadOptions;
@@ -631,7 +630,7 @@ public final class SessionImpl extends AbstractSessionImpl implements EventSourc
 
 	@Override
 	public OperationContext getOperationContext(OperationContextType operationContextType) {
-		return operationContextManager.getOperationContext( operationContextType );
+		return operationContextManager.getOperationContextInProgress( operationContextType );
 	}
 
 	// saveOrUpdate() operations ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -668,7 +667,7 @@ public final class SessionImpl extends AbstractSessionImpl implements EventSourc
 	private void fireSaveOrUpdateTopLevel(SaveOrUpdateEvent event, EventType<SaveOrUpdateEventListener> actualEventType) {
 		errorIfClosed();
 		checkTransactionSynchStatus();
-		operationContextManager.beforeOperation( OperationContextType.SAVE_UPDATE, event );
+		operationContextManager.beforeSaveOrUpdateOperation( event );
 		boolean success = false;
 		try {
 			for ( SaveOrUpdateEventListener listener : listeners( actualEventType ) ) {
@@ -678,7 +677,7 @@ public final class SessionImpl extends AbstractSessionImpl implements EventSourc
 			success = true;
 		}
 		finally {
-			operationContextManager.afterOperation( OperationContextType.SAVE_UPDATE, event, success );
+			operationContextManager.afterSaveOrUpdateOperation( event, success );
 		}
 	}
 
@@ -764,7 +763,7 @@ public final class SessionImpl extends AbstractSessionImpl implements EventSourc
 	private void fireLockTopLevel(LockEvent event) {
 		errorIfClosed();
 		checkTransactionSynchStatus();
-		operationContextManager.beforeOperation( OperationContextType.LOCK, event );
+		operationContextManager.beforeLockOperation(  event );
 		boolean success = false;
 		try {
 			for ( LockEventListener listener : listeners( EventType.LOCK ) ) {
@@ -774,7 +773,7 @@ public final class SessionImpl extends AbstractSessionImpl implements EventSourc
 			success = true;
 		}
 		finally {
-			operationContextManager.afterOperation( OperationContextType.LOCK, event, success );
+			operationContextManager.afterLockOperation( event, success );
 		}
 	}
 
@@ -819,7 +818,7 @@ public final class SessionImpl extends AbstractSessionImpl implements EventSourc
 	private void firePersistTopLevel(PersistEvent event, EventType<PersistEventListener> actualEventType) {
 		errorIfClosed();
 		checkTransactionSynchStatus();
-		operationContextManager.beforeOperation( OperationContextType.PERSIST, event );
+		operationContextManager.beforePersistOperation( event );
 		boolean success = false;
 		try {
 			for ( PersistEventListener listener : listeners( actualEventType ) ) {
@@ -829,7 +828,7 @@ public final class SessionImpl extends AbstractSessionImpl implements EventSourc
 			success = true;
 		}
 		finally {
-			operationContextManager.afterOperation( OperationContextType.PERSIST, event, success );
+			operationContextManager.afterPersistOperation( event, success );
 		}
 	}
 
@@ -891,7 +890,7 @@ public final class SessionImpl extends AbstractSessionImpl implements EventSourc
 	private Object fireMergeTopLevel(MergeEvent event) {
 		errorIfClosed();
 		checkTransactionSynchStatus();
-		operationContextManager.beforeOperation( OperationContextType.MERGE, event );
+		operationContextManager.beforeMergeOperation( event );
 		boolean success = false;
 		try {
 			for ( MergeEventListener listener : listeners( EventType.MERGE ) ) {
@@ -901,7 +900,7 @@ public final class SessionImpl extends AbstractSessionImpl implements EventSourc
 			success = true;
 		}
 		finally {
-			operationContextManager.afterOperation( OperationContextType.MERGE, event, success );
+			operationContextManager.afterMergeOperation( event, success );
 		}
 		return event.getResult();
 	}
@@ -995,7 +994,7 @@ public final class SessionImpl extends AbstractSessionImpl implements EventSourc
 	private void fireDeleteTopLevel(DeleteEvent event) {
 		errorIfClosed();
 		checkTransactionSynchStatus();
-		operationContextManager.beforeOperation( OperationContextType.DELETE, event );
+		operationContextManager.beforeDeleteOperation( event );
 		boolean success = false;
 		try {
 			for ( DeleteEventListener listener : listeners( EventType.DELETE ) ) {
@@ -1005,7 +1004,7 @@ public final class SessionImpl extends AbstractSessionImpl implements EventSourc
 			success = true;
 		}
 		finally {
-			operationContextManager.afterOperation( OperationContextType.DELETE, event, success );
+			operationContextManager.afterDeleteOperation( event, success );
 		}
 	}
 
@@ -1282,7 +1281,7 @@ public final class SessionImpl extends AbstractSessionImpl implements EventSourc
 	private void fireRefreshTopLevel(RefreshEvent event) {
 		errorIfClosed();
 		checkTransactionSynchStatus();
-		operationContextManager.beforeOperation( OperationContextType.REFRESH, event );
+		operationContextManager.beforeRefreshOperation( event );
 		boolean success = false;
 		try {
 			for ( RefreshEventListener listener : listeners( EventType.REFRESH ) ) {
@@ -1293,7 +1292,7 @@ public final class SessionImpl extends AbstractSessionImpl implements EventSourc
 			success = true;
 		}
 		finally {
-			operationContextManager.afterOperation( OperationContextType.REFRESH, event, success );
+			operationContextManager.afterRefreshOperation( event, success );
 		}
 	}
 
@@ -1333,7 +1332,7 @@ public final class SessionImpl extends AbstractSessionImpl implements EventSourc
 	private void fireTopLevelReplicate(ReplicationMode replicationMode, ReplicateEvent event) {
 		errorIfClosed();
 		checkTransactionSynchStatus();
-		operationContextManager.beforeOperation( OperationContextType.REPLICATE, event );
+		operationContextManager.beforeReplicateOperation( event );
 		boolean success = false;
 		try {
 			for ( ReplicateEventListener listener : listeners( EventType.REPLICATE ) ) {
@@ -1343,7 +1342,7 @@ public final class SessionImpl extends AbstractSessionImpl implements EventSourc
 			success = true;
 		}
 		finally {
-			operationContextManager.afterOperation( OperationContextType.REPLICATE, event, success );
+			operationContextManager.afterReplicateOperation( event, success );
 		}
 	}
 

@@ -8,17 +8,15 @@ package org.hibernate.engine.operationContext.internal;
 
 import java.util.IdentityHashMap;
 import java.util.Map;
-import java.util.Set;
 
 import org.hibernate.engine.operationContext.spi.OperationContextType;
 import org.hibernate.engine.operationContext.spi.RefreshOperationContext;
 import org.hibernate.event.spi.RefreshEvent;
-import org.hibernate.internal.util.collections.IdentitySet;
 
 /**
  * @author Gail Badner
  */
-public class RefreshOperationContextImpl extends AbstractEventOperationContextImpl<RefreshEvent>
+public class RefreshOperationContextImpl extends AbstractOperationContextImpl<RefreshEvent>
 		implements RefreshOperationContext {
 	private Map<Object, Object> entities = new IdentityHashMap<Object,Object>(10);
 

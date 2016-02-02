@@ -6,9 +6,11 @@
  */
 package org.hibernate.engine.operationContext.spi;
 
+import org.hibernate.event.spi.SaveOrUpdateEvent;
+
 /**
  * SaveOrUpdateOperationContext is an {@link OperationContext} of type
- * {@link OperationContextType#SAVE_UPDATE} used to cache data for
+ * {@link OperationContextType#SAVE_OR_UPDATE} used to cache data for
  * entity save-or-update and cascading the save-or-update operation.
  * The method in this interface is available only when a
  * save-or-update operation is in progress.

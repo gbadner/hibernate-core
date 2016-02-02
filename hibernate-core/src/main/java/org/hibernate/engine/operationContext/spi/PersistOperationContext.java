@@ -6,6 +6,8 @@
  */
 package org.hibernate.engine.operationContext.spi;
 
+import org.hibernate.event.spi.PersistEvent;
+
 /**
  * PersistOperationContext is an {@link OperationContext} of type
  * {@link OperationContextType#PERSIST} used to cache data for

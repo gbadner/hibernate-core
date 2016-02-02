@@ -15,18 +15,17 @@ import org.hibernate.event.spi.EventSource;
  *
  * @author Gail Badner
  */
-public abstract class AbstractSaveOperationContextImpl<T extends AbstractEvent> extends AbstractEventOperationContextImpl<T> {
+public abstract class AbstractSaveOperationContextImpl<T extends AbstractEvent> extends AbstractOperationContextImpl<T> {
 
 	// TODO: Should code using UnresolvedEntityInsertActions be moved from ActionQueue to this class?
 
-	protected AbstractSaveOperationContextImpl(Class<T> entityClass) {
-		super( entityClass );
+	protected AbstractSaveOperationContextImpl(Class<T> eventClass) {
+		super( eventClass );
 	}
 
 	@Override
 	protected void doBeforeOperation() {
-		final EventSource session = getEvent().getSession();
-		if ( session.getActionQueue().hasUnresolvedEntityInsertActions() ) {
+		if ( getSession().getActionQueue().hasUnresolvedEntityInsertActions() ) {
 			throw new IllegalStateException(
 					String.format(
 							"There are delayed insert actions when OperationContext [%s] is being initiated.",
@@ -42,5 +41,8 @@ public abstract class AbstractSaveOperationContextImpl<T extends AbstractEvent> 
 		getSession().getActionQueue().checkNoUnresolvedActionsAfterOperation();
 		super.doAfterSuccessfulOperation();
 	}
+
+	final protected EventSource getSession() {
+		return getEvent().getSession();
+	}
 }
-                                               ;

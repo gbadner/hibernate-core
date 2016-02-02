@@ -6,6 +6,8 @@
  */
 package org.hibernate.engine.operationContext.spi;
 
+import org.hibernate.event.spi.DeleteEvent;
+
 /**
  * DeleteOperationContext is an {@link OperationContext} of type
  * {@link OperationContextType#DELETE} used to cache data while deleting

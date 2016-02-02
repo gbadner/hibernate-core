@@ -13,7 +13,7 @@ import org.hibernate.event.spi.ReplicateEvent;
 /**
  * @author Gail Badner
  */
-public class ReplicateOperationContextImpl extends AbstractEventOperationContextImpl<ReplicateEvent>
+public class ReplicateOperationContextImpl extends AbstractOperationContextImpl<ReplicateEvent>
 		implements org.hibernate.engine.operationContext.spi.ReplicateOperationContext {
 
 	ReplicateOperationContextImpl() {

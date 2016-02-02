@@ -7,8 +7,6 @@
 package org.hibernate.engine.operationContext.internal;
 
 import org.hibernate.engine.operationContext.spi.OperationContext;
-import org.hibernate.event.spi.AbstractEvent;
-import org.hibernate.event.spi.EventSource;
 
 /**
  * An abstract implementation for EventOperationContextImplementor to be
@@ -16,16 +14,14 @@ import org.hibernate.event.spi.EventSource;
  *
  * @author Gail Badner
  */
-public abstract class AbstractEventOperationContextImpl<T extends AbstractEvent>
-		implements EventOperationContextImplementor<T> {
+public abstract class AbstractOperationContextImpl<T>
+		implements OperationContextImplementor<T> {
 	private T event;
-	private final Class<T> eventClass;
 
-	protected AbstractEventOperationContextImpl(Class<T> eventClass) {
+	protected AbstractOperationContextImpl(Class<T> eventClass) {
 		if ( eventClass == null ) {
 			throw new IllegalArgumentException( "eventClass must be non-null" );
 		}
-		this.eventClass = eventClass;
 	}
 
 	@Override
@@ -90,11 +86,6 @@ public abstract class AbstractEventOperationContextImpl<T extends AbstractEvent>
 	}
 
 	@Override
-	public final Class<T> getEventClass() {
-		return eventClass;
-	}
-
-	@Override
 	public void clear() {
 		event = null;
 	}
@@ -110,10 +101,5 @@ public abstract class AbstractEventOperationContextImpl<T extends AbstractEvent>
 					String.format( "OperationContext [%s] is in an invalid state", getOperationContextType() )
 			);
 		}
-	}
-
-	protected EventSource getSession() {
-		checkIsValid();
-		return event.getSession();
 	}
 }

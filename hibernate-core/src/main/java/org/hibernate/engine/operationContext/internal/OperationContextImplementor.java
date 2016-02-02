@@ -14,7 +14,7 @@ import org.hibernate.event.spi.AbstractEvent;
  *
  * @author Gail Badner
  */
-public interface EventOperationContextImplementor<T extends AbstractEvent> extends OperationContext {
+public interface OperationContextImplementor<T> extends OperationContext {
 	/**
 	 * Called just before starting the operation. This method should not
 	 * be called if the operation is already in progress (i.e., when
@@ -56,16 +56,6 @@ public interface EventOperationContextImplementor<T extends AbstractEvent> exten
 	 * @throws IllegalArgumentException if {@code event} is null.
 	 */
 	void afterOperation(T event, boolean success);
-
-	/**
-	 * The event class used for the operation. This method can be used to
-	 * cast {@link AbstractEvent} to the expected class when calling
-	 * {@link #beforeOperation(AbstractEvent)} and
-	 * {@link #afterOperation(AbstractEvent, boolean)}.
-	 *
-	 * @return the event class.
-	 */
-	Class<T> getEventClass();
 
 	/**
 	 * Clears operation-specific data. After the method executes {@link #isInProgress()}

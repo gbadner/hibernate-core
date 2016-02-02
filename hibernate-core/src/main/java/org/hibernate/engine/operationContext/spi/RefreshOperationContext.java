@@ -7,6 +7,7 @@
 package org.hibernate.engine.operationContext.spi;
 
 import org.hibernate.engine.operationContext.spi.OperationContext;
+import org.hibernate.event.spi.RefreshEvent;
 
 /**
  * RefreshOperationContext is an {@link OperationContext} of type

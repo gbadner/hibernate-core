@@ -7,6 +7,7 @@
 package org.hibernate.engine.operationContext.spi;
 
 import org.hibernate.LockOptions;
+import org.hibernate.event.spi.LockEvent;
 
 /**
  * LockOperationContext is an {@link OperationContext} of type

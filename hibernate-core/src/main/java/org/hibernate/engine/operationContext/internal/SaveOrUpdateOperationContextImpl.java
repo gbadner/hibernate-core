@@ -8,12 +8,10 @@ package org.hibernate.engine.operationContext.internal;
 
 import java.util.IdentityHashMap;
 import java.util.Map;
-import java.util.Set;
 
 import org.hibernate.engine.operationContext.spi.OperationContextType;
 import org.hibernate.engine.operationContext.spi.SaveOrUpdateOperationContext;
 import org.hibernate.event.spi.SaveOrUpdateEvent;
-import org.hibernate.internal.util.collections.IdentitySet;
 
 /**
  * @author Gail Badner

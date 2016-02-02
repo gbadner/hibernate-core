@@ -7,6 +7,7 @@
 package org.hibernate.engine.operationContext.spi;
 
 import org.hibernate.ReplicationMode;
+import org.hibernate.event.spi.ReplicateEvent;
 
 /**
  * ReplicateOperationContext is an {@link OperationContext} of type
