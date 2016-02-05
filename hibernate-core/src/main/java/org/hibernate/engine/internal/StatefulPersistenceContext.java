@@ -1664,8 +1664,9 @@ public class StatefulPersistenceContext implements PersistenceContext {
 	}
 
 	private static MergeOperationContext getMergeOperationContext(SessionImplementor session) {
+		// a merge operation may not be in process, so check first.
 		if ( session.isOperationInProgress( OperationContextType.MERGE ) ) {
-			return (MergeOperationContext) session.getOperationContext( OperationContextType.MERGE );
+			return session.getOperationContext( OperationContextType.MERGE );
 		}
 		else {
 			return null;

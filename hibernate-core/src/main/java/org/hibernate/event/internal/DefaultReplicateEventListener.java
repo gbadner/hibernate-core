@@ -222,7 +222,8 @@ public class DefaultReplicateEventListener extends AbstractSaveEventListener imp
 	}
 
 	private static ReplicationMode getReplicationMode(EventSource session) {
-		return ( (ReplicateOperationContext) session.getOperationContext( OperationContextType.REPLICATE) )
-				.getReplicationMode();
+		// don't bother checking if replicate operation is in progress
+		// since we're in the middle of a replicate operation.
+		return session.getOperationContext( OperationContextType.REPLICATE).getReplicationMode();
 	}
 }

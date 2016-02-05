@@ -366,7 +366,9 @@ public class DefaultDeleteEventListener implements DeleteEventListener {
 	}
 
 	private static boolean addTransientEntity(EventSource session, Object transientEntity) {
-		return ( (DeleteOperationContext) session.getOperationContext( OperationContextType.DELETE ) )
+		// don't bother checking if delete operation is in progress
+		// since we're in the middle of a delete operation.
+		return session.getOperationContext( OperationContextType.DELETE )
 				.addTransientEntity( transientEntity );
 	}
 }

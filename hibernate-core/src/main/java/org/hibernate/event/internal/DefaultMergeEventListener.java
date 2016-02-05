@@ -21,6 +21,7 @@ import org.hibernate.engine.spi.CascadingAction;
 import org.hibernate.engine.spi.CascadingActions;
 import org.hibernate.engine.spi.EntityEntry;
 import org.hibernate.engine.spi.EntityKey;
+import org.hibernate.engine.operationContext.spi.EntityStatus;
 import org.hibernate.engine.operationContext.spi.OperationContextType;
 import org.hibernate.engine.spi.SelfDirtinessTracker;
 import org.hibernate.engine.spi.SessionImplementor;
@@ -53,9 +54,7 @@ public class DefaultMergeEventListener extends AbstractSaveEventListener impleme
 	 */
 	public void onMerge(MergeEvent event) throws HibernateException {
 
-		final MergeOperationContext copyCache = (MergeOperationContext) event.getSession().getOperationContext(
-				OperationContextType.MERGE
-		);
+		final MergeOperationContext copyCache = getMergeOperationContext( event.getSession() );
 		final EventSource source = event.getSession();
 		final Object original = event.getOriginal();
 
@@ -82,12 +81,6 @@ public class DefaultMergeEventListener extends AbstractSaveEventListener impleme
 				event.setResult( entity );
 			}
 			else {
-				if ( copyCache.getEntityCopyFromMergeEntity( entity ) != null ) {
-					// copyCache contains a cross-reference for entity, but
-					// it is not marked "in merge process" yet.
-					// Go ahead and mark it "in merge process".
-					copyCache.markMergeDataInMergeProcess( entity );
-				}
 				event.setEntity( entity );
 				EntityState entityState = null;
 
@@ -159,7 +152,7 @@ public class DefaultMergeEventListener extends AbstractSaveEventListener impleme
 		final EventSource source = event.getSession();
 		final EntityPersister persister = source.getEntityPersister( event.getEntityName(), entity );
 
-		getMergeOperationContext( source ).addMergeData( entity, entity );  //before cascade!
+		getMergeOperationContext( source ).addMergeData( EntityStatus.PERSISTENT, entity, entity );  //before cascade!
 
 		cascadeOnMerge( source, persister, entity );
 		copyValues( persister, entity, entity, source );
@@ -184,13 +177,17 @@ public class DefaultMergeEventListener extends AbstractSaveEventListener impleme
 		final MergeOperationContext copyCache = getMergeOperationContext( source );
 		Object copy  = copyCache.getEntityCopyFromMergeEntity( entity );
 		if ( copy != null ) {
+			// copyCache contains a cross-reference for entity;
+			// if we got here, it's because is not marked "in merge process" yet.
+			// Go ahead and mark it "in merge process".
+			copyCache.markTransientMergeDataInMergeProcess( entity );
 			persister.setIdentifier( copy, id, source );
 		}
 		else {
 			// no cross-reference for entity;
 			// need to instantiate the copy and add to copyCache.
 			copy = source.instantiate( persister, id );
-			copyCache.addMergeData( entity, copy ); //before cascade!
+			copyCache.addMergeData( EntityStatus.TRANSIENT, entity, copy ); //before cascade!
 		}
 
 		// cascade first, so that all unsaved objects get their
@@ -267,7 +264,7 @@ public class DefaultMergeEventListener extends AbstractSaveEventListener impleme
 			entityIsTransient( event );
 		}
 		else {
-			getMergeOperationContext( source ).addMergeData( entity, result ); //before cascade!
+			getMergeOperationContext( source ).addMergeData( EntityStatus.DETACHED, entity, result ); //before cascade!
 
 			final Object target = source.getPersistenceContext().unproxy( result );
 			if ( target == entity ) {
@@ -458,6 +455,8 @@ public class DefaultMergeEventListener extends AbstractSaveEventListener impleme
 	}
 
 	private static MergeOperationContext getMergeOperationContext(EventSource session) {
-		return (MergeOperationContext) session.getOperationContext( OperationContextType.MERGE );
+		// don't bother checking if merge operation is in progress
+		// since we're in the middle of a merge operation.
+		return session.getOperationContext( OperationContextType.MERGE );
 	}
 }

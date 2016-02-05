@@ -6,7 +6,6 @@
  */
 package org.hibernate.engine.operationContext.spi;
 
-import org.hibernate.event.spi.SaveOrUpdateEvent;
 
 /**
  * SaveOrUpdateOperationContext is an {@link OperationContext} of type

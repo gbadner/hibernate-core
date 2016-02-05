@@ -191,6 +191,8 @@ public class DefaultRefreshEventListener implements RefreshEventListener {
 	}
 
 	private static RefreshOperationContext getRefreshOperationContext(EventSource session) {
-		return (RefreshOperationContext) session.getOperationContext( OperationContextType.REFRESH );
+		// don't bother checking if refresh operation is in progress
+		// since we're in the middle of a refresh operation.
+		return session.getOperationContext( OperationContextType.REFRESH );
 	}
 }

@@ -14,7 +14,7 @@ import org.hibernate.event.spi.MergeEvent;
 /**
  * MergeOperationContext is an {@link OperationContext} of type
  * {@link OperationContextType#MERGE} used to cache data for
- * the merging an entity and cascading the merge operation.
+ * merging an entity and cascading the merge operation.
  * The methods in this interface are available only when a
  * merge operation is in progress.
  * <p/>
@@ -41,10 +41,10 @@ import org.hibernate.event.spi.MergeEvent;
  * <p/>
  * The following method should be called when a merge entity is actively being merged
  * (e.g., by {@link org.hibernate.event.spi.MergeEventListener#onMerge(MergeEvent)}:
- * {@link #addMergeData(Object mergeEntity, Object entityCopy)}}.
+ * {@link #addMergeData(EntityStatus mergeEntityStatus, Object mergeEntity, Object entityCopy)}}.
  * <p/>
  * After a merge entity and its entity copy is added via
- * {@link #addMergeData(Object mergeEntity, Object entityCopy)}},
+ * {@link #addMergeData(EntityStatus mergeEntityStatus, Object mergeEntity, Object entityCopy)}},
  * a call to {@link #isInMergeProcess(Object mergeEntity)} will return
  * {@code true}.
  * <p/>
@@ -60,23 +60,23 @@ import org.hibernate.event.spi.MergeEvent;
  * property. By default, merging multiple entity representations for the same
  * persistent entity is not allowed.
  * <p/>
- * In addition, if {@link #addMergeData(Object mergeEntity, Object entityCopy)}
+ * In addition, if {@link #addMergeData(EntityStatus mergeEntityStatus, Object mergeEntity, Object entityCopy) }
  * is executed and this {@link MergeOperationContext} already contains
  * a cross-reference for <code>mergeEntity</code>, then <code>entityCopy</code>
  * must be the same as what is already associated with <code>mergeEntity</code>
  * in this {@link MergeOperationContext}.
  * <p/>
- * A entity (that will ultimately be merged) and its corresponding entity
+ * A transient entity (that will ultimately be merged) and its corresponding entity
  * copy may be added to this {@link MergeOperationContext} before the
  * merge operation cascades to that entity by using the method:
- * {@link #addMergeDataBeforeInMergeProcess(Object mergeEntity, Object entityCopy)}.
+ * {@link #addTransientMergeDataBeforeInMergeProcess(Object mergeEntity, Object entityCopy)}.
  * The entity is not considered to be "in the merge process" yet and
  * a call to {@link #isInMergeProcess(Object entity)} will return
  * {@code false}. Later, when the merge operation cascades to the entity to
  * ({@link org.hibernate.event.spi.MergeEventListener#onMerge(MergeEvent)},
- * the following method should be called to indicate that
- * the merge entity and its entity copy is "in the merge process"
- * by calling: {@link #markMergeDataInMergeProcess(Object mergeEntity)}
+ * the following method must be called to indicate that
+ * the transient merge entity and its entity copy is "in the merge process"
+ * by calling: {@link #markTransientMergeDataInMergeProcess(Object mergeEntity)}
  * <p/>
  * The method {@link #getEntityCopyFromMergeEntity(Object mergeEntity)}} returns
  * the entity copy that corresponds with the provided merge entity.
@@ -94,6 +94,26 @@ import org.hibernate.event.spi.MergeEvent;
  * @author Gail Badner
  */
 public interface MergeOperationContext extends OperationContext {
+
+	/**
+	 * Returns true if the {@link org.hibernate.event.spi.MergeEventListener} is actively
+	 * performing or has already performed the merge operation on the specified merge entity.
+	 * <p/>
+	 * An entity is considered to be "in the merge process" if <code>mergeEntity</code>
+	 * was added using {@link #addMergeData(EntityStatus mergeEntityStatus, Object mergeEntity, Object entityCopy)},
+	 * or if added using {@link #addTransientMergeDataBeforeInMergeProcess(Object, Object)}
+	 * followed by {@link #markTransientMergeDataInMergeProcess}.
+	 *
+	 * @param mergeEntity - the merge entity; must be non-null.
+	 * returns true if <code>mergeEntity</code> was added using
+	 * {@link #addMergeData(EntityStatus mergeEntityStatus, Object mergeEntity, Object entityCopy)},
+	 * or if added using {@link #addTransientMergeDataBeforeInMergeProcess(Object, Object)}
+	 * followed by {@link #markTransientMergeDataInMergeProcess}; false, otherwise.
+	 * @throws IllegalArgumentException if <code>mergeEntity</code> is null.
+	 * @throws IllegalStateException if a merge operation is not currently
+	 * in progress.
+	 */
+	boolean isInMergeProcess(Object mergeEntity);
 
 	/**
 	 * Returns the entity copy associated with the specified merge Entity.
@@ -124,6 +144,22 @@ public interface MergeOperationContext extends OperationContext {
 	Object getMergeEntityFromEntityCopy(Object entityCopy);
 
 	/**
+	 * Gets the status of the merge entity. The status of the entity copy
+	 * may not be the same as for the merge entity (e.g., a transient
+	 * mergeEntity may have a corresponding entity copy that is persistent).
+	 *
+	 * @param mergeEntity the merge entity; must be non-null.
+	 * @return the status.
+	 *
+	 * @throws IllegalArgumentException if mergeEntity is null or
+	 * this {@link MergeOperationContext} does not contain
+	 * a cross-reference for <code>mergeEntity</code>.
+	 * @throws IllegalStateException if a merge operation is not currently
+	 * in progress.
+	 */
+	EntityStatus getMergeEntityStatus(Object mergeEntity);
+
+	/**
 	 * Associates the specified merge entity with the specified entity copy in this
 	 * {@link MergeOperationContext}. This method should only be used when the merge
 	 * entity is actively being merged (e.g., by
@@ -134,18 +170,21 @@ public interface MergeOperationContext extends OperationContext {
 	 * method is called, then <code>entityCopy</code> must be the same
 	 * as what is already associated with <code>mergeEntity</code>.
 	 *
+	 * @param mergeEntityStatus the merge entity status; must be non-null.
 	 * @param mergeEntity - the merge entity; must be non-null.
 	 * @param entityCopy - the entity copy; must be non-null.
 	 *
 	 * @return true, if the merge entity and entity copy cross-reference was added
 	 * to this {@link MergeOperationContext}; false, otherwise.
 	 *
-	 * @throws IllegalArgumentException if <code>mergeEntity</code> or <code>entityCopy</code> is null, or
-	 * <code>entityCopy</code> is not the same as the previous entity copy associated with <code>mergeEntity</code>
+	 * @throws IllegalArgumentException if <code>mergeEntityStatus</code>,
+	 * <code>mergeEntity</code> or <code>entityCopy</code> is null, or
+	 * <code>entityCopy</code> is not the same as the previous entity copy
+	 * associated with <code>mergeEntity</code>
 	 * @throws IllegalStateException if a merge operation is not currently
 	 * in progress.
 	 */
-	boolean addMergeData(Object mergeEntity, Object entityCopy);
+	boolean addMergeData(EntityStatus mergeEntityStatus, Object mergeEntity, Object entityCopy);
 
 	/**
 	 * Associates the specified merge entity with the specified entity copy in this
@@ -156,44 +195,38 @@ public interface MergeOperationContext extends OperationContext {
 	 * @param mergeEntity - the merge entity; must be non-null.
 	 * @param entityCopy - the entity copy; must be non-null.
 	 *
-	 * @return true, if the merge entity and entity copy cross-reference was added
-	 * to this {@link MergeOperationContext}; false, otherwise.
 	 * @throws IllegalArgumentException if <code>mergeEntity</code> or <code>entityCopy</code> is null, or
 	 * @throws IllegalStateException if {@link MergeOperationContext} already contains
 	 * <code>mergeEntity</code> or <code>entityCopy</code>, or if a merge operation is
 	 * not currently in progress.
 	 */
-	void addMergeDataBeforeInMergeProcess(Object mergeEntity, Object entityCopy);
+	void addTransientMergeDataBeforeInMergeProcess(Object mergeEntity, Object entityCopy);
 
 	/**
-	 * Returns true if the {@link org.hibernate.event.spi.MergeEventListener} is actively
-	 * performing or has already performed the merge operation on the specified merge entity.
+	 * Indicate that the listener is performing the merge operation on a transient
+	 * merge entity that had previously been added before it was in the merge
+	 * process.
 	 *
-	 * @param mergeEntity - the merge entity; must be non-null.
-	 * returns true if <code>mergeEntity</code> was added using {@link #addMergeData(Object, Object)},
-	 * or if added using {@link #addMergeDataBeforeInMergeProcess(Object, Object)}
-	 * followed by {@link #markMergeDataInMergeProcess}; false, otherwise.
-	 * @throws IllegalArgumentException if <code>mergeEntity</code> is null.
-	 * @throws IllegalStateException if a merge operation is not currently
-	 * in progress.
-	 */
-	boolean isInMergeProcess(Object mergeEntity);
-
-	/**
-	 * Indicate that the listener is performing the merge operation on the
 	 * specified merge entity.
 	 *
 	 * @param mergeEntity; the merge entity; must be non-null.
 	 * .
 	 * @throws IllegalArgumentException if <code>mergeEntity</code> is null.
-	 * @throws IllegalStateException if this MergeContext does not contain a a cross-reference for
-	 * <code>mergeEntity</code>, or if a merge operation is not currently
+	 * @throws IllegalStateException if the previously added merge entity is
+	 * already in the merge process, this MergeContext does not contain a
+	 * cross-reference for <code>mergeEntity</code>, or if a merge operation is not currently
 	 * in progress.
 	 */
-	void markMergeDataInMergeProcess(Object mergeEntity);
+	void markTransientMergeDataInMergeProcess(Object mergeEntity);
 
 	/**
 	 * Gets an unmodifiable collection of all associated merge entity / entity copy pairs.
+	 * If there more than 1 merge entity that is associated with the same entity copy, then
+	 * the returned collection will contain a separate {@link MergeData} element for each merge
+	 * entity.
+	 * <p/>
+	 * Teh collection will include {@link MergeData} for any merge entity / entity copy
+	 * pairs addded using {@link #addTransientMergeDataBeforeInMergeProcess(Object, Object)}.
 	 *
 	 * @return an unmodifiable collection of all associated merge entity / entity copy pairs.
 	 *

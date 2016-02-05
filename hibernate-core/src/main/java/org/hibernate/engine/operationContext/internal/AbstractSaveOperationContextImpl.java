@@ -37,12 +37,12 @@ public abstract class AbstractSaveOperationContextImpl<T extends AbstractEvent> 
 	}
 
 	@Override
-	public void doAfterSuccessfulOperation() {
+	protected void doAfterSuccessfulOperation() {
 		getSession().getActionQueue().checkNoUnresolvedActionsAfterOperation();
 		super.doAfterSuccessfulOperation();
 	}
 
 	final protected EventSource getSession() {
-		return getEvent().getSession();
+		return getOperationContextData().getSession();
 	}
 }

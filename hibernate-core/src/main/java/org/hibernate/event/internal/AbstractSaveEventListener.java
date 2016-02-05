@@ -7,7 +7,6 @@
 package org.hibernate.event.internal;
 
 import java.io.Serializable;
-import java.util.Map;
 
 import org.hibernate.LockMode;
 import org.hibernate.NonUniqueObjectException;
@@ -44,7 +43,7 @@ import org.hibernate.type.TypeHelper;
 public abstract class AbstractSaveEventListener extends AbstractReassociateEventListener {
 	private static final CoreMessageLogger LOG = CoreLogging.messageLogger( AbstractSaveEventListener.class );
 
-	public static enum EntityState {
+	public enum EntityState {
 		PERSISTENT, TRANSIENT, DETACHED, DELETED
 	}
 

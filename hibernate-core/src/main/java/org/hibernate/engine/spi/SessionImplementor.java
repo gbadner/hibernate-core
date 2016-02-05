@@ -100,7 +100,7 @@ public interface SessionImplementor extends Serializable, LobCreationContext, Wr
 	 * Get the context of the operation currently in progress.
 	 * @return
 	 */
-	OperationContext getOperationContext(OperationContextType operationContextType);
+	<T extends OperationContext> T getOperationContext(OperationContextType<T> operationContextType);
 
 	/**
 	 * Initialize the collection (if not already initialized)

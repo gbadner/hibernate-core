@@ -296,9 +296,9 @@ public abstract class EntityType extends AbstractType implements AssociationType
 		if ( original == null ) {
 			return null;
 		}
-		MergeOperationContext copyCache = (MergeOperationContext) session.getOperationContext(
-				OperationContextType.MERGE
-		);
+		// don't bother checking if merge operation is in progress
+		// since we're in the middle of a merge operation.
+		MergeOperationContext copyCache = session.getOperationContext( OperationContextType.MERGE );
 		final Object existingCopy = copyCache.getEntityCopyFromMergeEntity( original );
 		if ( existingCopy != null ) {
 			return existingCopy;
@@ -311,7 +311,7 @@ public abstract class EntityType extends AbstractType implements AssociationType
 					ForeignKeys.isTransient( associatedEntityName, original, Boolean.FALSE, session ) ) {
 				final Object copy = session.getEntityPersister( associatedEntityName, original )
 						.instantiate( null, session );
-				copyCache.addMergeDataBeforeInMergeProcess( original, copy );
+				copyCache.addTransientMergeDataBeforeInMergeProcess( original, copy );
 				return copy;
 			}
 			else {

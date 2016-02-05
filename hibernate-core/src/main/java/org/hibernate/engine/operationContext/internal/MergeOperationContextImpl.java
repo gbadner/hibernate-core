@@ -15,6 +15,7 @@ import org.jboss.logging.Logger;
 
 import org.hibernate.boot.registry.selector.spi.StrategySelector;
 import org.hibernate.engine.config.spi.ConfigurationService;
+import org.hibernate.engine.operationContext.spi.EntityStatus;
 import org.hibernate.engine.operationContext.spi.MergeData;
 import org.hibernate.engine.operationContext.spi.MergeOperationContext;
 import org.hibernate.engine.operationContext.spi.OperationContextType;
@@ -37,23 +38,20 @@ public class MergeOperationContextImpl extends AbstractSaveOperationContextImpl<
 	private EntityCopyObserver entityCopyObserver;
 
 	private Map<Object,MergeData> mergeEntityToMergeDataXref = new IdentityHashMap<Object,MergeData>(10);
-		// key is an entity to be merged;
-		// value is the associated managed entity (result) in the persistence context.
+		// key is an merge entity (passed to Session#merge);
+		// value is the MergeData containing the associated entity copy.
+		// (entity copy is ultimately managed in the persistence context).
 
-	private Map<Object,MergeData> entityCopyToMergeDataXref = new IdentityHashMap<Object,MergeData>( 10 );
-		// maintains the inverse of the mergeToManagedEntityXref for performance reasons.
-		// key is the managed entity result in the persistence context.
-		// value is the associated entity to be merged; if multiple
-		// representations of the same persistent entity are added to the MergeContext,
-		// value will be the most recently added merge entity that is
-		// associated with the managed entity.
+	private Map<Object,Object> entityCopyToMergeEntityXref = new IdentityHashMap<Object,Object>( 10 );
+		// for performance reasons, maintained to enable look ups by entity copy.
+		// key is the entity copy;
+		// value is the merge entity; if multiple representations of the same persistent entity
+		// are added to this MergeOperationContextImpl, then the value will contain the most
+		// recently added merge entity that is associated with the entity copy.
 
 	MergeOperationContextImpl() {
 		super( MergeEvent.class );
 	}
-
-	// key is a merge entity;
-	// value is a flag indicating if the merge entity is currently in the merge process.
 
 	@Override
 	public OperationContextType getOperationContextType() {
@@ -61,15 +59,15 @@ public class MergeOperationContextImpl extends AbstractSaveOperationContextImpl<
 	}
 
 	@Override
-	public void doBeforeOperation() {
+	protected void doBeforeOperation() {
 		if ( entityCopyObserver == null ) {
-			entityCopyObserver = createEntityCopyObserver( getEvent().getSession().getFactory() );
+			entityCopyObserver = createEntityCopyObserver( getOperationContextData().getSession().getFactory() );
 		}
 		super.doBeforeOperation();
 	}
 
 	@Override
-	public void doAfterSuccessfulOperation() {
+	protected void doAfterSuccessfulOperation() {
 		entityCopyObserver.topLevelMergeComplete( getSession() );
 		super.doAfterSuccessfulOperation();
 	}
@@ -93,12 +91,10 @@ public class MergeOperationContextImpl extends AbstractSaveOperationContextImpl<
 		return strategySelector.resolveStrategy( EntityCopyObserver.class, entityCopyObserverStrategy );
 	}
 
-	/**
-	 * Clears the MergeContext.
-	 */
+	@Override
 	public void clear() {
 		mergeEntityToMergeDataXref.clear();
-		entityCopyToMergeDataXref.clear();
+		entityCopyToMergeEntityXref.clear();
 		entityCopyObserver.clear();
 		super.clear();
 	}
@@ -119,79 +115,100 @@ public class MergeOperationContextImpl extends AbstractSaveOperationContextImpl<
 		if ( entityCopy == null ) {
 			throw new IllegalArgumentException( "entityCopy must be non-null" );
 		}
-		final MergeData mergeData = entityCopyToMergeDataXref.get( entityCopy );
-		return mergeData == null ? null : mergeData.getMergeEntity();
+		return entityCopyToMergeEntityXref.get( entityCopy );
 	}
 
 	@Override
-	public boolean addMergeData(Object mergeEntity, Object entityCopy) {
+	public EntityStatus getMergeEntityStatus(Object mergeEntity) {
 		checkIsValid();
-		if ( mergeEntity == null || entityCopy == null ) {
-			throw new IllegalArgumentException( "null merge and managed entities are not supported by " + getClass().getName() );
+		if ( mergeEntity == null ) {
+			throw new IllegalArgumentException( "mergeEntity must be non-null." );
 		}
+		final MergeDataImpl mergeData = (MergeDataImpl) mergeEntityToMergeDataXref.get( mergeEntity );
+		if ( mergeData == null ) {
+			throw new IllegalArgumentException( "mergeEntity has not been added as a merge entity" );
+		}
+		return mergeData.getMergeEntityStatus();
+	}
 
-		MergeDataImpl oldMergeDataByMergeEntity = (MergeDataImpl) mergeEntityToMergeDataXref.get( mergeEntity );
+	@Override
+	public boolean addMergeData(EntityStatus mergeEntityStatus, Object mergeEntity, Object entityCopy) {
+		checkIsValid();
+		if ( mergeEntityStatus == null || mergeEntity == null || entityCopy == null ) {
+			throw new IllegalArgumentException( "mergeEntityStatus, mergeEntity, and entityCopy must be non-null" );
+		}
+		final MergeDataImpl newMergeData = new MergeDataImpl( mergeEntityStatus, mergeEntity, entityCopy, true );
+		final MergeDataImpl oldMergeData = (MergeDataImpl) mergeEntityToMergeDataXref.put( mergeEntity, newMergeData );
 
-		if ( oldMergeDataByMergeEntity == null ) {
+		// If entityCopy already corresponds with a different merge entity, that means
+		// that there are multiple entities being merged that correspond with the same entity copy.
+		// In the following, the old merge entity will be replaced with mergeEntity in entityCopyToMergeEntityXref.
+		final Object oldMergeEntityFromEntityCopy = entityCopyToMergeEntityXref.put( entityCopy, mergeEntity );
+
+		if ( oldMergeData == null ) {
 			// this is a new mapping for mergeEntity in mergeEntityToMergeDataXref
-			// put a new MergeData into mergeEntityToMergeDataXref
-			final MergeDataImpl newMergeData = new MergeDataImpl( mergeEntity, entityCopy, true );
-			mergeEntityToMergeDataXref.put( mergeEntity, newMergeData );
-
-			// If entityCopy already corresponds with a different merge entity, that means
-			// that there are multiple entities being merged that correspond with managedEntity.
-			MergeData oldMergeDataByEntityCopy = entityCopyToMergeDataXref.get( entityCopy );
-			if  ( oldMergeDataByEntityCopy != null ) {
-				if ( mergeEntity == oldMergeDataByEntityCopy.getMergeEntity() ) {
+			if  ( oldMergeEntityFromEntityCopy != null ) {
+				if ( mergeEntity == oldMergeEntityFromEntityCopy ) {
 					throw new IllegalStateException(
-							"mergeEntityToMergeDataXref and entityCopyToMergeDataXref are out of sync."
+							"mergeEntityToMergeDataXref and entityCopyToMergeEntityXref are out of sync."
 					);
 				}
-				// oldMergeDataByEntityCopy was a different merge entity with the same corresponding entity copy;
+				// oldMergeEntityFromEntityCopy was a different merge entity with the same corresponding entity copy;
 				entityCopyObserver.entityCopyDetected(
 						entityCopy,
 						mergeEntity,
-						oldMergeDataByEntityCopy.getMergeEntity(),
+						oldMergeEntityFromEntityCopy,
 						getSession()
 				);
 			}
-
-			// In the following, oldMergeDataByEntityCopy will be replaced with newMergeData in entityCopyToMergeDataXref.
-			entityCopyToMergeDataXref.put( entityCopy, newMergeData );
 		}
 		else {
-			// mergeEntity was already mapped in mergeToManagedEntityXref
-			if ( oldMergeDataByMergeEntity.getEntityCopy() != entityCopy ) {
-				throw new IllegalArgumentException(
+			// mergeEntity was already mapped in mergeEntityToMergeDataXref
+			if ( oldMergeData.getEntityCopy() != entityCopy ) {
+				throw new IllegalStateException(
 						"Error occurred while storing a merge Entity " + printEntity( mergeEntity )
-								+ ". It was previously associated with managed entity " + printEntity( oldMergeDataByMergeEntity.getEntityCopy() )
-								+ ". Attempted to replace managed entity with " + printEntity( entityCopy )
+								+ ". It was previously associated with entity copy" + printEntity( oldMergeData.getEntityCopy() )
+								+ ". Attempted to replace entity copy with " + printEntity( entityCopy )
 				);
 			}
-			if ( !oldMergeDataByMergeEntity.isInMergeProcess() ) {
-				oldMergeDataByMergeEntity.markInMergeProcess();
+			if ( oldMergeData.getMergeEntityStatus() != mergeEntityStatus ) {
+				throw new IllegalStateException( "" +
+						String.format(
+								"Merge entity status was already set to [%s]; attempt to change it to [%s].",
+								oldMergeData.getMergeEntityStatus(),
+								mergeEntityStatus
+						)
+				);
+			}
+			if ( !oldMergeData.isInMergeProcess() ) {
+				throw new IllegalStateException(
+						"The merge entity was already added using addTransientMergeDataBeforeInMergeProcess();" +
+								"use markTransientMergeDataInMergeProcess() to indicate it is now in the merge process."
+				);
 			}
 		}
 
-		return oldMergeDataByMergeEntity == null;
+		return oldMergeData == null;
 	}
 
 	@Override
-	public void addMergeDataBeforeInMergeProcess(Object mergeEntity, Object entityCopy) {
+	public void addTransientMergeDataBeforeInMergeProcess(Object mergeEntity, Object entityCopy) {
+		checkIsValid();
 		if ( mergeEntity == null || entityCopy == null ) {
 			throw new IllegalArgumentException( "mergeEntity and entityCopy must be non-null." );
 		}
-		final MergeDataImpl transientMergeData = new MergeDataImpl( mergeEntity, entityCopy, false );
+		final MergeDataImpl transientMergeData = new MergeDataImpl( EntityStatus.TRANSIENT, mergeEntity, entityCopy, false );
 		if ( mergeEntityToMergeDataXref.put( mergeEntity, transientMergeData ) != null ) {
 			throw new IllegalStateException( "mergeEntityToMergeDataXref already contained data for mergeData." );
 		}
-		if ( entityCopyToMergeDataXref.put( entityCopy, transientMergeData ) != null ) {
-			throw new IllegalStateException( "entityCopyToMergeDataXref already contained data for entityCopy" );
+		if ( entityCopyToMergeEntityXref.put( entityCopy, mergeEntity ) != null ) {
+			throw new IllegalStateException( "entityCopyToMergeEntityXref already contained data for entityCopy" );
 		}
 	}
 
 	@Override
 	public boolean isInMergeProcess(Object mergeEntity) {
+		checkIsValid();
 		if ( mergeEntity == null ) {
 			throw new IllegalArgumentException( "mergeEntity must be non-null." );
 		}
@@ -200,7 +217,8 @@ public class MergeOperationContextImpl extends AbstractSaveOperationContextImpl<
 	}
 
 	@Override
-	public void markMergeDataInMergeProcess(Object mergeEntity) {
+	public void markTransientMergeDataInMergeProcess(Object mergeEntity) {
+		checkIsValid();
 		if ( mergeEntity == null ) {
 			throw new IllegalArgumentException( "mergeEntity must be non-null." );
 		}
@@ -210,11 +228,20 @@ public class MergeOperationContextImpl extends AbstractSaveOperationContextImpl<
 					"mergeEntityToMergeDataXref does not contain mergeEntity."
 			);
 		}
+		if ( mergeDataImpl.isInMergeProcess() ) {
+			throw new IllegalStateException( "mergeEntity was already in the merge process." );
+		}
+		if ( mergeDataImpl.getMergeEntityStatus() != EntityStatus.TRANSIENT ) {
+			throw new IllegalStateException(
+					"mergeEntity status is not 'transient'; it was " + mergeDataImpl.getMergeEntityStatus().name()
+			);
+		}
 		mergeDataImpl.markInMergeProcess();
 	}
 
 	@Override
 	public Collection<MergeData> getAllMergeData() {
+		checkIsValid();
 		return Collections.unmodifiableCollection( mergeEntityToMergeDataXref.values() );
 	}
 
@@ -222,7 +249,6 @@ public class MergeOperationContextImpl extends AbstractSaveOperationContextImpl<
 		if ( getSession().getPersistenceContext().getEntry( entity ) != null ) {
 			return MessageHelper.infoString( getSession().getEntityName( entity ), getSession().getIdentifier( entity ) );
 		}
-		// Entity was not found in current persistence context. Use Object#toString() method.
 		return "[" + entity + "]";
 	}
 }

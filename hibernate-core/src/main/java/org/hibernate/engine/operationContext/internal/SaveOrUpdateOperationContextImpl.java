@@ -26,7 +26,7 @@ public class SaveOrUpdateOperationContextImpl extends AbstractSaveOperationConte
 
 	@Override
 	public OperationContextType getOperationContextType() {
-		return OperationContextType.SAVE_UPDATE;
+		return OperationContextType.SAVE_OR_UPDATE;
 	}
 
 	@Override

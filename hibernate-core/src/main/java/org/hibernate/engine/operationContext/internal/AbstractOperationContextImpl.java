@@ -6,28 +6,27 @@
  */
 package org.hibernate.engine.operationContext.internal;
 
-import org.hibernate.engine.operationContext.spi.OperationContext;
 
 /**
- * An abstract implementation for EventOperationContextImplementor to be
- * used as a base class for an {@link OperationContext} for an event.
+ * An abstract implementation to be used as a base class for an
+ * {@link OperationContextImplementor}.
  *
  * @author Gail Badner
  */
 public abstract class AbstractOperationContextImpl<T>
 		implements OperationContextImplementor<T> {
-	private T event;
+	private T operationContextData;
 
-	protected AbstractOperationContextImpl(Class<T> eventClass) {
-		if ( eventClass == null ) {
-			throw new IllegalArgumentException( "eventClass must be non-null" );
+	protected AbstractOperationContextImpl(Class<T> operationContextDataClass) {
+		if ( operationContextDataClass == null ) {
+			throw new IllegalArgumentException( "operationContextDataClass must be non-null" );
 		}
 	}
 
 	@Override
-	public final void beforeOperation(T event) {
-		if ( event == null ) {
-			throw new IllegalArgumentException( "event must be non-null" );
+	public final void beforeOperation(T operationContextData) {
+		if ( operationContextData == null ) {
+			throw new IllegalArgumentException( "operationContextData must be non-null" );
 		}
 		if ( isInProgress() ) {
 			throw new IllegalStateException(
@@ -37,9 +36,9 @@ public abstract class AbstractOperationContextImpl<T>
 					)
 			);
 		}
-		// this.event must be set before calling doBeforeOperationChecks()
-		// so it is available when implementations call #getEvent().
-		this.event = event;
+		// this.operationContextData must be set before calling doBeforeOperationChecks()
+		// so it is available when implementations call #getOperationContextData().
+		this.operationContextData = operationContextData;
 		doBeforeOperation();
 	}
 
@@ -52,14 +51,14 @@ public abstract class AbstractOperationContextImpl<T>
 	}
 
 	@Override
-	public final void afterOperation(T event, boolean success) {
-		if ( event == null ) {
-			throw new IllegalArgumentException( "event must be non-null" );
+	public final void afterOperation(T operationContextData, boolean success) {
+		if ( operationContextData == null ) {
+			throw new IllegalArgumentException( "operationContextData must be non-null" );
 		}
 		checkIsValid();
-		if ( this.event != event ) {
+		if ( this.operationContextData != operationContextData ) {
 			throw new IllegalStateException(
-					String.format( "Inconsistent event for OperationContext [%s]", getOperationContextType() )
+					String.format( "Inconsistent operationContextData for OperationContext [%s]", getOperationContextType() )
 			);
 		}
 		try {
@@ -80,19 +79,19 @@ public abstract class AbstractOperationContextImpl<T>
 	protected void doAfterSuccessfulOperation() {
 	}
 
-	protected final T getEvent() {
+	protected final T getOperationContextData() {
 		checkIsValid();
-		return event;
+		return operationContextData;
 	}
 
 	@Override
 	public void clear() {
-		event = null;
+		operationContextData = null;
 	}
 
 	@Override
 	public boolean isInProgress() {
-		return event != null;
+		return operationContextData != null;
 	}
 
 	protected void checkIsValid() {

@@ -72,6 +72,7 @@ import org.hibernate.engine.jdbc.LobCreator;
 import org.hibernate.engine.jdbc.NonContextualLobCreator;
 import org.hibernate.engine.jdbc.internal.JdbcCoordinatorImpl;
 import org.hibernate.engine.jdbc.spi.JdbcCoordinator;
+import org.hibernate.engine.operationContext.internal.OperationExecutor;
 import org.hibernate.engine.query.spi.FilterQueryPlan;
 import org.hibernate.engine.query.spi.HQLQueryPlan;
 import org.hibernate.engine.query.spi.NativeSQLQueryPlan;
@@ -629,7 +630,7 @@ public final class SessionImpl extends AbstractSessionImpl implements EventSourc
 	}
 
 	@Override
-	public OperationContext getOperationContext(OperationContextType operationContextType) {
+	public <T extends OperationContext> T getOperationContext(OperationContextType<T> operationContextType) {
 		return operationContextManager.getOperationContextInProgress( operationContextType );
 	}
 
@@ -645,40 +646,23 @@ public final class SessionImpl extends AbstractSessionImpl implements EventSourc
 		fireSaveOrUpdate( new SaveOrUpdateEvent( entityName, obj, this ), EventType.SAVE_UPDATE );
 	}
 
-	private void fireSaveOrUpdate(SaveOrUpdateEvent event, EventType<SaveOrUpdateEventListener> actualEventType) {
+	private void fireSaveOrUpdate(final SaveOrUpdateEvent event, final EventType<SaveOrUpdateEventListener> actualEventType) {
 		errorIfClosed();
 		checkTransactionSynchStatus();
-		if ( !operationContextManager.isOperationInProgress( OperationContextType.SAVE_UPDATE ) ) {
-			fireSaveOrUpdateTopLevel( event, actualEventType );
-			return;  // early return
-		}
-		if ( TRACE_ENABLED ) {
-			LOG.tracef(
-					"%s operation cascade level: %d",
-					actualEventType.eventName(),
-					getPersistenceContext().getCascadeLevel() );
-		}
-		for ( SaveOrUpdateEventListener listener : listeners( actualEventType ) ) {
-			listener.onSaveOrUpdate( event );
-		}
-		delayedAfterCompletion();
-	}
-
-	private void fireSaveOrUpdateTopLevel(SaveOrUpdateEvent event, EventType<SaveOrUpdateEventListener> actualEventType) {
-		errorIfClosed();
-		checkTransactionSynchStatus();
-		operationContextManager.beforeSaveOrUpdateOperation( event );
-		boolean success = false;
-		try {
-			for ( SaveOrUpdateEventListener listener : listeners( actualEventType ) ) {
-				listener.onSaveOrUpdate( event );
+		final OperationExecutor<SaveOrUpdateEvent> executor = new OperationExecutor<SaveOrUpdateEvent>() {
+			@Override
+			public SaveOrUpdateEvent getOperationContextData() {
+				return event;
 			}
-			delayedAfterCompletion();
-			success = true;
-		}
-		finally {
-			operationContextManager.afterSaveOrUpdateOperation( event, success );
-		}
+			@Override
+			public void execute() {
+				for ( SaveOrUpdateEventListener listener : listeners( actualEventType ) ) {
+					listener.onSaveOrUpdate( event );
+				}
+				delayedAfterCompletion();
+			}
+		};
+		operationContextManager.saveOrUpdate( executor );
 	}
 
 	private <T> Iterable<T> listeners(EventType<T> type) {
@@ -741,40 +725,23 @@ public final class SessionImpl extends AbstractSessionImpl implements EventSourc
 		fireLock( new LockEvent( object, options, this ) );
 	}
 
-	private void fireLock(LockEvent event) {
+	private void fireLock(final LockEvent event) {
 		errorIfClosed();
 		checkTransactionSynchStatus();
-		if ( !operationContextManager.isOperationInProgress( OperationContextType.LOCK ) ) {
-			fireLockTopLevel( event );
-			return;// early return
-		}
-		else {
-			LOG.tracef(
-					"%s operation cascade level: %d",
-					EventType.LOCK.eventName(),
-					getPersistenceContext().getCascadeLevel() );
-		}
-		for ( LockEventListener listener : listeners( EventType.LOCK ) ) {
-			listener.onLock( event );
-		}
-		delayedAfterCompletion();
-	}
-
-	private void fireLockTopLevel(LockEvent event) {
-		errorIfClosed();
-		checkTransactionSynchStatus();
-		operationContextManager.beforeLockOperation(  event );
-		boolean success = false;
-		try {
-			for ( LockEventListener listener : listeners( EventType.LOCK ) ) {
-				listener.onLock( event );
+		final OperationExecutor<LockEvent> executor = new OperationExecutor<LockEvent>() {
+			@Override
+			public LockEvent getOperationContextData() {
+				return event;
 			}
-			delayedAfterCompletion();
-			success = true;
-		}
-		finally {
-			operationContextManager.afterLockOperation( event, success );
-		}
+			@Override
+			public void execute() {
+				for ( LockEventListener listener : listeners( EventType.LOCK ) ) {
+					listener.onLock( event );
+				}
+				delayedAfterCompletion();
+			}
+		};
+		operationContextManager.lock( executor );
 	}
 
 	// persist() operations ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -794,44 +761,24 @@ public final class SessionImpl extends AbstractSessionImpl implements EventSourc
 		persist( entityName, object );
 	}
 
-	private void firePersist(PersistEvent event, EventType<PersistEventListener> actualEventType) {
+	private void firePersist(final PersistEvent event, final EventType<PersistEventListener> actualEventType) {
 		errorIfClosed();
 		checkTransactionSynchStatus();
-		if ( !operationContextManager.isOperationInProgress( OperationContextType.PERSIST ) ) {
-			firePersistTopLevel( event, actualEventType );
-			return;  // early return
-		}
-		else {
-			if ( TRACE_ENABLED ) {
-				LOG.tracef(
-						"%s operation cascade level: %d",
-						actualEventType.eventName(),
-						getPersistenceContext().getCascadeLevel() );
+		final OperationExecutor<PersistEvent> executor = new OperationExecutor<PersistEvent>() {
+			@Override
+			public PersistEvent getOperationContextData() {
+				return event;
 			}
-		}
-		for ( PersistEventListener listener : listeners( actualEventType ) ) {
-			listener.onPersist( event );
-		}
-		delayedAfterCompletion();
-	}
-
-	private void firePersistTopLevel(PersistEvent event, EventType<PersistEventListener> actualEventType) {
-		errorIfClosed();
-		checkTransactionSynchStatus();
-		operationContextManager.beforePersistOperation( event );
-		boolean success = false;
-		try {
-			for ( PersistEventListener listener : listeners( actualEventType ) ) {
-				listener.onPersist( event );
+			@Override
+			public void execute() {
+				for ( PersistEventListener listener : listeners( actualEventType ) ) {
+					listener.onPersist( event );
+				}
+				delayedAfterCompletion();
 			}
-			delayedAfterCompletion();
-			success = true;
-		}
-		finally {
-			operationContextManager.afterPersistOperation( event, success );
-		}
+		};
+		operationContextManager.persist( executor );
 	}
-
 
 	// persistOnFlush() operations ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -868,40 +815,23 @@ public final class SessionImpl extends AbstractSessionImpl implements EventSourc
 		fireMerge( new MergeEvent( entityName, object, this ) );
 	}
 
-	private Object fireMerge(MergeEvent event) {
+	private Object fireMerge(final MergeEvent event) {
 		errorIfClosed();
 		checkTransactionSynchStatus();
-		if ( !operationContextManager.isOperationInProgress( OperationContextType.MERGE ) ) {
-			return fireMergeTopLevel( event ); // early return
-		}
-		else {
-			LOG.tracef(
-					"%s operation cascade level: %d",
-					EventType.MERGE.eventName(),
-					getPersistenceContext().getCascadeLevel() );
-		}
-		for ( MergeEventListener listener : listeners( EventType.MERGE ) ) {
-			listener.onMerge( event );
-		}
-		delayedAfterCompletion();
-		return event.getResult();
-	}
-
-	private Object fireMergeTopLevel(MergeEvent event) {
-		errorIfClosed();
-		checkTransactionSynchStatus();
-		operationContextManager.beforeMergeOperation( event );
-		boolean success = false;
-		try {
-			for ( MergeEventListener listener : listeners( EventType.MERGE ) ) {
-				listener.onMerge( event );
+		final OperationExecutor<MergeEvent> executor = new OperationExecutor<MergeEvent>() {
+			@Override
+			public MergeEvent getOperationContextData() {
+				return event;
 			}
-			delayedAfterCompletion();
-			success = true;
-		}
-		finally {
-			operationContextManager.afterMergeOperation( event, success );
-		}
+			@Override
+			public void execute() {
+				for ( MergeEventListener listener : listeners( EventType.MERGE ) ) {
+					listener.onMerge( event );
+				}
+				delayedAfterCompletion();
+			}
+		};
+		operationContextManager.merge( executor );
 		return event.getResult();
 	}
 
@@ -972,40 +902,23 @@ public final class SessionImpl extends AbstractSessionImpl implements EventSourc
 		);
 	}
 
-	private void fireDelete(DeleteEvent event) {
+	private void fireDelete(final DeleteEvent event) {
 		errorIfClosed();
 		checkTransactionSynchStatus();
-		if ( !operationContextManager.isOperationInProgress( OperationContextType.DELETE ) ) {
-			fireDeleteTopLevel( event );
-			return; // early return
-		}
-		else {
-			LOG.tracef(
-					"%s operation cascade level: %d",
-					EventType.DELETE.eventName(),
-					getPersistenceContext().getCascadeLevel() );
-		}
-		for ( DeleteEventListener listener : listeners( EventType.DELETE ) ) {
-			listener.onDelete( event );
-		}
-		delayedAfterCompletion();
-	}
-
-	private void fireDeleteTopLevel(DeleteEvent event) {
-		errorIfClosed();
-		checkTransactionSynchStatus();
-		operationContextManager.beforeDeleteOperation( event );
-		boolean success = false;
-		try {
-			for ( DeleteEventListener listener : listeners( EventType.DELETE ) ) {
-				listener.onDelete( event );
+		final OperationExecutor<DeleteEvent> executor = new OperationExecutor<DeleteEvent>() {
+			@Override
+			public DeleteEvent getOperationContextData() {
+				return event;
 			}
-			delayedAfterCompletion();
-			success = true;
-		}
-		finally {
-			operationContextManager.afterDeleteOperation( event, success );
-		}
+			@Override
+			public void execute() {
+				for ( DeleteEventListener listener : listeners( EventType.DELETE ) ) {
+					listener.onDelete( event );
+				}
+				delayedAfterCompletion();
+			}
+		};
+		operationContextManager.delete( executor );
 	}
 
 
@@ -1259,41 +1172,23 @@ public final class SessionImpl extends AbstractSessionImpl implements EventSourc
 		refresh( entityName, object );
 	}
 
-	private void fireRefresh(RefreshEvent event) {
+	private void fireRefresh(final RefreshEvent event) {
 		errorIfClosed();
 		checkTransactionSynchStatus();
-		if ( !operationContextManager.isOperationInProgress( OperationContextType.REFRESH ) ) {
-			fireRefreshTopLevel( event );
-			return; // early return
-		}
-		else {
-			LOG.tracef(
-					"%s operation cascade level: %d",
-					EventType.REFRESH.eventName(),
-					getPersistenceContext().getCascadeLevel() );
-		}
-		for ( RefreshEventListener listener : listeners( EventType.REFRESH ) ) {
-			listener.onRefresh( event );
-		}
-		delayedAfterCompletion();
-	}
-
-	private void fireRefreshTopLevel(RefreshEvent event) {
-		errorIfClosed();
-		checkTransactionSynchStatus();
-		operationContextManager.beforeRefreshOperation( event );
-		boolean success = false;
-		try {
-			for ( RefreshEventListener listener : listeners( EventType.REFRESH ) ) {
-				listener.onRefresh( event );
+		final OperationExecutor<RefreshEvent> executor = new OperationExecutor<RefreshEvent>() {
+			@Override
+			public RefreshEvent getOperationContextData() {
+				return event;
 			}
-			delayedAfterCompletion();
-			delayedAfterCompletion();
-			success = true;
-		}
-		finally {
-			operationContextManager.afterRefreshOperation( event, success );
-		}
+			@Override
+			public void execute() {
+				for ( RefreshEventListener listener : listeners( EventType.REFRESH ) ) {
+					listener.onRefresh( event );
+				}
+				delayedAfterCompletion();
+			}
+		};
+		operationContextManager.refresh( executor );
 	}
 
 
@@ -1301,49 +1196,32 @@ public final class SessionImpl extends AbstractSessionImpl implements EventSourc
 
 	@Override
 	public void replicate(Object obj, ReplicationMode replicationMode) throws HibernateException {
-		fireReplicate( replicationMode, new ReplicateEvent( obj, replicationMode, this ) );
+		fireReplicate( new ReplicateEvent( obj, replicationMode, this ) );
 	}
 
 	@Override
 	public void replicate(String entityName, Object obj, ReplicationMode replicationMode)
 			throws HibernateException {
-		fireReplicate( replicationMode, new ReplicateEvent( entityName, obj, replicationMode, this ) );
+		fireReplicate( new ReplicateEvent( entityName, obj, replicationMode, this ) );
 	}
 
-	private void fireReplicate(ReplicationMode replicationMode, ReplicateEvent event) {
+	private void fireReplicate(final ReplicateEvent event) {
 		errorIfClosed();
 		checkTransactionSynchStatus();
-		if ( !operationContextManager.isOperationInProgress( OperationContextType.REPLICATE ) ) {
-			fireTopLevelReplicate( replicationMode, event );
-			return; // early return
-		}
-		else {
-			LOG.tracef(
-					"%s operation cascade level: %d",
-					EventType.REPLICATE.eventName(),
-					getPersistenceContext().getCascadeLevel() );
-		}
-		for ( ReplicateEventListener listener : listeners( EventType.REPLICATE ) ) {
-			listener.onReplicate( event );
-		}
-		delayedAfterCompletion();
-	}
-
-	private void fireTopLevelReplicate(ReplicationMode replicationMode, ReplicateEvent event) {
-		errorIfClosed();
-		checkTransactionSynchStatus();
-		operationContextManager.beforeReplicateOperation( event );
-		boolean success = false;
-		try {
-			for ( ReplicateEventListener listener : listeners( EventType.REPLICATE ) ) {
-				listener.onReplicate( event );
+		final OperationExecutor<ReplicateEvent> executor = new OperationExecutor<ReplicateEvent>() {
+			@Override
+			public ReplicateEvent getOperationContextData() {
+				return event;
 			}
-			delayedAfterCompletion();
-			success = true;
-		}
-		finally {
-			operationContextManager.afterReplicateOperation( event, success );
-		}
+			@Override
+			public void execute() {
+				for ( ReplicateEventListener listener : listeners( EventType.REPLICATE ) ) {
+					listener.onReplicate( event );
+				}
+				delayedAfterCompletion();
+			}
+		};
+		operationContextManager.replicate( executor );
 	}
 
 

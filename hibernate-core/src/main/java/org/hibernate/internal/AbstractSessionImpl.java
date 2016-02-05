@@ -106,7 +106,7 @@ public abstract class AbstractSessionImpl
 	}
 
 	@Override
-	public OperationContext getOperationContext(OperationContextType operationContextType) {
+	public <T extends OperationContext> T getOperationContext(OperationContextType<T> operationContextType) {
 		return null;
 	}
 

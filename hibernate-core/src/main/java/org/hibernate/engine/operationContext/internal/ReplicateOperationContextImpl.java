@@ -23,7 +23,7 @@ public class ReplicateOperationContextImpl extends AbstractOperationContextImpl<
 	@Override
 	public ReplicationMode getReplicationMode() {
 		checkIsValid();
-		return getEvent().getReplicationMode();
+		return getOperationContextData().getReplicationMode();
 	}
 
 	@Override

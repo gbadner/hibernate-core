@@ -7,10 +7,9 @@
 package org.hibernate.engine.operationContext.internal;
 
 import org.hibernate.engine.operationContext.spi.OperationContext;
-import org.hibernate.event.spi.AbstractEvent;
 
 /**
- * An interface for managing an OperationContext for an event.
+ * An interface for managing an OperationContext.
  *
  * @author Gail Badner
  */
@@ -25,14 +24,15 @@ public interface OperationContextImplementor<T> extends OperationContext {
 	 * <p/>
 	 * After this method completes, {@link #isInProgress} should return {@code true}.
 	 *
-	 * @param event - the "top-level" event being processed; must be non-null.
+	 * @param operationContextData - the "top-level" operationContextData being processed;
+	 * must be non-null.
 	 *
 	 * @throws IllegalStateException if the operation is already in progress
 	 * (i.e., {@link #isInProgress()} returns {@code true}), or if an
 	 * integrity check fails.
-	 * @throws IllegalArgumentException if {@code event} is null.
+	 * @throws IllegalArgumentException if {@code operationContextData} is null.
 	 */
-	void beforeOperation(T event);
+	void beforeOperation(T operationContextData);
 
 	/**
 	 * Called just after the operation completes. This method should
@@ -46,16 +46,16 @@ public interface OperationContextImplementor<T> extends OperationContext {
 	 * <p/>
 	 * After this method completes, {@link #isInProgress} should return {@code true}.
 	 *
-	 * @param event - the same event as used when {@link #beforeOperation(AbstractEvent)}
-	 *                was called.
+	 * @param operationContextData - the same operationContextData as used when
+	 * {@link #beforeOperation was called.
 	 * @param success - {@code true}, if the operation was successful; {@code false}, otherwise.
 	 *
-	 * @throws IllegalStateException if {@code event} is not the same event as
-	 * used when {@link #beforeOperation(AbstractEvent)} was called, or if an
-	 * integrity check fails.
-	 * @throws IllegalArgumentException if {@code event} is null.
+	 * @throws IllegalStateException if the operation is not in progress,
+	 * {@code operationContextData} is not the same operationContextData as used
+	 * when {@link #beforeOperation} was called, or if an integrity check fails.
+	 * @throws IllegalArgumentException if {@code operationContextData} is null.
 	 */
-	void afterOperation(T event, boolean success);
+	void afterOperation(T operationContextData, boolean success);
 
 	/**
 	 * Clears operation-specific data. After the method executes {@link #isInProgress()}

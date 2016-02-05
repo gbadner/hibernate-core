@@ -26,7 +26,7 @@ public class LockOperationContextImpl extends AbstractOperationContextImpl<LockE
 	@Override
 	public LockOptions getLockOptions() {
 		checkIsValid();
-		return getEvent().getLockOptions();
+		return getOperationContextData().getLockOptions();
 	}
 
 	@Override

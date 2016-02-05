@@ -211,6 +211,8 @@ public class DefaultPersistEventListener extends AbstractSaveEventListener imple
 	}
 
 	private static PersistOperationContext getPersistOperationContext(EventSource source) {
-		return (PersistOperationContext) source.getOperationContext( OperationContextType.PERSIST );
+		// don't bother checking if persist operation is in progress
+		// since we're in the middle of a persist operation.
+		return source.getOperationContext( OperationContextType.PERSIST );
 	}
 }
