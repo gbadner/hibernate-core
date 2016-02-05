@@ -29,6 +29,9 @@ public class MergeDataImpl implements MergeData {
 			Object mergeEntity,
 			Object entityCopy,
 			boolean isInMergeProcess) {
+		if ( mergeEntityStatus == null || mergeEntity == null || entityCopy == null ) {
+			throw new IllegalArgumentException( "mergeEntityStatus, mergeEntity, and entityCopy must be non-null." );
+		}
 		this.mergeEntityStatus = mergeEntityStatus;
 		this.mergeEntity = mergeEntity;
 		this.entityCopy = entityCopy;
