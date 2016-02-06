@@ -21,15 +21,17 @@ import org.hibernate.event.spi.RefreshEvent;
  * {@code SessionImplementor#isOperationInProgress(OperationContextType.REFRESH)}
  * will return true if a refresh operation is in progress.
  *
+ * @see org.hibernate.event.spi.EventSource#refresh(Object)
+ * @see org.hibernate.engine.spi.SessionImplementor#isOperationInProgress(OperationContextType)
+ * @see org.hibernate.engine.spi.SessionImplementor#getOperationContext(OperationContextType)
+ *
+ *
  * @author Gail Badner
  */
 public interface RefreshOperationContext extends OperationContext {
 	/**
 	 * Add an entity to a cache of entities that have
 	 * have already been visited (to avoid infinite recursion).
-	 * <p/>
-	 * It is only valid to call this method if the refresh operation is currently
-	 * in progress (i.e., when {@link #isInProgress()} returns true).
 	 *
 	 * @param entity
 	 * @return true, if the refreshed entity was added to the cache (because

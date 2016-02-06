@@ -18,7 +18,7 @@ import org.hibernate.event.spi.DeleteEvent;
  *
  * @author Gail Badner
  */
-public class DeleteOperationContextImpl extends AbstractOperationContextImpl<DeleteEvent>
+public class DeleteOperationContextImpl extends AbstractManageableOperationContextImpl<DeleteEvent>
 		implements org.hibernate.engine.operationContext.spi.DeleteOperationContext {
 	// A cache of already visited transient entities (to avoid infinite recursion)
 	private Map<Object, Object> transientEntities = new IdentityHashMap<Object,Object>(10);

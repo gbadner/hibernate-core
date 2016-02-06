@@ -187,12 +187,12 @@ public interface MergeOperationContext extends OperationContext {
 	boolean addMergeData(EntityStatus mergeEntityStatus, Object mergeEntity, Object entityCopy);
 
 	/**
-	 * Associates the specified merge entity with the specified entity copy in this
-	 * {@link MergeOperationContext}. This method should only be used in cases
+	 * Associates the specified transient merge entity with the specified entity copy
+	 * in this {@link MergeOperationContext}. This method should only be used in cases
 	 * where the entity copy needs to be created before the merge operation cascades to
 	 * merge entity.
 	 * <p/>
-	 * @param mergeEntity - the merge entity; must be non-null.
+	 * @param mergeEntity - the transient merge entity; must be non-null.
 	 * @param entityCopy - the entity copy; must be non-null.
 	 *
 	 * @throws IllegalArgumentException if <code>mergeEntity</code> or <code>entityCopy</code> is null, or

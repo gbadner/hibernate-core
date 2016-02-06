@@ -16,7 +16,7 @@ import org.hibernate.event.spi.LockEvent;
  *
  * @author Gail Badner
  */
-public class LockOperationContextImpl extends AbstractOperationContextImpl<LockEvent>
+public class LockOperationContextImpl extends AbstractManageableOperationContextImpl<LockEvent>
 		implements org.hibernate.engine.operationContext.spi.LockOperationContext {
 
 	LockOperationContextImpl() {

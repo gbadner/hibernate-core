@@ -21,6 +21,8 @@ import org.hibernate.event.spi.DeleteEvent;
  * <p/>
  *
  * @see org.hibernate.event.spi.EventSource#delete(Object)
+ * @see org.hibernate.engine.spi.SessionImplementor#isOperationInProgress(OperationContextType)
+ * @see org.hibernate.engine.spi.SessionImplementor#getOperationContext(OperationContextType)
  *
  * @author Gail Badner
  */
@@ -30,9 +32,9 @@ public interface DeleteOperationContext extends OperationContext {
 	 * have already been visited (to avoid infinite recursion).
 	 * <p/>
 	 * It is only valid to call this method if the delete operation is currently
-	 * in progress (i.e., when {@link #isInProgress()} returns true).
+	 * in progress.
 	 *
-	 * @param transientEntity
+	 * @param transientEntity - transient entity
 	 * @return true, if the transient entity was added to the cache (because
 	 * the cache did not already contain it); false, otherwise.
 	 * @throws IllegalStateException if a delete operation is not currently

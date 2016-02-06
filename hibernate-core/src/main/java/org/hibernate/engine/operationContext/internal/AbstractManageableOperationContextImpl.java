@@ -9,15 +9,15 @@ package org.hibernate.engine.operationContext.internal;
 
 /**
  * An abstract implementation to be used as a base class for an
- * {@link OperationContextImplementor}.
+ * {@link ManageableOperationContext}.
  *
  * @author Gail Badner
  */
-public abstract class AbstractOperationContextImpl<T>
-		implements OperationContextImplementor<T> {
+public abstract class AbstractManageableOperationContextImpl<T>
+		implements ManageableOperationContext<T> {
 	private T operationContextData;
 
-	protected AbstractOperationContextImpl(Class<T> operationContextDataClass) {
+	protected AbstractManageableOperationContextImpl(Class<T> operationContextDataClass) {
 		if ( operationContextDataClass == null ) {
 			throw new IllegalArgumentException( "operationContextDataClass must be non-null" );
 		}

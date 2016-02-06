@@ -7,9 +7,20 @@
 package org.hibernate.engine.operationContext.internal;
 
 /**
+ * An interface for executing an operation.
+ *
  * @author Gail Badner
  */
 public interface OperationExecutor<T> {
+	/**
+	 * Gets data required by the {@link OperationContext}.
+	 *
+	 * @return data required by the {@link OperationContext}
+	 */
 	T getOperationContextData();
+
+	/**
+	 * Executes the operation.
+	 */
 	void execute();
 }

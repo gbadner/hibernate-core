@@ -25,19 +25,19 @@ import org.hibernate.event.spi.SaveOrUpdateEvent;
  */
 public class OperationContextManager {
 
-	private final Map<OperationContextType, OperationContextImplementor> cachedOperationContextByType =
-			new HashMap<OperationContextType, OperationContextImplementor>( 7 );
+	private final Map<OperationContextType, ManageableOperationContext> cachedOperationContextByType =
+			new HashMap<OperationContextType, ManageableOperationContext>( 7 );
 
 	public boolean isOperationInProgress(OperationContextType operationContextType) {
 		if ( operationContextType == null ) {
 			throw new IllegalArgumentException( "operationContextType must be non-null." );
 		}
-		OperationContextImplementor operationContext = cachedOperationContextByType.get( operationContextType );
+		ManageableOperationContext operationContext = cachedOperationContextByType.get( operationContextType );
 		return operationContext != null && operationContext.isInProgress();
 	}
 
 	public <T extends OperationContext> T getOperationContextInProgress(OperationContextType<T> operationContextType) {
-		OperationContextImplementor operationContext = cachedOperationContextByType.get( operationContextType );
+		ManageableOperationContext operationContext = cachedOperationContextByType.get( operationContextType );
 		final boolean isInProgress = operationContext != null && operationContext.isInProgress();
 		if ( !isInProgress  ) {
 			throw new IllegalStateException(
@@ -130,10 +130,10 @@ public class OperationContextManager {
 	}
 
 	private <T> void executeOperation(
-			OperationContextImplementor<T> operationContext,
+			ManageableOperationContext<T> operationContext,
 			OperationExecutor<T> operationExecutor) {
 		final boolean isTopLevel = isTopLevel( operationContext );
-		if ( isTopLevel ) {				;
+		if ( isTopLevel ) {
 			operationContext.beforeOperation( operationExecutor.getOperationContextData() );
 		}
 		boolean success = false;
@@ -151,14 +151,14 @@ public class OperationContextManager {
 		}
 	}
 
-	private boolean isTopLevel(OperationContext operationContext) {
+	private boolean isTopLevel(ManageableOperationContext operationContext) {
 		return !operationContext.isInProgress();
 	}
 
-	private <T extends OperationContext,U extends OperationContextImplementor> U getOperationContextInternal(
+	private <T extends OperationContext,U extends ManageableOperationContext> U getOperationContextInternal(
 			OperationContextType<T> operationContextType,
 			Class<U> expectedOperationContextClass) {
-		OperationContextImplementor operationContext = cachedOperationContextByType.get( operationContextType );
+		ManageableOperationContext operationContext = cachedOperationContextByType.get( operationContextType );
 		if ( operationContext == null ) {
 			operationContext = createOperationContext( operationContextType);
 			if ( cachedOperationContextByType.put( operationContext.getOperationContextType(), operationContext ) != null ) {
@@ -179,8 +179,8 @@ public class OperationContextManager {
 		return expectedOperationContextClass.cast( operationContext );
 	}
 
-	private static OperationContextImplementor createOperationContext(OperationContextType operationContextType) {
-		final OperationContextImplementor operationContext;
+	private static ManageableOperationContext createOperationContext(OperationContextType operationContextType) {
+		final ManageableOperationContext operationContext;
 		if ( operationContextType == OperationContextType.PERSIST ) {
 			operationContext = new PersistOperationContextImpl();
 		}
@@ -209,7 +209,7 @@ public class OperationContextManager {
 	}
 
 	public void clear() {
-		for ( OperationContextImplementor operationContext : cachedOperationContextByType.values() ) {
+		for ( ManageableOperationContext operationContext : cachedOperationContextByType.values() ) {
 			operationContext.clear();
 		}
 		cachedOperationContextByType.clear();

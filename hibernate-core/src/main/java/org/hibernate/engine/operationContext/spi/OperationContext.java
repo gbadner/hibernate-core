@@ -6,8 +6,6 @@
  */
 package org.hibernate.engine.operationContext.spi;
 
-import org.hibernate.event.spi.AbstractEvent;
-
 /**
  * An interface that represents the "context" for an operation.
  * Implementations provide a means to cache and retrieve data
@@ -26,11 +24,4 @@ public interface OperationContext {
 	 * @see {@link OperationContextType}
 	 */
 	OperationContextType getOperationContextType();
-
-	/**
-	 * Indicates if an operation is currently in progress.
-	 *
-	 * @return {@code true}, if the operation is in progress; {@code false}, otherwise.
-	 */
-	boolean isInProgress();
 }

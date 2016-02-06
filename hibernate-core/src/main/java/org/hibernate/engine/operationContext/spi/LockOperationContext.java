@@ -6,6 +6,9 @@
  */
 package org.hibernate.engine.operationContext.spi;
 
+import java.io.Serializable;
+
+import org.hibernate.LockMode;
 import org.hibernate.LockOptions;
 import org.hibernate.event.spi.LockEvent;
 
@@ -21,15 +24,16 @@ import org.hibernate.event.spi.LockEvent;
  * {@code SessionImplementor#isOperationInProgress(OperationContextType.LOCK)}
  * will return true if a lock operation is in progress.
  *
+ * @see org.hibernate.event.spi.EventSource#lock(Object, LockMode)
+ * @see org.hibernate.engine.spi.SessionImplementor#isOperationInProgress(OperationContextType)
+ * @see org.hibernate.engine.spi.SessionImplementor#getOperationContext(OperationContextType)
+ *
  * @author Gail Badner
  */
 public interface LockOperationContext extends OperationContext {
 	/**
 	 * Returns the {@link LockOptions} for an entity lock operation
 	 * that is in progress.
-	 * <p/>
-	 * It is only valid to call this method if the lock operation is currently
-	 * in progress (i.e., when {@link #isInProgress()} returns true).
 	 *
 	 * @return the lock options.
 	 *

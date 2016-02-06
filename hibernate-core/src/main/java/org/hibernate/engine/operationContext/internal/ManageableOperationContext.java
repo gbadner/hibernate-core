@@ -9,11 +9,18 @@ package org.hibernate.engine.operationContext.internal;
 import org.hibernate.engine.operationContext.spi.OperationContext;
 
 /**
- * An interface for managing an OperationContext.
+ * An interface for an OperationContext that is manageable.
  *
  * @author Gail Badner
  */
-public interface OperationContextImplementor<T> extends OperationContext {
+public interface ManageableOperationContext<T> extends OperationContext {
+	/**
+	 * Indicates if the operation is currently in progress.
+	 *
+	 * @return {@code true}, if the operation is in progress; {@code false}, otherwise.
+	 */
+	boolean isInProgress();
+
 	/**
 	 * Called just before starting the operation. This method should not
 	 * be called if the operation is already in progress (i.e., when
@@ -44,7 +51,7 @@ public interface OperationContextImplementor<T> extends OperationContext {
 	 * Resources held by implementations will be cleared by calling {@link #clear()}
 	 * (even when {@code success} is {@code false}).
 	 * <p/>
-	 * After this method completes, {@link #isInProgress} should return {@code true}.
+	 * After this method completes, {@link #isInProgress} should return {@code false}.
 	 *
 	 * @param operationContextData - the same operationContextData as used when
 	 * {@link #beforeOperation was called.

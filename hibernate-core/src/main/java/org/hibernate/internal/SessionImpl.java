@@ -213,7 +213,7 @@ public final class SessionImpl extends AbstractSessionImpl implements EventSourc
 	private transient AfterCompletionAction afterCompletionAction;
 	private transient LoadEvent loadEvent; //cached LoadEvent instance
 
-	private transient OperationContextManager operationContextManager = new OperationContextManager();;
+	private transient OperationContextManager operationContextManager = new OperationContextManager();
 
 	/**
 	 * Constructor used for openSession(...) processing, as well as construction

@@ -16,7 +16,7 @@ import org.hibernate.event.spi.RefreshEvent;
 /**
  * @author Gail Badner
  */
-public class RefreshOperationContextImpl extends AbstractOperationContextImpl<RefreshEvent>
+public class RefreshOperationContextImpl extends AbstractManageableOperationContextImpl<RefreshEvent>
 		implements RefreshOperationContext {
 	private Map<Object, Object> entities = new IdentityHashMap<Object,Object>(10);
 

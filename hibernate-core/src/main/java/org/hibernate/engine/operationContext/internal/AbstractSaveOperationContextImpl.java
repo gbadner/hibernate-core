@@ -15,7 +15,7 @@ import org.hibernate.event.spi.EventSource;
  *
  * @author Gail Badner
  */
-public abstract class AbstractSaveOperationContextImpl<T extends AbstractEvent> extends AbstractOperationContextImpl<T> {
+public abstract class AbstractSaveOperationContextImpl<T extends AbstractEvent> extends AbstractManageableOperationContextImpl<T> {
 
 	// TODO: Should code using UnresolvedEntityInsertActions be moved from ActionQueue to this class?
 
