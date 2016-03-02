@@ -108,7 +108,9 @@ buildScan {
 
 
 
-
+task test {
+	test.onlyIf { ! (Boolean.getBoolean('skip.tests') || Boolean.getBoolean('skipTests') ) }	
+}
 
 
 
