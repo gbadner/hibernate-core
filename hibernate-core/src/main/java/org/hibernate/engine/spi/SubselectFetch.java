@@ -27,7 +27,23 @@ public class SubselectFetch {
 	private final Map namedParameterLocMap;
 
 	public SubselectFetch(
-			//final String queryString,
+			final String alias,
+			final Loadable loadable,
+			final QueryParameters queryParameters,
+			final Set resultingEntityKeys,
+			final Map namedParameterLocMap) {
+		this(
+				createSubselectFetchQueryString( queryParameters ),
+				alias,
+				loadable,
+				queryParameters,
+				resultingEntityKeys,
+				namedParameterLocMap
+		);
+	}
+
+	public SubselectFetch(
+			final String queryString,
 			final String alias,
 			final Loadable loadable,
 			final QueryParameters queryParameters,
@@ -39,11 +55,15 @@ public class SubselectFetch {
 		this.loadable = loadable;
 		this.alias = alias;
 
+		this.queryString = queryString;
+	}
+
+	public static String createSubselectFetchQueryString(QueryParameters queryParameters) {
 		//TODO: ugly here:
 		final String queryString = queryParameters.getFilteredSQL();
 		final int fromIndex = getFromIndex( queryString );
 		final int orderByIndex = queryString.lastIndexOf( "order by" );
-		this.queryString = orderByIndex > 0
+		return orderByIndex > 0
 				? queryString.substring( fromIndex, orderByIndex )
 				: queryString.substring( fromIndex );
 	}
