@@ -13,8 +13,10 @@ import org.hibernate.Session;
 import org.hibernate.Transaction;
 import org.hibernate.dialect.SybaseASE15Dialect;
 import org.hibernate.testing.RequiresDialect;
+import org.hibernate.testing.TestForIssue;
 import org.hibernate.testing.junit4.BaseCoreFunctionalTestCase;
 import org.hibernate.type.BinaryType;
+import org.hibernate.type.VersionType;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -216,4 +218,39 @@ public class SybaseTimestampVersioningTest extends BaseCoreFunctionalTestCase {
 		t.commit();
 		s.close();
 	}
+
+	@Test
+	@TestForIssue( jiraKey = "HHH-10413" )
+	public void testComparableTimestamps() {
+		final VersionType versionType =
+				sessionFactory().getEntityPersister( User.class.getName() ).getVersionType();
+
+		Session s = openSession();
+		s.getTransaction().begin();
+		User user = new User();
+		user.setUsername( "n" );
+		s.persist( user );
+		s.getTransaction().commit();
+		s.close();
+
+		byte[] previousTimestamp = user.getTimestamp();
+		for ( int i = 0 ; i < 10 ; i++ ) {
+			try {
+				Thread.sleep(1000);                 //1000 milliseconds is one second.
+			} catch(InterruptedException ex) {
+				Thread.currentThread().interrupt();
+			}
+
+			s = openSession();
+			s.getTransaction().begin();
+			user.setUsername( "n" + i );
+			user = (User) s.merge( user );
+			s.getTransaction().commit();
+			s.close();
+
+			assertTrue( versionType.compare( previousTimestamp, user.getTimestamp() ) < 0 );
+			previousTimestamp = user.getTimestamp();
+		}
+	}
+
 }

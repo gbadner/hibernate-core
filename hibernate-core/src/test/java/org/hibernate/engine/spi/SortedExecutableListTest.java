@@ -28,7 +28,7 @@ import org.junit.Test;
 /**
  * @author Anton Marsden
  */
-public class ExecutableListTest extends BaseUnitTestCase {
+public class SortedExecutableListTest extends BaseUnitTestCase {
 
 	// For testing, we need an Executable that is also Comparable and Serializable
 	private static class AnExecutable implements Executable, Comparable, Serializable {
@@ -105,7 +105,7 @@ public class ExecutableListTest extends BaseUnitTestCase {
 
 	@Before
 	public void setUp() {
-		l = new ExecutableList<AnExecutable>();
+		l = new ExecutableList<AnExecutable>( true );
 	}
 
 	@After
@@ -214,7 +214,7 @@ public class ExecutableListTest extends BaseUnitTestCase {
 		oos.flush();
 		ByteArrayInputStream bin = new ByteArrayInputStream( baos.toByteArray() );
 		ObjectInputStream ois = new ObjectInputStream( bin );
-		l = new ExecutableList<ExecutableListTest.AnExecutable>();
+		l = new ExecutableList<SortedExecutableListTest.AnExecutable>();
 		l.readExternal( ois );
 		
 		Assert.assertEquals( 4, l.size() );

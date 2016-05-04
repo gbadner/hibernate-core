@@ -53,8 +53,7 @@ public class ExecutableList<E extends Executable & Comparable & Serializable> im
 
 	private final ArrayList<E> executables;
 
-	private final Sorter<E> sorter;
-	private boolean sorted;
+	private final SortSupport<E> sortSupport;
 
 	/**
 	 * Used to hold the query spaces (table names, roughly) that all the Executable instances contained
@@ -65,23 +64,38 @@ public class ExecutableList<E extends Executable & Comparable & Serializable> im
 	private transient Set<Serializable> querySpaces;
 
 	/**
-	 * Creates a new ExecutableList with the default settings.
+	 * Creates a new ExecutableList with the default capacity. Use of this constructor
+	 * assumes that the {@link Executable} objects do not need to be sorted.
 	 */
 	public ExecutableList() {
-		this( INIT_QUEUE_LIST_SIZE );
+		this( INIT_QUEUE_LIST_SIZE, false );
 	}
 
 	/**
-	 * Creates a new ExecutableList with the specified initialCapacity.
+	 * Creates a new ExecutableList with the default capacity.
+	 *
+	 * @param requiresSorting true indicates a default (natural ordering) sorter for sorting
+	 *                       {@link Executable} objects; false indicates that the
+	 *                       {@link Executable} objects do not need to be sorted.
+	 */
+	public ExecutableList(boolean requiresSorting) {
+		this( INIT_QUEUE_LIST_SIZE, requiresSorting );
+	}
+
+	/**
+	 * Creates a new ExecutableList with the specified {@code initialCapacity}. Use of this
+	 * constructor assumes that the {@link Executable} objects do not need to be sorted.
 	 *
 	 * @param initialCapacity The initial capacity for instantiating the internal List
 	 */
 	public ExecutableList(int initialCapacity) {
-		this( initialCapacity, null );
+		this( initialCapacity, false );
 	}
 
 	/**
-	 * Creates a new ExecutableList using the specified Sorter.
+	 * Creates a new ExecutableList using the specified Sorter. If {@code sorter} is
+	 * {@code null}, then it is assumed that the {@link Executable} objects
+	 * do not need to be sorted.
 	 *
 	 * @param sorter The Sorter to use; may be {@code null}
 	 */
@@ -91,15 +105,47 @@ public class ExecutableList<E extends Executable & Comparable & Serializable> im
 
 	/**
 	 * Creates a new ExecutableList with the specified initialCapacity and Sorter.
+	 * If {@code sorter} is {@code null}, then it is assumed that the {@link Executable} objects
+	 * do not need to be sorted.
 	 *
 	 * @param initialCapacity The initial capacity for instantiating the internal List
-	 * @param sorter The Sorter to use; may be {@code null}
+	 * @param sorter The {@link Sorter} to use; may be {@code null} to indicate that the
+	 *               {@link Executable} objects do not need to be sorted.
 	 */
 	public ExecutableList(int initialCapacity, ExecutableList.Sorter<E> sorter) {
-		this.sorter = sorter;
+		if ( sorter == null ) {
+			sortSupport = new NoSortSupport();
+		}
+		else {
+			sortSupport = new SorterSortSupport( sorter );
+		}
 		this.executables = new ArrayList<E>( initialCapacity );
 		this.querySpaces = null;
-		this.sorted = true;
+	}
+
+	/**
+	 * Creates a new ExecutableList with the specified initialCapacity. If a specific
+	 * {@link ExecutableList.Sorter} is required, then one of the following constructors
+	 * should be used instead: {@link #ExecutableList(ExecutableList.Sorter)}
+	 * or {@link #ExecutableList(int, ExecutableList.Sorter)}.
+	 * <p/>
+	 * If {@code requiresSorting} is {@code false}, then it is assumed that the {@link Executable}
+	 * objects do not need to be sorted.
+	 *
+	 * @param initialCapacity The initial capacity for instantiating the internal List
+	 * @param requiresSorting true indicates a default (natural ordering) sorter for sorting
+	 *                       {@link Executable} objects; false indicates that the
+	 *                       {@link Executable} objects do not need to be sorted.
+	 */
+	public ExecutableList(int initialCapacity, boolean requiresSorting) {
+		if ( requiresSorting ) {
+			sortSupport = new NaturalOrderingSortSupport();
+		}
+		else {
+			sortSupport = new NoSortSupport();
+		}
+		this.executables = new ArrayList<E>( initialCapacity );
+		this.querySpaces = null;
 	}
 
 	/**
@@ -162,7 +208,7 @@ public class ExecutableList<E extends Executable & Comparable & Serializable> im
 	public void clear() {
 		executables.clear();
 		querySpaces = null;
-		sorted = true;
+		sortSupport.clear();
 	}
 
 	/**
@@ -192,24 +238,11 @@ public class ExecutableList<E extends Executable & Comparable & Serializable> im
 	 * @return true if the object was added to the list
 	 */
 	public boolean add(E executable) {
-		final E previousLast = sorter != null || executables.isEmpty() ? null : executables.get( executables.size() - 1 );
-		boolean added = executables.add( executable );
-
-		if ( !added ) {
-			return false;
-		}
-
-		// see if the addition invalidated the sorting
-		if ( sorter != null ) {
-			// we don't have intrinsic insight into the sorter's algorithm, so invalidate sorting
-			sorted = false;
+		if ( executables.add( executable ) ) {
+			sortSupport.executableAdded();
 		}
 		else {
-			// otherwise, we added to the end of the list.  So check the comparison between the incoming
-			// executable and the one previously at the end of the list using the Comparable contract
-			if ( previousLast != null && previousLast.compareTo( executable ) > 0 ) {
-				sorted = false;
-			}
+			return false;
 		}
 
 		Serializable[] querySpaces = executable.getPropertySpaces();
@@ -217,25 +250,17 @@ public class ExecutableList<E extends Executable & Comparable & Serializable> im
 			Collections.addAll( this.querySpaces, querySpaces );
 		}
 
-		return added;
+		return true;
 	}
 
 	/**
-	 * Sorts the list using the natural ordering or using the Sorter if it's not null.
+	 * If a {@link Sorter} was provided to the constructor, then it is used
+	 * to sort the list; otherwise, if sorting is required, the list is sorted
+	 * using the natural ordering.
 	 */
 	@SuppressWarnings("unchecked")
 	public void sort() {
-		if ( sorted ) {
-			return;
-		}
-
-		if ( sorter != null ) {
-			sorter.sort( executables );
-		}
-		else {
-			Collections.sort( executables );
-		}
-		sorted = true;
+		sortSupport.sort();
 	}
 
 	/**
@@ -271,7 +296,7 @@ public class ExecutableList<E extends Executable & Comparable & Serializable> im
 	 */
 	@Override
 	public void writeExternal(ObjectOutput oos) throws IOException {
-		oos.writeBoolean( sorted );
+		oos.writeBoolean( sortSupport.isSorted() );
 
 		oos.writeInt( executables.size() );
 		for ( E e : executables ) {
@@ -299,7 +324,7 @@ public class ExecutableList<E extends Executable & Comparable & Serializable> im
 	@Override
 	@SuppressWarnings("unchecked")
 	public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
-		sorted = in.readBoolean();
+		sortSupport.setSorted( in.readBoolean() );
 
 		final int numberOfExecutables = in.readInt();
 		executables.ensureCapacity( numberOfExecutables );
@@ -337,4 +362,122 @@ public class ExecutableList<E extends Executable & Comparable & Serializable> im
 		return "ExecutableList{size=" + executables.size() + "}";
 	}
 
+	private interface SortSupport<E extends Executable & Comparable & Serializable> {
+		void executableAdded();
+		boolean isSorted();
+		void setSorted(boolean sorted);
+		void sort();
+		void clear();
+	}
+
+	private class SorterSortSupport implements SortSupport<E> {
+		private final Sorter<E> sorter;
+		private boolean sorted = true;
+
+		private SorterSortSupport(Sorter<E> sorter) {
+			this.sorter = sorter;
+		}
+
+		public void setSorted(boolean sorted) {
+			this.sorted = sorted;
+		}
+
+		@Override
+		public void executableAdded() {
+			// we don't have intrinsic insight into the sorter's algorithm;
+			// if there is only one element, then we can assume it is still sorted;
+			// otherwise, invalidate sorting
+			sorted = executables.size() < 2;
+		}
+
+		@Override
+		public boolean isSorted() {
+			return sorted;
+		}
+
+		@Override
+		public void sort() {
+			if ( sorted ) {
+				return;
+			}
+			sorter.sort( executables );
+			sorted = true;
+		}
+
+		@Override
+		public void clear() {
+			sorted = true;
+		}
+	}
+
+	private class NaturalOrderingSortSupport implements SortSupport<E> {
+		public boolean sorted = true;
+
+		@Override
+		@SuppressWarnings("unchecked")
+		public void executableAdded() {
+			// if it's not sorted or fewer than 2 elements, then there is nothing to check.
+			if ( !sorted || executables.size() < 2 ) {
+				return;
+			}
+			// the value was added to the end of the list.  So check the comparison between the
+			// executable that was previously at the end of the list with the last executable
+			// using the Comparable contract
+			final E previousLast = executables.get( executables.size() - 2 );
+			final E last = executables.get( executables.size() - 1 );
+			sorted = previousLast.compareTo( last ) < 0;
+		}
+
+		@Override
+		public boolean isSorted() {
+			return sorted;
+		}
+
+		@Override
+		public void setSorted(boolean sorted) {
+			this.sorted = sorted;
+		}
+
+		@Override
+		public void sort() {
+			if ( sorted ) {
+				return;
+			}
+			Collections.sort( executables );
+			sorted = true;
+		}
+
+		@Override
+		public void clear() {
+			sorted = true;
+		}
+	}
+
+	private class NoSortSupport implements SortSupport<E> {
+
+		@Override
+		public void executableAdded() {
+			// do nothing
+		}
+
+		@Override
+		public boolean isSorted() {
+			return false;
+		}
+
+		@Override
+		public void setSorted(boolean sorted) {
+			// ignore
+		}
+
+		@Override
+		public void sort() {
+			// do nothing
+		}
+
+		@Override
+		public void clear() {
+			// do nothing
+		}
+	}
 }
