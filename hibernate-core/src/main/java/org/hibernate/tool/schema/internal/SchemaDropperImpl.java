@@ -449,7 +449,7 @@ public class SchemaDropperImpl implements SchemaDropper {
 			final JdbcContext jdbcContext = tool.resolveJdbcContext( settings );
 			targets = new GenerationTarget[] {
 				new GenerationTargetToDatabase(
-						serviceRegistry.getService( TransactionCoordinatorBuilder.class ).buildDdlTransactionIsolator( jdbcContext )
+						Helper.buildDefaultDdlTransactionIsolator( jdbcContext )
 				)
 			};
 		}
@@ -520,7 +520,7 @@ public class SchemaDropperImpl implements SchemaDropper {
 
 			final JdbcContext jdbcContext = new JdbcContextDelayedDropImpl( serviceRegistry );
 			final GenerationTargetToDatabase target = new GenerationTargetToDatabase(
-					serviceRegistry.getService( TransactionCoordinatorBuilder.class ).buildDdlTransactionIsolator( jdbcContext )
+					Helper.buildDefaultDdlTransactionIsolator( jdbcContext )
 			);
 
 			target.prepare();

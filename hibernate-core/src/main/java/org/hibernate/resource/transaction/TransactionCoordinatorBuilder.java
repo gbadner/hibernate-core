@@ -42,6 +42,4 @@ public interface TransactionCoordinatorBuilder extends Service {
 	ConnectionReleaseMode getDefaultConnectionReleaseMode();
 
 	ConnectionAcquisitionMode getDefaultConnectionAcquisitionMode();
-
-	DdlTransactionIsolator buildDdlTransactionIsolator(JdbcContext jdbcContext);
 }

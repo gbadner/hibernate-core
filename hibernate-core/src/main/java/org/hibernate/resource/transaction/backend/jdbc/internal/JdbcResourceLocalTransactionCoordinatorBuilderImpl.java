@@ -54,9 +54,4 @@ public class JdbcResourceLocalTransactionCoordinatorBuilderImpl implements Trans
 	public ConnectionAcquisitionMode getDefaultConnectionAcquisitionMode() {
 		return ConnectionAcquisitionMode.AS_NEEDED;
 	}
-
-	@Override
-	public DdlTransactionIsolator buildDdlTransactionIsolator(JdbcContext jdbcContext) {
-		return new DdlTransactionIsolatorNonJtaImpl( jdbcContext );
-	}
 }

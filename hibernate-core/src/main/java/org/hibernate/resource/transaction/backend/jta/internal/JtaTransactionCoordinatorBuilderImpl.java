@@ -46,9 +46,4 @@ public class JtaTransactionCoordinatorBuilderImpl implements TransactionCoordina
 	public ConnectionAcquisitionMode getDefaultConnectionAcquisitionMode() {
 		return ConnectionAcquisitionMode.AS_NEEDED;
 	}
-
-	@Override
-	public DdlTransactionIsolator buildDdlTransactionIsolator(JdbcContext jdbcContext) {
-		return new DdlTransactionIsolatorJtaImpl( jdbcContext );
-	}
 }
