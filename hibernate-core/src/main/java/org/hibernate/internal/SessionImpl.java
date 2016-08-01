@@ -206,7 +206,7 @@ public final class SessionImpl extends AbstractSessionImpl implements EventSourc
 	private transient ManagedFlushChecker managedFlushChecker;
 	private transient AfterCompletionAction afterCompletionAction;
 	private transient LoadEvent loadEvent; //cached LoadEvent instance
-	private static transient EventListenerRegistry cachedEventListenerRegistry;
+	private transient EventListenerRegistry cachedEventListenerRegistry;
 
 	/**
 	 * Constructor used for openSession(...) processing, as well as construction

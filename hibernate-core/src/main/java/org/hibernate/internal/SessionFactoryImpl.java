@@ -205,7 +205,7 @@ public final class SessionFactoryImpl implements SessionFactoryImplementor {
 	private final transient TypeHelper typeHelper;
 	private final transient SessionFactoryOptions sessionFactoryOptions;
 	private final transient Map<String, RegionAccessStrategy> cacheAccessStrategiesMap = new HashMap();
-	private static transient StatisticsImplementor statisticsImplementor;
+	private transient StatisticsImplementor statisticsImplementor;
 
 	public SessionFactoryImpl(final MetadataImplementor metadata, SessionFactoryOptions options) {
 		LOG.debug( "Building session factory" );
