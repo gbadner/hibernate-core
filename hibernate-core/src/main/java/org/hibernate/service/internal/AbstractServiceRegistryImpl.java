@@ -53,7 +53,7 @@ public abstract class AbstractServiceRegistryImpl
 	private final ConcurrentServiceBinding<Class,Class> roleXref = new ConcurrentServiceBinding<Class,Class>();
 	// The services stored in initializedServiceByRole are completely initialized
 	// (i.e., configured, dependencies injected, and started)
-	private final ConcurrentServiceBinding<Class,Service> initializedServiceByRole = new ConcurrentServiceBinding<Class, Service>();
+	private final ConcurrentServiceBinding<Class,ServiceBinding> initializedServiceBindingByRole = new ConcurrentServiceBinding<Class, ServiceBinding>();
 
 	// IMPL NOTE : the list used for ordered destruction.  Cannot used map above because we need to
 	// iterate it in reverse order which is only available through ListIterator
@@ -183,31 +183,31 @@ public abstract class AbstractServiceRegistryImpl
 	}
 
 	@Override
+	@SuppressWarnings( {"unchecked"})
 	public <R extends Service> R getService(Class<R> serviceRole) {
 		// TODO: should an exception be thrown if active == false???
-		R service = serviceRole.cast( initializedServiceByRole.get( serviceRole ) );
-		if ( service != null ) {
-			return service;
+		ServiceBinding<R> initializedServiceBinding = initializedServiceBindingByRole.get( serviceRole );
+		if ( initializedServiceBinding != null ) {
+			return initializedServiceBinding.getService();
 		}
 
 		//Any service initialization needs synchronization
 		synchronized ( this ) {
 			// Check again after having acquired the lock:
-			service = serviceRole.cast( initializedServiceByRole.get( serviceRole ) );
-			if ( service != null ) {
-				return service;
+			initializedServiceBinding = initializedServiceBindingByRole.get( serviceRole );
+			if ( initializedServiceBinding != null ) {
+				return initializedServiceBinding.getService();
 			}
-
 			final ServiceBinding<R> serviceBinding = locateServiceBinding( serviceRole );
 			if ( serviceBinding == null ) {
 				throw new UnknownServiceException( serviceRole );
 			}
-			service = serviceBinding.getService();
+			R service = serviceBinding.getService();
 			if ( service == null ) {
 				service = initializeService( serviceBinding );
 			}
 			// add the service only after it is completely initialized
-			initializedServiceByRole.put( serviceRole, service );
+			initializedServiceBindingByRole.put( serviceRole, serviceBinding );
 			return service;
 		}
 	}
@@ -351,7 +351,7 @@ public abstract class AbstractServiceRegistryImpl
 			try {
 				//First thing, make sure that the fast path read is disabled so that
 				//threads not owning the synchronization lock can't get an invalid Service:
-				initializedServiceByRole.clear();
+				initializedServiceBindingByRole.clear();
 				synchronized (serviceBindingList) {
 					ListIterator<ServiceBinding> serviceBindingsIterator = serviceBindingList.listIterator(
 							serviceBindingList.size()
