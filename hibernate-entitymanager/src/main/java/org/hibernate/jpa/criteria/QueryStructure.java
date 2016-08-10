@@ -28,7 +28,9 @@ import javax.persistence.criteria.Subquery;
 import javax.persistence.metamodel.EntityType;
 
 import org.hibernate.jpa.criteria.compile.RenderingContext;
+import org.hibernate.jpa.criteria.path.PluralAttributeJoinSupport;
 import org.hibernate.jpa.criteria.path.RootImpl;
+import org.hibernate.jpa.criteria.path.SingularAttributeJoin;
 
 /**
  * Models basic query structure.  Used as a delegate in implementing both
@@ -336,7 +338,7 @@ public class QueryStructure<T> implements Serializable {
 		}
 
 		for ( Join join : joins ) {
-			if ( ((FromImplementor) join).shouldBeRendered() ) {
+			if ( shouldBeRendered( join ) ) {
 				((FromImplementor) join).prepareAlias( renderingContext );
 				jpaqlQuery.append( renderJoinType( join.getJoinType() ) )
 						.append( ((FromImplementor) join).renderTableExpression( renderingContext ) );
@@ -344,6 +346,18 @@ public class QueryStructure<T> implements Serializable {
 				renderFetches( jpaqlQuery, renderingContext, join.getFetches() );
 			}
 		}
+	}
+
+	private boolean shouldBeRendered(Join from)  {
+		if ( SingularAttributeJoin.class.isInstance( from ) || PluralAttributeJoinSupport.class.isInstance( from ) ) {
+			if ( from.getJoins().size() > 0 ) {
+				return true;
+			}
+			else {
+				return false;
+			}
+		}
+		return true;
 	}
 
 	private String renderJoinType(JoinType joinType) {
