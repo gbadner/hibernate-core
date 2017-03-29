@@ -25,7 +25,7 @@ import javax.persistence.OneToMany;
 import javax.persistence.Table;
 import java.util.List;
 
-import static org.hibernate.testing.transaction.TransactionUtil.doInHibernate;
+import org.hibernate.Session;
 
 /**
  * @author Christian Beikov
@@ -38,7 +38,9 @@ public class SingleTableRelationsTest extends BaseCoreFunctionalTestCase {
 	}
 
 	private void createTestData() {
-		doInHibernate( this::sessionFactory, session -> {
+		Session session = openSession();
+		session.getTransaction().begin();
+		{
 			Category category7;
 			session.persist( new Category( 1 ) );
 			session.persist( new Category( 2 ) );
@@ -48,19 +50,25 @@ public class SingleTableRelationsTest extends BaseCoreFunctionalTestCase {
 			session.persist( new Category( 6 ) );
 			session.persist( category7 = new Category( 7 ) );
 			session.persist( new Post( 8, category7 ) );
-		} );
+		}
+		session.getTransaction().commit();
+		session.close();
 	}
 
 	@Test
 	@TestForIssue(jiraKey = "HHH-11375")
 	public void testLazyInitialization() {
 		createTestData();
-		doInHibernate( this::sessionFactory, session -> {
-			Category category7 = session.find( Category.class, 7 );
+		Session session = openSession();
+		session.getTransaction().begin();
+		{
+			Category category7 = session.get( Category.class, 7 );
 			// Must be empty because although Post and Category share the same column for their category relations,
 			// the children must be based on entities that are of type Category
 			Assert.assertTrue( category7.children.isEmpty() );
-		} );
+		}
+		session.getTransaction().commit();
+		session.close();
 	}
 
 	@Override
@@ -72,14 +80,18 @@ public class SingleTableRelationsTest extends BaseCoreFunctionalTestCase {
 	@TestForIssue(jiraKey = "HHH-11375")
 	public void testJoinFetch() {
 		createTestData();
-		doInHibernate( this::sessionFactory, session -> {
-			Category category7 = session.createQuery( "SELECT c FROM " + Category.class.getName() + " c LEFT JOIN FETCH c.children WHERE c.id = :id", Category.class )
+		Session session = openSession();
+		session.getTransaction().begin();
+		{
+			Category category7 = (Category) session.createQuery( "SELECT c FROM " + Category.class.getName() + " c LEFT JOIN FETCH c.children WHERE c.id = :id" )
 					.setParameter( "id", 7 )
-					.getSingleResult();
+					.uniqueResult();
 			// Must be empty because although Post and Category share the same column for their category relations,
 			// the children must be based on entities that are of type Category
 			Assert.assertTrue( category7.children.isEmpty() );
-		} );
+		}
+		session.getTransaction().commit();
+		session.close();
 	}
 
 	@Entity
