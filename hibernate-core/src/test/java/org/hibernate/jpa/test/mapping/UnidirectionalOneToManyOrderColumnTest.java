@@ -21,6 +21,7 @@ import javax.persistence.Table;
 
 import org.hibernate.jpa.test.BaseEntityManagerFunctionalTestCase;
 
+import org.hibernate.testing.FailureExpected;
 import org.hibernate.testing.TestForIssue;
 import org.junit.Test;
 
@@ -101,6 +102,40 @@ public class UnidirectionalOneToManyOrderColumnTest extends BaseEntityManagerFun
 			assertEquals( "Another", childIds.get( i++ ));
 			assertEquals( "Three", childIds.get( i++ ));
 		} );
+	}
+
+	@Test
+	@FailureExpected( jiraKey = "HHH-11587" )
+	public void testRemovingOneAndAddingTwoElements() {
+		doInJPA( this::entityManagerFactory, entityManager -> {
+
+					 ParentData parent = new ParentData();
+					 entityManager.persist( parent );
+
+					 String[] childrenStr = new String[] {"One", "Two", "Three"};
+					 for ( String str : childrenStr ) {
+						 ChildData child = new ChildData( str );
+						 entityManager.persist( child );
+						 parent.getChildren().add( child );
+					 }
+
+					 entityManager.flush();
+
+					 List<ChildData> children = parent.getChildren();
+					 children.remove( 0 );
+					 children.add( 1, new ChildData( "Another" ) );
+				   	 children.add( new ChildData( "Another Another" ) );
+				 } );
+		doInJPA( this::entityManagerFactory, entityManager -> {
+
+					 ParentData parent = entityManager.find( ParentData.class, 1L );
+					 List<String> childIds = parent.getChildren().stream().map( ChildData::toString ).collect( Collectors.toList() );
+					 int i = 0;
+					 assertEquals( "Two", childIds.get( i++ ));
+					 assertEquals( "Another", childIds.get( i++ ));
+					 assertEquals( "Three", childIds.get( i++ ));
+					 assertEquals( "Another Another", childIds.get( i++ ));
+				 } );
 	}
 
 	@Override
