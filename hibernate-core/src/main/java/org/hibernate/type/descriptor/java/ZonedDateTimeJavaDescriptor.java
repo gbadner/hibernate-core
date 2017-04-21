@@ -93,16 +93,16 @@ public class ZonedDateTimeJavaDescriptor extends AbstractTypeDescriptor<ZonedDat
 
 		if ( java.sql.Timestamp.class.isInstance( value ) ) {
 			final Timestamp ts = (Timestamp) value;
-			return ZonedDateTime.ofInstant( ts.toInstant(), ZoneId.systemDefault() );
+			return ZonedDateTime.ofInstant( ts.toInstant(), getZoneId( options ) );
 		}
 
 		if ( java.util.Date.class.isInstance( value ) ) {
 			final java.util.Date date = (java.util.Date) value;
-			return ZonedDateTime.ofInstant( date.toInstant(), ZoneId.systemDefault() );
+			return ZonedDateTime.ofInstant( date.toInstant(), getZoneId( options ) );
 		}
 
 		if ( Long.class.isInstance( value ) ) {
-			return ZonedDateTime.ofInstant( Instant.ofEpochMilli( (Long) value ), ZoneId.systemDefault() );
+			return ZonedDateTime.ofInstant( Instant.ofEpochMilli( (Long) value ), getZoneId( options ) );
 		}
 
 		if ( Calendar.class.isInstance( value ) ) {
@@ -111,5 +111,12 @@ public class ZonedDateTimeJavaDescriptor extends AbstractTypeDescriptor<ZonedDat
 		}
 
 		throw unknownWrap( value.getClass() );
+	}
+
+	private static ZoneId getZoneId(WrapperOptions options) {
+		//return options.getJdbcTimeZone() == null
+		//		? ZoneId.systemDefault()
+		//		: options.getJdbcTimeZone().toZoneId();
+		return ZoneId.systemDefault();
 	}
 }
