@@ -9,6 +9,7 @@ package org.hibernate.test.bytecode.enhancement;
 import org.hibernate.bytecode.enhance.spi.UnloadedClass;
 
 import org.hibernate.bytecode.enhance.spi.UnloadedField;
+import org.hibernate.test.bytecode.enhancement.lazy.LazyLoadingByEnhancerSetterTestTask;
 import org.hibernate.test.bytecode.enhancement.merge.MergeEnhancedEntityTestTask;
 import org.hibernate.test.bytecode.enhancement.merge.RefreshEnhancedEntityTestTask;
 import org.hibernate.testing.DialectChecks;
@@ -299,6 +300,12 @@ public class EnhancerTest extends BaseUnitTestCase {
 	@TestForIssue( jiraKey = "HHH-9937")
 	public void testLazyBasicFieldNotInitialized() {
 		EnhancerTestUtils.runEnhancerTestTask( LazyBasicFieldNotInitializedTestTask.class );
+	}
+
+	@Test
+	@TestForIssue( jiraKey = "HHH-11624" )
+	public void testLazyLoadingByEnhancerSetter() {
+		EnhancerTestUtils.runEnhancerTestTask( LazyLoadingByEnhancerSetterTestTask.class );
 	}
 
 	@Test
