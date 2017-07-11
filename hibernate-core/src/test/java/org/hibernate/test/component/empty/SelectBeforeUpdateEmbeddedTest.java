@@ -7,6 +7,7 @@
 package org.hibernate.test.component.empty;
 
 import java.io.Serializable;
+import java.util.Collections;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.persistence.Embeddable;
@@ -16,6 +17,7 @@ import javax.persistence.Id;
 import javax.persistence.Version;
 
 import org.hibernate.EmptyInterceptor;
+import org.hibernate.Session;
 import org.hibernate.annotations.SelectBeforeUpdate;
 import org.hibernate.cfg.AvailableSettings;
 import org.hibernate.cfg.Configuration;
@@ -24,7 +26,6 @@ import org.junit.Test;
 
 import org.hibernate.testing.TestForIssue;
 import org.hibernate.testing.junit4.BaseCoreFunctionalTestCase;
-import org.hibernate.testing.transaction.TransactionUtil;
 
 import static org.junit.Assert.assertEquals;
 
@@ -52,7 +53,9 @@ public class SelectBeforeUpdateEmbeddedTest extends BaseCoreFunctionalTestCase {
 	@TestForIssue(jiraKey = "HHH-11237")
 	public void testSelectBeforeUpdateUsingEmptyComposites() {
 		// Opt-in behavior 5.1+
-		rebuildSessionFactory( c -> c.setProperty( AvailableSettings.CREATE_EMPTY_COMPOSITES_ENABLED, "true" ) );
+		rebuildSessionFactory(
+				Collections.singletonMap( AvailableSettings.CREATE_EMPTY_COMPOSITES_ENABLED, "true" )
+		);
 		testSelectBeforeUpdate();
 	}
 
@@ -60,7 +63,9 @@ public class SelectBeforeUpdateEmbeddedTest extends BaseCoreFunctionalTestCase {
 	@TestForIssue(jiraKey = "HHH-11237")
 	public void testSelectBeforeUpdateUsingNullComposites() {
 		// Legacy behavior test
-		rebuildSessionFactory( c -> c.setProperty( AvailableSettings.CREATE_EMPTY_COMPOSITES_ENABLED, "false" ) );
+		rebuildSessionFactory(
+				Collections.singletonMap( AvailableSettings.CREATE_EMPTY_COMPOSITES_ENABLED, "false" )
+		);
 		testSelectBeforeUpdate();
 	}
 
@@ -69,37 +74,51 @@ public class SelectBeforeUpdateEmbeddedTest extends BaseCoreFunctionalTestCase {
 	 * the {@code @SelectBeforeUpdate} annotation with an {code @Embedded} component.
 	 */
 	private void testSelectBeforeUpdate() {
-		TransactionUtil.doInHibernate( this::sessionFactory, session -> {
+		Session session = openSession();
+		session.getTransaction().begin();
+		{
 			final Person john = new Person( 1, "John", new Address() );
 			session.save( john );
 
 			final Person mary = new Person( 2, "Mary", null );
 			session.save( mary );
-		} );
+		}
+		session.getTransaction().commit();
+		session.close();
 
-		TransactionUtil.doInHibernate( this::sessionFactory, session -> {
-			final Person john = session.find( Person.class, 1 );
+		session = openSession();
+		session.getTransaction().begin();
+		{
+			final Person john = session.get( Person.class, 1 );
 			i.reset();
 			john.setAddress( null );
 			session.flush();
 			assertEquals( 0, i.getCalls() );
 
 			i.reset();
-			final Person mary = session.find( Person.class, 2 );
+			final Person mary = session.get( Person.class, 2 );
 			mary.setAddress( new Address() );
 			session.flush();
 			assertEquals( 0, i.getCalls() );
-		} );
+		}
+		session.getTransaction().commit();
+		session.close();
 
-		final Person john = TransactionUtil.doInHibernate( this::sessionFactory, session -> {
-			return session.get( Person.class, 1 );
-		} );
+		session = openSession();
+		session.getTransaction().begin();
+		final Person john = session.get( Person.class, 1 );
+		session.getTransaction().commit();
+		session.close();
 
-		final Person mary = TransactionUtil.doInHibernate( this::sessionFactory, session -> {
-			return session.get( Person.class, 2 );
-		} );
+		session = openSession();
+		session.getTransaction().begin();
+		final Person mary = session.get( Person.class, 2 );
+		session.getTransaction().commit();
+		session.close();
 
-		TransactionUtil.doInHibernate( this::sessionFactory, session -> {
+		session = openSession();
+		session.getTransaction().begin();
+		{
 			i.reset();
 			john.setAddress( null );
 			session.update( john );
@@ -111,8 +130,9 @@ public class SelectBeforeUpdateEmbeddedTest extends BaseCoreFunctionalTestCase {
 			session.update( mary );
 			session.flush();
 			assertEquals( 0, i.getCalls() );
-
-		} );
+		}
+		session.getTransaction().commit();
+		session.close();
 	}
 
 	@Entity(name = "Person")
