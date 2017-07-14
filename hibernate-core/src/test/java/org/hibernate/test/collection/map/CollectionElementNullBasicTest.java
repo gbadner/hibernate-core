@@ -57,6 +57,34 @@ public class CollectionElementNullBasicTest extends BaseCoreFunctionalTestCase {
 	}
 
 	@Test
+	public void addNullValue() {
+		Session s = openSession();
+		s.getTransaction().begin();
+		AnEntity e = new AnEntity();
+		s.persist( e );
+		s.getTransaction().commit();
+		s.close();
+
+		s = openSession();
+		s.getTransaction().begin();
+		e = (AnEntity) s.get( AnEntity.class, e.id );
+		assertEquals( 0, e.aMap.size() );
+		assertEquals( 0, getCollectionElementRows( e.id ).size() );
+		e.aMap.put( "null", null );
+		s.getTransaction().commit();
+		s.close();
+
+		s = openSession();
+		s.getTransaction().begin();
+		e = (AnEntity) s.get( AnEntity.class, e.id );
+		assertEquals( 0, e.aMap.size() );
+		assertEquals( 0, getCollectionElementRows( e.id ).size() );
+		s.delete( e );
+		s.getTransaction().commit();
+		s.close();
+	}
+
+	@Test
 	public void testUpdateNonNullValueToNull() {
 		Session s = openSession();
 		s.getTransaction().begin();
