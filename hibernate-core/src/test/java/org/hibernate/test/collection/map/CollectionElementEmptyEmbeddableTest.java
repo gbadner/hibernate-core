@@ -20,6 +20,8 @@ import javax.persistence.JoinColumn;
 import javax.persistence.Table;
 
 import org.hibernate.Session;
+import org.hibernate.cfg.AvailableSettings;
+import org.hibernate.cfg.Configuration;
 
 import org.hibernate.testing.junit4.BaseCoreFunctionalTestCase;
 import org.junit.Test;
@@ -30,6 +32,11 @@ import static org.junit.Assert.assertEquals;
  * @author Gail Badner
  */
 public class CollectionElementEmptyEmbeddableTest extends BaseCoreFunctionalTestCase {
+
+	protected void configure(Configuration cfg) {
+		super.configure( cfg );
+		cfg.setProperty( AvailableSettings.CREATE_EMPTY_COMPOSITES_ENABLED, "true" );
+	}
 
 	@Override
 	protected Class[] getAnnotatedClasses() {
@@ -52,14 +59,14 @@ public class CollectionElementEmptyEmbeddableTest extends BaseCoreFunctionalTest
 		s.getTransaction().begin();
 		e = (AnEntity) s.get( AnEntity.class, e.id );
 		assertEquals( 0, e.aMap.size() );
-		//assertEquals( 0, getCollectionElementRows( e.id ).size() );
+		assertEquals( 0, getCollectionElementRows( e.id ).size() );
 		s.delete( e );
 		s.getTransaction().commit();
 		s.close();
 	}
 
 	@Test
-	public void addNullValue() {
+	public void addEmptyValue() {
 		Session s = openSession();
 		s.getTransaction().begin();
 		AnEntity e = new AnEntity();
@@ -109,7 +116,7 @@ public class CollectionElementEmptyEmbeddableTest extends BaseCoreFunctionalTest
 		s.getTransaction().begin();
 		e = (AnEntity) s.get( AnEntity.class, e.id );
 		assertEquals( 0, e.aMap.size() );
-		//assertEquals( 0, getCollectionElementRows( e.id ).size() );
+		assertEquals( 0, getCollectionElementRows( e.id ).size() );
 		s.delete( e );
 		s.getTransaction().commit();
 		s.close();
@@ -138,7 +145,7 @@ public class CollectionElementEmptyEmbeddableTest extends BaseCoreFunctionalTest
 		s.getTransaction().begin();
 		e = (AnEntity) s.get( AnEntity.class, e.id );
 		assertEquals( 0, e.aMap.size() );
-		//assertEquals( 0, getCollectionElementRows( e.id ).size() );
+		assertEquals( 0, getCollectionElementRows( e.id ).size() );
 		e.aMap.put( "abc", new Thing( "jkl", "mno" ) );
 		s.getTransaction().commit();
 		s.close();
@@ -178,9 +185,9 @@ public class CollectionElementEmptyEmbeddableTest extends BaseCoreFunctionalTest
 		e = (AnEntity) s.get( AnEntity.class, e.id );
 		assertEquals( 1, e.aMap.size() );
 		List<Thing> things = getCollectionElementRows( e.id );
-		//assertEquals( 1, things.size() );
-		//assertEquals( "wvu", things.get( 0 ).value1 );
-		//assertEquals( "tsr", things.get( 0 ).value2 );
+		assertEquals( 1, things.size() );
+		assertEquals( "wvu", things.get( 0 ).value1 );
+		assertEquals( "tsr", things.get( 0 ).value2 );
 		s.delete( e );
 		s.getTransaction().commit();
 		s.close();
