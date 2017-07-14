@@ -51,7 +51,13 @@ public class DollarValueUserType implements UserType {
 
 	@Override
 	public boolean equals(Object x, Object y) throws HibernateException {
-		if (!(x instanceof DollarValue) || !(y instanceof DollarValue)) {
+		if ( x == y ) {
+			return true;
+		}
+		else if ( x == null || y == null ) {
+			return false;
+		}
+		else if (!(x instanceof DollarValue) || !(y instanceof DollarValue)) {
 			throw new HibernateException("Expected DollarValue");
 		}
 		return ((DollarValue)x).getAmount().equals(((DollarValue)y).getAmount());

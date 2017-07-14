@@ -20,6 +20,8 @@ import javax.persistence.JoinColumn;
 import javax.persistence.Table;
 
 import org.hibernate.Session;
+import org.hibernate.cfg.AvailableSettings;
+import org.hibernate.cfg.Configuration;
 
 import org.hibernate.testing.junit4.BaseCoreFunctionalTestCase;
 import org.junit.Test;
@@ -30,6 +32,11 @@ import static org.junit.Assert.assertEquals;
  * @author Gail Badner
  */
 public class CollectionElementNullEmbeddableTest extends BaseCoreFunctionalTestCase {
+
+	protected void configure(Configuration cfg) {
+		super.configure( cfg );
+		cfg.setProperty( AvailableSettings.CREATE_EMPTY_COMPOSITES_ENABLED, "true" );
+	}
 
 	@Override
 	protected Class[] getAnnotatedClasses() {
