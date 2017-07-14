@@ -59,6 +59,34 @@ public class CollectionElementEmptyEmbeddableTest extends BaseCoreFunctionalTest
 	}
 
 	@Test
+	public void addNullValue() {
+		Session s = openSession();
+		s.getTransaction().begin();
+		AnEntity e = new AnEntity();
+		s.persist( e );
+		s.getTransaction().commit();
+		s.close();
+
+		s = openSession();
+		s.getTransaction().begin();
+		e = (AnEntity) s.get( AnEntity.class, e.id );
+		assertEquals( 0, e.aMap.size() );
+		assertEquals( 0, getCollectionElementRows( e.id ).size() );
+		e.aMap.put( "null", new Thing() );
+		s.getTransaction().commit();
+		s.close();
+
+		s = openSession();
+		s.getTransaction().begin();
+		e = (AnEntity) s.get( AnEntity.class, e.id );
+		assertEquals( 0, e.aMap.size() );
+		assertEquals( 0, getCollectionElementRows( e.id ).size() );
+		s.delete( e );
+		s.getTransaction().commit();
+		s.close();
+	}
+
+	@Test
 	public void testUpdateNonEmptyValueToEmpty() {
 		Session s = openSession();
 		s.getTransaction().begin();
