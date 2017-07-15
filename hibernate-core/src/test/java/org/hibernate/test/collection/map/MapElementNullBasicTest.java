@@ -31,11 +31,6 @@ import static org.junit.Assert.assertEquals;
  */
 public class MapElementNullBasicTest extends BaseCoreFunctionalTestCase {
 
-	protected void configure(Configuration cfg) {
-		super.configure( cfg );
-		cfg.setProperty( AvailableSettings.CREATE_EMPTY_COMPOSITES_ENABLED, "true" );
-	}
-
 	@Override
 	protected Class[] getAnnotatedClasses() {
 		return new Class[] {
