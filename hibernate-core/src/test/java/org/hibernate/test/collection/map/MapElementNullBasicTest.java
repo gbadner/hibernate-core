@@ -29,7 +29,7 @@ import static org.junit.Assert.assertEquals;
 /**
  * @author Gail Badner
  */
-public class CollectionElementNullBasicTest extends BaseCoreFunctionalTestCase {
+public class MapElementNullBasicTest extends BaseCoreFunctionalTestCase {
 
 	protected void configure(Configuration cfg) {
 		super.configure( cfg );

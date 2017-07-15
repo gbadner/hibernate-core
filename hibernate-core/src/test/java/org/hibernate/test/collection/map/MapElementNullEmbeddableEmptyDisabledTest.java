@@ -31,12 +31,7 @@ import static org.junit.Assert.assertEquals;
 /**
  * @author Gail Badner
  */
-public class CollectionElementEmptyEmbeddableTest extends BaseCoreFunctionalTestCase {
-
-	protected void configure(Configuration cfg) {
-		super.configure( cfg );
-		cfg.setProperty( AvailableSettings.CREATE_EMPTY_COMPOSITES_ENABLED, "true" );
-	}
+public  class MapElementNullEmbeddableEmptyDisabledTest extends BaseCoreFunctionalTestCase {
 
 	@Override
 	protected Class[] getAnnotatedClasses() {
@@ -46,11 +41,11 @@ public class CollectionElementEmptyEmbeddableTest extends BaseCoreFunctionalTest
 	}
 
 	@Test
-	public void testPersistEmptyValue() {
+	public void testPersistNullValue() {
 		Session s = openSession();
 		s.getTransaction().begin();
 		AnEntity e = new AnEntity();
-		e.aMap.put( "empty", new Thing() );
+		e.aMap.put( "null", null );
 		s.persist( e );
 		s.getTransaction().commit();
 		s.close();
@@ -66,7 +61,7 @@ public class CollectionElementEmptyEmbeddableTest extends BaseCoreFunctionalTest
 	}
 
 	@Test
-	public void addEmptyValue() {
+	public void addNullValue() {
 		Session s = openSession();
 		s.getTransaction().begin();
 		AnEntity e = new AnEntity();
@@ -79,7 +74,7 @@ public class CollectionElementEmptyEmbeddableTest extends BaseCoreFunctionalTest
 		e = (AnEntity) s.get( AnEntity.class, e.id );
 		assertEquals( 0, e.aMap.size() );
 		assertEquals( 0, getCollectionElementRows( e.id ).size() );
-		e.aMap.put( "null", new Thing() );
+		e.aMap.put( "null", null );
 		s.getTransaction().commit();
 		s.close();
 
@@ -94,7 +89,7 @@ public class CollectionElementEmptyEmbeddableTest extends BaseCoreFunctionalTest
 	}
 
 	@Test
-	public void testUpdateNonEmptyValueToEmpty() {
+	public void testUpdateNonNullValueToNull() {
 		Session s = openSession();
 		s.getTransaction().begin();
 		AnEntity e = new AnEntity();
@@ -108,7 +103,7 @@ public class CollectionElementEmptyEmbeddableTest extends BaseCoreFunctionalTest
 		e = (AnEntity) s.get( AnEntity.class, e.id );
 		assertEquals( 1, e.aMap.size() );
 		assertEquals( 1, getCollectionElementRows( e.id ).size() );
-		e.aMap.put( "abc", new Thing() );
+		e.aMap.put( "abc", null );
 		s.getTransaction().commit();
 		s.close();
 
@@ -123,7 +118,7 @@ public class CollectionElementEmptyEmbeddableTest extends BaseCoreFunctionalTest
 	}
 
 	@Test
-	public void testUpdateNonEmptyValueToNonEmpty() {
+	public void testUpdateNonNullValueToNullToNonNull() {
 		Session s = openSession();
 		s.getTransaction().begin();
 		AnEntity e = new AnEntity();
@@ -137,7 +132,7 @@ public class CollectionElementEmptyEmbeddableTest extends BaseCoreFunctionalTest
 		e = (AnEntity) s.get( AnEntity.class, e.id );
 		assertEquals( 1, e.aMap.size() );
 		assertEquals( 1, getCollectionElementRows( e.id ).size() );
-		e.aMap.put( "abc", new Thing() );
+		e.aMap.put( "abc", null );
 		s.getTransaction().commit();
 		s.close();
 
@@ -161,7 +156,7 @@ public class CollectionElementEmptyEmbeddableTest extends BaseCoreFunctionalTest
 	}
 
 	@Test
-	public void testUpdateNonEmptyValueToEmptyWithExtraValue() {
+	public void testUpdateNonNullValueToNullWithExtraValue() {
 		Session s = openSession();
 		s.getTransaction().begin();
 		AnEntity e = new AnEntity();
@@ -176,7 +171,7 @@ public class CollectionElementEmptyEmbeddableTest extends BaseCoreFunctionalTest
 		e = (AnEntity) s.get( AnEntity.class, e.id );
 		assertEquals( 2, e.aMap.size() );
 		assertEquals( 2, getCollectionElementRows( e.id ).size() );
-		e.aMap.put( "abc", new Thing() );
+		e.aMap.put( "abc", null );
 		s.getTransaction().commit();
 		s.close();
 
