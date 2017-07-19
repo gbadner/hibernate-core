@@ -176,9 +176,9 @@ public class ListElementEmptyEmbeddableEmptyDisabledTest extends BaseCoreFunctio
 		s = openSession();
 		s.getTransaction().begin();
 		e = (AnEntity) s.get( AnEntity.class, e.id );
-		assertEquals( 1, e.aList.size() );
+		assertEquals( 2, e.aList.size() );
 		List<Thing> things = getCollectionElementRows( e.id );
-		assertEquals( 2, things.size() );
+		assertEquals( 1, things.size() );
 		assertEquals( "wvu", things.get( 0 ).value1 );
 		assertEquals( "tsr", things.get( 0 ).value2 );
 		s.delete( e );
