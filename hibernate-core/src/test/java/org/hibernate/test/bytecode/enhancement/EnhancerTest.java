@@ -8,7 +8,7 @@ package org.hibernate.test.bytecode.enhancement;
 
 import org.hibernate.bytecode.enhance.spi.UnloadedClass;
 
-import org.hibernate.bytecode.enhance.spi.UnloadedField;
+import org.hibernate.test.bytecode.enhancement.lazy.LazyLoadingByEnhancerSetterPropAccessTestTask;
 import org.hibernate.test.bytecode.enhancement.lazy.LazyLoadingByEnhancerSetterTestTask;
 import org.hibernate.test.bytecode.enhancement.merge.MergeEnhancedEntityTestTask;
 import org.hibernate.test.bytecode.enhancement.merge.RefreshEnhancedEntityTestTask;
@@ -306,6 +306,12 @@ public class EnhancerTest extends BaseUnitTestCase {
 	@TestForIssue( jiraKey = "HHH-11624" )
 	public void testLazyLoadingByEnhancerSetter() {
 		EnhancerTestUtils.runEnhancerTestTask( LazyLoadingByEnhancerSetterTestTask.class );
+	}
+
+	@Test
+	@TestForIssue( jiraKey = "HHH-11624" )
+	public void testLazyLoadingByEnhancerSetterPropertyAccess() {
+		EnhancerTestUtils.runEnhancerTestTask( LazyLoadingByEnhancerSetterPropAccessTestTask.class );
 	}
 
 	@Test
