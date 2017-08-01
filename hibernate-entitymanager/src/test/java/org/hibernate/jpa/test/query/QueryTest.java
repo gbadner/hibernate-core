@@ -1104,12 +1104,7 @@ public class QueryTest extends BaseEntityManagerFunctionalTestCase {
 		em.getTransaction().commit();
 
 		em.getTransaction().begin();
-		Query query = em.createQuery(
-				"select i" +
-						" FROM Item i" +
-						" LEFT JOIN Item iNull" +
-						" ON i.name = iNull.name AND i.name <> iNull.name"
-		);
+		Query query = em.createQuery( "select i FROM Item i" );
 		query.unwrap( org.hibernate.Query.class ).setResultTransformer(
 				new ResultTransformer() {
 					@Override
