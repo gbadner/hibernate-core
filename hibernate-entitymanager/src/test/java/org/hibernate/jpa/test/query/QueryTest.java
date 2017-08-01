@@ -28,6 +28,7 @@ import org.hibernate.jpa.test.Distributor;
 import org.hibernate.jpa.test.Item;
 import org.hibernate.jpa.test.Wallet;
 import org.hibernate.stat.Statistics;
+import org.hibernate.transform.ResultTransformer;
 
 import junit.framework.Assert;
 
@@ -1068,6 +1069,74 @@ public class QueryTest extends BaseEntityManagerFunctionalTestCase {
 	}
 
 	@Test
+	public void testUnrelatedJoin() {
+		EntityManager em = getOrCreateEntityManager();
+		em.getTransaction().begin();
+		Item item = new Item( "Mouse", "Micro$oft mouse" );
+		em.persist( item );
+		assertTrue( em.contains( item ) );
+		em.getTransaction().commit();
+
+		em.getTransaction().begin();
+		Pair pair = (Pair) em.createQuery(
+				"select new org.hibernate.jpa.test.query.QueryTest$Pair( i, iNull )" +
+						" FROM Item i" +
+						" LEFT JOIN Item iNull" +
+						" ON i.name = iNull.name AND i.name <> iNull.name"
+				 ).getSingleResult();
+
+		assertEquals( "Mouse", pair.item1.getName() );
+		assertEquals( "Micro$oft mouse", pair.item1.getDescr() );
+		assertNull( pair.item2 );
+		em.remove( item );
+		em.getTransaction().commit();
+
+		em.close();
+	}
+
+	@Test
+	public void testWithResultTransformer() {
+		EntityManager em = getOrCreateEntityManager();
+		em.getTransaction().begin();
+		Item item = new Item( "Mouse", "Micro$oft mouse" );
+		em.persist( item );
+		assertTrue( em.contains( item ) );
+		em.getTransaction().commit();
+
+		em.getTransaction().begin();
+		Query query = em.createQuery(
+				"select i" +
+						" FROM Item i" +
+						" LEFT JOIN Item iNull" +
+						" ON i.name = iNull.name AND i.name <> iNull.name"
+		);
+		query.unwrap( org.hibernate.Query.class ).setResultTransformer(
+				new ResultTransformer() {
+					@Override
+					public Object transformTuple(Object[] tuple, String[] aliases) {
+						return new Pair( (Item) tuple[0], null );
+					}
+
+					@Override
+					public List transformList(List collection) {
+						return collection;
+					}
+				}
+		);
+		Pair pair = (Pair) query.getSingleResult();
+
+		assertEquals( "Mouse", pair.item1.getName() );
+		assertEquals( "Micro$oft mouse", pair.item1.getDescr() );
+		assertNull( pair.item2 );
+		em.remove( item );
+		em.getTransaction().commit();
+
+		em.close();
+	}
+
+
+
+	@Test
 	@TestForIssue( jiraKey = "HHH-10269")
 	public void testFailingNativeQuery() {
 		final EntityManager entityManager = getOrCreateEntityManager();
@@ -1081,5 +1150,15 @@ public class QueryTest extends BaseEntityManagerFunctionalTestCase {
 			}
 		}
 
+	}
+
+	public static class Pair {
+		private final Item item1;
+		private final Item item2;
+
+		public Pair(Item item1, Item item2) {
+			this.item1 = item1;
+			this.item2 = item2;
+		}
 	}
 }
