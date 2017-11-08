@@ -16,6 +16,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import javax.persistence.Basic;
 import javax.persistence.CascadeType;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
@@ -46,12 +47,13 @@ public class CascadeDetachedTest extends BaseCoreFunctionalTestCase {
     @Test
     public void test() {
         Book book = new Book( "978-1118063330", "Operating System Concepts 9th Edition" );
-        book.addAuthor( new Author( "Abraham", "Silberschatz" ) );
-        book.addAuthor( new Author( "Peter", "Galvin" ) );
-        book.addAuthor( new Author( "Greg", "Gagne" ) );
+        book.addAuthor( new Author( "Abraham", "Silberschatz", new char[] { 'a', 'b' } ) );
+        book.addAuthor( new Author( "Peter", "Galvin", new char[] { 'c', 'd' }  ) );
+        book.addAuthor( new Author( "Greg", "Gagne", new char[] { 'e', 'f' }  ) );
 
-        doInJPA( this::sessionFactory, em -> {
-            em.persist( book );
+        doInJPA(
+                this::sessionFactory, em -> {
+                    em.persist( book );
         } );
 
         doInJPA( this::sessionFactory, em -> {
@@ -104,12 +106,16 @@ public class CascadeDetachedTest extends BaseCoreFunctionalTestCase {
         @JoinColumn
         Book book;
 
+        @Basic( fetch = FetchType.LAZY )
+        char[] charArrayCode;
+
         public Author() {
         }
 
-        public Author(String firstName, String lastName) {
+        public Author(String firstName, String lastName, char[] charArrayCode) {
             this.firstName = firstName;
             this.lastName = lastName;
+            this.charArrayCode = charArrayCode;
         }
     }
 
