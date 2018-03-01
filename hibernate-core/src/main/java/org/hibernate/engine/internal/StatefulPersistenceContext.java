@@ -20,6 +20,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 
 import org.hibernate.AssertionFailure;
@@ -129,17 +130,19 @@ public class StatefulPersistenceContext implements PersistenceContext {
 	// May be empty or not contains all relation
 	private Map<Object,Object> parentsByChild;
 
+	private Map<CollectionKey, PersistentCollection> loadingCollections;
+
 	private int cascading;
 	private int loadCounter;
 	private int removeOrphanBeforeUpdatesCounter;
 	private boolean flushing;
+	private boolean isEntityLoading;
 
 	private boolean defaultReadOnly;
 	private boolean hasNonReadOnlyEntities;
 
 	private LoadContexts loadContexts;
 	private BatchFetchQueue batchFetchQueue;
-
 
 	/**
 	 * Constructs a PersistentContext, bound to the given session.
@@ -178,6 +181,7 @@ public class StatefulPersistenceContext implements PersistenceContext {
 	private void initTransientState() {
 		nullAssociations = new HashSet<>( INIT_COLL_SIZE );
 		nonlazyCollections = new ArrayList<>( INIT_COLL_SIZE );
+		loadingCollections = new HashMap<>( INIT_COLL_SIZE );
 	}
 
 	@Override
@@ -204,6 +208,9 @@ public class StatefulPersistenceContext implements PersistenceContext {
 			unownedCollections = new HashMap<>( INIT_COLL_SIZE );
 		}
 		unownedCollections.put( key, collection );
+		if ( isEntityLoading() ) {
+			loadingCollections.put( key, collection );
+		}
 	}
 
 	@Override
@@ -254,6 +261,9 @@ public class StatefulPersistenceContext implements PersistenceContext {
 		collectionEntries.clear();
 		if ( unownedCollections != null ) {
 			unownedCollections.clear();
+		}
+		if ( loadingCollections != null ) {
+			loadingCollections.clear();
 		}
 		proxiesByKey.clear();
 		nullifiableEntityKeys.clear();
@@ -826,6 +836,9 @@ public class StatefulPersistenceContext implements PersistenceContext {
 		if ( persister.getBatchSize() > 1 ) {
 			getBatchFetchQueue().addBatchLoadableCollection( collection, ce );
 		}
+		if ( isEntityLoading() ) {
+			loadingCollections.put( new CollectionKey( persister, id ), collection );
+		}
 	}
 
 	@Override
@@ -896,6 +909,9 @@ public class StatefulPersistenceContext implements PersistenceContext {
 		final CollectionEntry ce = new CollectionEntry( collection, persister, id, flushing );
 		ce.postInitialize( collection );
 		addCollection( collection, ce, id );
+		if ( isEntityLoading() ) {
+			loadingCollections.put( new CollectionKey( persister, id ), collection );
+		}
 		return ce;
 	}
 
@@ -1062,6 +1078,24 @@ public class StatefulPersistenceContext implements PersistenceContext {
 		}
 	}
 
+	public boolean isEntityLoading() {
+		return isEntityLoading;
+	}
+
+	public void setEntityLoading(boolean isEntityLoading) {
+		if ( this.isEntityLoading() && ! isEntityLoading ) {
+			// top-level load has finished
+			for ( PersistentCollection loadingCollection : loadingCollections.values() ) {
+				if ( loadingCollection.wasInitialized() ) {
+					loadingCollection.afterInitialize();
+					final CollectionEntry collectionEntry = getCollectionEntry( loadingCollection );
+					collectionEntry.postInitialize( loadingCollection );
+				}
+			}
+			loadingCollections.clear();
+		}
+		this.isEntityLoading = isEntityLoading;
+	}
 	public boolean isRemovingOrphanBeforeUpates() {
 		return removeOrphanBeforeUpdatesCounter > 0;
 	}

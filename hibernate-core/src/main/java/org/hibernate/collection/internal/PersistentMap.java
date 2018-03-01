@@ -286,6 +286,24 @@ public class PersistentMap extends AbstractPersistentCollection implements Map {
 	}
 
 	@Override
+	protected void clearAndReinsert() {
+		// TODO: if queued operations were executed, could the collection be dirty?
+		// For now, just check to see if it is dirty before clearing and re-inserting.
+		final boolean wasDirty = isDirty();
+		final List<Map.Entry> contents = new ArrayList<>( map.entrySet() );
+		map.clear();
+		for ( Map.Entry entry : contents) {
+			map.put( entry.getKey(), entry.getValue() );
+		}
+		contents.clear();
+		if ( !wasDirty ) {
+			// Clearing and re-inserting the collection will dirty it, if it wasn't dirty already.
+			// Only clear dirtiness if the collection was not dirty before clearing and re-inserting.
+			clearDirty();
+		}
+	}
+
+	@Override
 	@SuppressWarnings("unchecked")
 	public Iterator entries(CollectionPersister persister) {
 		return map.entrySet().iterator();

@@ -539,16 +539,46 @@ public abstract class AbstractPersistentCollection implements Serializable, Pers
 
 	@Override
 	public boolean afterInitialize() {
-		setInitialized();
-		//do this bit after setting initialized to true or it will recurse
-		if ( operationQueue != null ) {
-			performQueuedOperations();
-			operationQueue = null;
-			cachedSize = -1;
-			return false;
+		if ( isInitialized() ) {
+			// collection is already initialized; this is being called after a load is finished
+			// so that elements can be re-inserted
+			clearAndReinsert();
+			return true;
 		}
 		else {
-			return true;
+			setInitialized();
+			//do this bit after setting initialized to true or it will recurse
+			if ( operationQueue != null ) {
+				performQueuedOperations();
+				operationQueue = null;
+				cachedSize = -1;
+				return false;
+			}
+			else {
+				return true;
+			}
+		}
+	}
+
+	protected void clearAndReinsert() {
+		if ( Collection.class.isInstance( this ) ) {
+			// TODO: if queued operations were executed, could the collection be dirty?
+			// For now, just check to see if it is dirty before clearing and re-inserting.
+			final boolean wasDirty = isDirty();
+			final Collection thisCollection = (Collection) this;
+			List contents = new ArrayList( thisCollection );
+			thisCollection.clear();
+			thisCollection.addAll( contents );
+			if ( !wasDirty ) {
+				// Clearing and re-inserting the collection will dirty it, if it wasn't dirty already.
+				// Only clear dirtiness if the collection was not dirty before clearing and re-inserting.
+				clearDirty();
+			}
+		}
+		else {
+			throw new AssertionFailure(
+					getClass().getName() + "is not a " + Collection.class.getName() +
+							"; #clearAndReinsert must be implemented by " + getClass().getName() );
 		}
 	}
 

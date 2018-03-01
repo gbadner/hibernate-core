@@ -1238,8 +1238,19 @@ public final class SessionImpl
 	private void fireLoad(LoadEvent event, LoadType loadType) {
 		checkOpenOrWaitingForAutoClose();
 		checkTransactionSynchStatus();
-		for ( LoadEventListener listener : listeners( EventType.LOAD ) ) {
-			listener.onLoad( event, loadType );
+		final boolean isTopLevel = !persistenceContext.isEntityLoading();
+		if ( isTopLevel ) {
+			persistenceContext.setEntityLoading( true );
+		}
+		try {
+			for ( LoadEventListener listener : listeners( EventType.LOAD ) ) {
+				listener.onLoad( event, loadType );
+			}
+		}
+		finally {
+			if ( isTopLevel ) {
+				persistenceContext.setEntityLoading( false );
+			}
 		}
 		delayedAfterCompletion();
 	}

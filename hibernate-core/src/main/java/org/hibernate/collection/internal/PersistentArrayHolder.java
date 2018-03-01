@@ -187,6 +187,11 @@ public class PersistentArrayHolder extends AbstractPersistentCollection {
 	}
 
 	@Override
+	protected void clearAndReinsert() {
+		// nothing to do?
+	}
+
+	@Override
 	public void beforeInitialize(CollectionPersister persister, int anticipatedSize) {
 		//if (tempList==null) throw new UnsupportedOperationException("Can't lazily initialize arrays");
 	}
