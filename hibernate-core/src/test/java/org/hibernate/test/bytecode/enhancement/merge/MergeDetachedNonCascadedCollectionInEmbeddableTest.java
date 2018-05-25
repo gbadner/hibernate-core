@@ -8,14 +8,12 @@ package org.hibernate.test.bytecode.enhancement.merge;
 
 import java.util.HashSet;
 import java.util.Set;
-import javax.persistence.CascadeType;
-import javax.persistence.ElementCollection;
 import javax.persistence.Embeddable;
-import javax.persistence.Embedded;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
+import javax.persistence.JoinColumn;
 import javax.persistence.OneToMany;
 
 import org.hibernate.testing.TestForIssue;
@@ -32,7 +30,7 @@ import static org.junit.Assert.assertNotSame;
  */
 @TestForIssue(jiraKey = "HHH-12592")
 @RunWith(BytecodeEnhancerRunner.class)
-public class MergeEnhancedDetachedCollectionInEmbeddableTest extends BaseCoreFunctionalTestCase {
+public class MergeDetachedNonCascadedCollectionInEmbeddableTest extends BaseCoreFunctionalTestCase {
 	@Override
 	protected Class<?>[] getAnnotatedClasses() {
 		return new Class<?>[] { Heading.class, Grouping.class, Thing.class };
@@ -44,7 +42,9 @@ public class MergeEnhancedDetachedCollectionInEmbeddableTest extends BaseCoreFun
 			Heading entity = new Heading();
 			entity.name = "new";
 			entity.setGrouping( new Grouping() );
-			entity.getGrouping().getThings().add( new Thing() );
+			Thing thing = new Thing();
+			entity.getGrouping().getThings().add( thing );
+			session.save( thing );
 			session.save( entity );
 			return entity;
 		} );
@@ -95,7 +95,8 @@ public class MergeEnhancedDetachedCollectionInEmbeddableTest extends BaseCoreFun
 	public static class Grouping {
 		private Set<Thing> things = new HashSet<>();
 
-		@OneToMany(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+		@OneToMany(fetch = FetchType.LAZY)
+		@JoinColumn
 		public Set<Thing> getThings() {
 			return things;
 		}
