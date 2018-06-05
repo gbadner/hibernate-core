@@ -12,12 +12,42 @@ dependencies {
 
 jar {
     manifest = null
+	manifest {
+		attributes('Specification-Title': project.name,
+		           'Specification-Version': project.version,
+		           'Specification-Vendor': 'Hibernate.org',
+		           'Implementation-Title': project.name,
+		           'Implementation-Version': project.version,
+		           'Implementation-Vendor': 'Hibernate.org',
+		           'Implementation-Vendor-Id': 'org.hibernate',
+		           'Implementation-Url': 'http://hibernate.org/orm')
+	}
 }
 
 sourcesJar {
     manifest = null
+	manifest {
+		attributes('Specification-Title': project.name,
+		           'Specification-Version': project.version,
+		           'Specification-Vendor': 'Hibernate.org',
+		           'Implementation-Title': project.name,
+		           'Implementation-Version': project.version,
+		           'Implementation-Vendor': 'Hibernate.org',
+		           'Implementation-Vendor-Id': 'org.hibernate',
+		           'Implementation-Url': 'http://hibernate.org/orm')
+	}
 }
 
 javadocJar {
     manifest = null
+	manifest {
+		attributes('Specification-Title': project.name,
+		           'Specification-Version': project.version,
+		           'Specification-Vendor': 'Hibernate.org',
+		           'Implementation-Title': project.name,
+		           'Implementation-Version': project.version,
+		           'Implementation-Vendor': 'Hibernate.org',
+		           'Implementation-Vendor-Id': 'org.hibernate',
+		           'Implementation-Url': 'http://hibernate.org/orm')
+	}
 }
