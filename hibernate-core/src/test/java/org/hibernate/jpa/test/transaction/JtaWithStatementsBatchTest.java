@@ -13,6 +13,10 @@
  */
 package org.hibernate.jpa.test.transaction;
 
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import javax.persistence.Entity;
 import javax.persistence.EntityManager;
@@ -26,6 +30,12 @@ import org.hibernate.annotations.GenericGenerator;
 import org.hibernate.annotations.Parameter;
 import org.hibernate.cfg.AvailableSettings;
 import org.hibernate.engine.jdbc.batch.internal.AbstractBatchImpl;
+import org.hibernate.engine.jdbc.batch.internal.BatchBuilderImpl;
+import org.hibernate.engine.jdbc.batch.internal.BatchBuilderInitiator;
+import org.hibernate.engine.jdbc.batch.internal.BatchingBatch;
+import org.hibernate.engine.jdbc.batch.spi.Batch;
+import org.hibernate.engine.jdbc.batch.spi.BatchKey;
+import org.hibernate.engine.jdbc.spi.JdbcCoordinator;
 import org.hibernate.internal.CoreMessageLogger;
 import org.hibernate.jpa.test.BaseEntityManagerFunctionalTestCase;
 
@@ -42,8 +52,10 @@ import org.junit.Test;
 import org.jboss.logging.Logger;
 
 import static org.hamcrest.core.Is.is;
+import static org.hamcrest.core.IsNot.not;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.fail;
 
 /**
  * @author Andrea Boriero
@@ -75,6 +87,8 @@ public class JtaWithStatementsBatchTest extends BaseEntityManagerFunctionalTestC
 	protected void addConfigOptions(Map options) {
 		super.addConfigOptions( options );
 		TestingJtaBootstrap.prepare( options );
+		options.put( BatchBuilderInitiator.BUILDER, TestBatchBuilder.class.getName() );
+
 		options.put( AvailableSettings.JPA_TRANSACTION_TYPE, "JTA" );
 		options.put( AvailableSettings.STATEMENT_BATCH_SIZE, "50" );
 	}
@@ -106,9 +120,20 @@ public class JtaWithStatementsBatchTest extends BaseEntityManagerFunctionalTestC
 			transaction.commit();
 		}
 		finally {
+			assertThat( statements.size(), not( 0 ) );
+			assertThat( numberOfStatementsAfterReleasing, is( 0 ) );
+			statements.forEach( statement -> {
+				try {
+					assertThat( statement.isClosed(), is( true ) );
+				}
+				catch (SQLException e) {
+					fail( e.getMessage() );
+				}
+			} );
 			if ( transaction != null && transaction.isActive() ) {
 				transaction.rollback();
 			}
+
 			em.close();
 		}
 
@@ -187,6 +212,36 @@ public class JtaWithStatementsBatchTest extends BaseEntityManagerFunctionalTestC
 
 		public void setMessage(String message) {
 			this.message = message;
+		}
+	}
+
+	private static int numberOfStatementsAfterReleasing;
+	private static List<PreparedStatement> statements = new ArrayList<>();
+
+	public static class TestBatch extends BatchingBatch {
+
+		public TestBatch(BatchKey key, JdbcCoordinator jdbcCoordinator, int batchSize) {
+			super( key, jdbcCoordinator, batchSize );
+		}
+
+		protected void releaseStatements() {
+			statements.addAll( getStatements().values() );
+			super.releaseStatements();
+			numberOfStatementsAfterReleasing += getStatements().size();
+		}
+	}
+
+	public static class TestBatchBuilder extends BatchBuilderImpl {
+		private int jdbcBatchSize;
+
+		@Override
+		public void setJdbcBatchSize(int jdbcBatchSize) {
+			this.jdbcBatchSize = jdbcBatchSize;
+		}
+
+		@Override
+		public Batch buildBatch(BatchKey key, JdbcCoordinator jdbcCoordinator) {
+			return new TestBatch( key, jdbcCoordinator, jdbcBatchSize );
 		}
 	}
 
