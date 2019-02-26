@@ -55,8 +55,7 @@ public class LocalDateTimeJavaDescriptor extends AbstractTypeDescriptor<LocalDat
 		}
 
 		if ( java.sql.Timestamp.class.isAssignableFrom( type ) ) {
-			Instant instant = value.atZone( ZoneId.systemDefault() ).toInstant();
-			return (X) java.sql.Timestamp.from( instant );
+			return (X) Timestamp.valueOf( value );
 		}
 
 		if ( java.sql.Date.class.isAssignableFrom( type ) ) {
@@ -98,7 +97,7 @@ public class LocalDateTimeJavaDescriptor extends AbstractTypeDescriptor<LocalDat
 
 		if ( Timestamp.class.isInstance( value ) ) {
 			final Timestamp ts = (Timestamp) value;
-			return LocalDateTime.ofInstant( ts.toInstant(), ZoneId.systemDefault() );
+			return ts.toLocalDateTime();
 		}
 
 		if ( Long.class.isInstance( value ) ) {
