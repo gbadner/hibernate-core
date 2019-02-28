@@ -5,6 +5,7 @@
  * See the lgpl.txt file in the root directory or <http://www.gnu.org/licenses/lgpl-2.1.html>.
  */
 apply from: rootProject.file( 'gradle/base-information.gradle' )
+apply from: rootProject.file( 'gradle/publishing-repos.gradle' )
 
 apply plugin: 'idea'
 apply plugin: 'distribution'
@@ -231,6 +232,22 @@ task uploadBundlesSourceForge(type: Exec, dependsOn: buildBundles) {
     }
 }
 
+task javadocJar(type: Jar, dependsOn: buildBundles) {
+    classifier = 'javadoc'
+    from 'target/documentation/javadocs'
+    manifest = null
+    manifest {
+        attributes('Specification-Title': project.name,
+                   'Specification-Version': project.version,
+                   'Specification-Vendor': 'Hibernate.org',
+                   'Implementation-Title': project.name,
+                   'Implementation-Version': project.version,
+                   'Implementation-Vendor': 'Hibernate.org',
+                   'Implementation-Vendor-Id': 'org.hibernate',
+                   'Implementation-Url': 'http://hibernate.org/orm')
+    }
+}
+
 configurations {
     bundles {
         description = 'Configuration used to group the archives output from the distribution plugin.'
@@ -240,7 +257,59 @@ configurations {
 artifacts {
     bundles distTar
     bundles distZip
+    javadocJar
 }
 
 task release( dependsOn: [uploadDocumentation, uploadBundlesSourceForge] )
+
+publishing {
+    publications {
+        publishedArtifacts {
+            pom {
+                artifactId = 'hibernate-release'
+                name = 'Hibernate ORM release bundle'
+                description = project.description
+                url = 'http://hibernate.org/orm'
+
+                organization {
+                    name = 'Hibernate.org'
+                    url = 'http://hibernate.org'
+                }
+
+                licenses {
+                    license {
+                        name = 'GNU Library General Public License v2.1 or later'
+                        url = 'http://www.opensource.org/licenses/LGPL-2.1'
+                        comments = 'See discussion at http://hibernate.org/community/license/ for more details.'
+                        distribution = 'repo'
+                    }
+                }
+
+                scm {
+                    url = 'http://github.com/hibernate/hibernate-orm'
+                    connection = 'scm:git:http://github.com/hibernate/hibernate-orm.git'
+                    developerConnection = 'scm:git:git@github.com:hibernate/hibernate-orm.git'
+                }
+
+                issueManagement {
+                    system = 'jira'
+                    url = 'https://hibernate.atlassian.net/browse/HHH'
+                }
+
+                developers {
+                    developer {
+                        id = 'hibernate-team'
+                        name = 'The Hibernate Development Team'
+                        organization = 'Hibernate.org'
+                        organizationUrl = 'http://hibernate.org'
+                    }
+                }
+
+            }
+            artifact distTar
+            artifact distZip
+            artifact javadocJar
+        }
+    }
+}
 
