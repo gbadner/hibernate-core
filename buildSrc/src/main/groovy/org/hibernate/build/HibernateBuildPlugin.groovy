@@ -79,6 +79,19 @@ class HibernateBuildPlugin implements Plugin<Project> {
 					url System.getProperty('maven.deploy.url')
 				}
 			}
+			else if ( System.getProperty('accessToken') != null ) {
+				gradlePublishingExtension.repositories.maven {
+					name 'maven-repository'
+					url System.getProperty('maven.deploy.url')
+					credentials(HttpHeaderCredentials) {
+						name = "Authorization"
+						value = "Bearer " + System.getProperty('accessToken')
+					}
+					authentication {
+						header(HttpHeaderAuthentication)
+					}
+				}
+			}
 			else {
 				gradlePublishingExtension.repositories.maven {
 					name 'maven-repository'

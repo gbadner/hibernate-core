@@ -25,9 +25,24 @@ publishing {
 	}
 
 	repositories {
-		maven {
-			name 'maven-repository'
-			url System.getProperty('maven.deploy.url')
+		if ( System.getProperty('accessToken') != null ) {
+			maven {
+				name 'maven-repository'
+				url System.getProperty('maven.deploy.url')
+				credentials(HttpHeaderCredentials) {
+					name = "Authorization"
+					value = "Bearer " + System.getProperty('accessToken')
+				}
+				authentication {
+					header(HttpHeaderAuthentication)
+				}
+			}
+		}
+		else {
+			maven {
+				name 'maven-repository'
+				url System.getProperty('maven.deploy.url')
+			}
 		}
 	}
 }
