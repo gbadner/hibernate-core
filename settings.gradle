@@ -34,6 +34,8 @@ include 'hibernate-orm-modules'
 include 'documentation'
 include 'release'
 
+include 'project'
+
 include 'metamodel-generator'
 project(':metamodel-generator').projectDir = new File(rootProject.projectDir, "tooling/metamodel-generator")
 project(':metamodel-generator').name = 'hibernate-jpamodelgen'
