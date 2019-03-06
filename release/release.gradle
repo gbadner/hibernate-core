@@ -200,6 +200,7 @@ distZip.dependsOn assembleDocumentation
 distTar.dependsOn assembleDocumentation
 distTar {
     compression = Compression.GZIP
+    extension = 'tar.gz'
 }
 
 /**
