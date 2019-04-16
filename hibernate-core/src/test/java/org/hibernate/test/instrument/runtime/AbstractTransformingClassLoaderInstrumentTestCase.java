@@ -104,6 +104,11 @@ public abstract class AbstractTransformingClassLoaderInstrumentTestCase extends 
 	}
 
 	@Test
+	public void testFetchGroupsDefault() throws Exception {
+		executeExecutable( "org.hibernate.test.instrument.cases.TestFetchGroupsDefaultExecutable" );
+	}
+
+	@Test
     @SkipForDialect( value = MySQLDialect.class, comment = "wrong sql in mapping, mysql needs double type, but it is float type in mapping")
 	public void testLazyManyToOne() {
 		executeExecutable( "org.hibernate.test.instrument.cases.TestLazyManyToOneExecutable" );
