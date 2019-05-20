@@ -174,6 +174,11 @@ public abstract class AbstractTransformingClassLoaderInstrumentTestCase extends 
 		executeExecutable( "org.hibernate.test.instrument.cases.LazyGraphWithInheritanceExecutable" );
 	}
 
+	@Test
+	public void testStatelessFetchingScrollExecutable() {
+		executeExecutable( "org.hibernate.test.instrument.cases.TestStatelessFetchingScrollExecutable" );
+	}
+
 	// reflection code to ensure isolation into the created classloader ~~~~~~~
 
 	private static final Class[] SIG = new Class[] {};

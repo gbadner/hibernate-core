@@ -1,0 +1,50 @@
+<?xml version="1.0"?>
+<!DOCTYPE hibernate-mapping PUBLIC 
+	"-//Hibernate/Hibernate Mapping DTD 3.0//EN"
+	"http://www.hibernate.org/dtd/hibernate-mapping-3.0.dtd">
+
+<!-- 
+
+  This mapping demonstrates shared PK one-to-one associations using
+  lazy="proxy" and lazy="no-proxy".
+
+  Implementation note: This test does not include any other
+  lazy properties, and allows testing special case code in
+  AbstractEntityPersister.initializeLazyPropertiesFromDatastore()
+  (lazy select string will be null) and OneToOne.nullSafeGet()
+  (ResultSet arg is ignored and the owner's ID is returned).
+
+-->
+
+<hibernate-mapping package="org.hibernate.test.instrument.domain" default-access="field">
+
+    <class name="AEntity3">
+        <id name="id">
+            <generator class="assigned"/>
+        </id>
+        <set name="bEntities" lazy="true" inverse="true" cascade="all">
+            <key column="aEntity"/>
+            <one-to-many class="BEntity3"/>
+        </set>
+    </class>
+
+    <class name="BEntity3">
+        <id name="id">
+            <generator class="assigned"/>
+        </id>
+        <many-to-one name="aEntity" class="AEntity3" lazy="no-proxy"/>
+        <many-to-one name="cEntity" class="CEntity3" lazy="no-proxy"/>
+    </class>
+
+    <class name="CEntity3">
+        <id name="id">
+            <generator class="assigned"/>
+        </id>
+        <set name="bEntities" lazy="true" inverse="true">
+            <key column="cEntity"/>
+            <one-to-many class="BEntity3"/>
+        </set>
+    </class>
+
+
+</hibernate-mapping>
