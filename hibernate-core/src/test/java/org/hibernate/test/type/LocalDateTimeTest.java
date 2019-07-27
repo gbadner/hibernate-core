@@ -31,7 +31,7 @@ public class LocalDateTimeTest extends AbstractJavaTimeTypeTest<LocalDateTime, L
 
 	private static class ParametersBuilder extends AbstractParametersBuilder<ParametersBuilder> {
 		public ParametersBuilder add(int year, int month, int day,
-				int hour, int minute, int second, int nanosecond, ZoneId defaultTimeZone) {
+									 int hour, int minute, int second, int nanosecond, ZoneId defaultTimeZone) {
 			if ( !isNanosecondPrecisionSupported() ) {
 				nanosecond = 0;
 			}
@@ -55,12 +55,28 @@ public class LocalDateTimeTest extends AbstractJavaTimeTypeTest<LocalDateTime, L
 								.add( 1900, 1, 1, 0, 0, 0, 0, ZONE_OSLO )
 								.add( 1900, 1, 2, 0, 9, 21, 0, ZONE_PARIS )
 								.add( 1900, 1, 2, 0, 19, 32, 0, ZONE_AMSTERDAM )
-								// Affected by HHH-13266 (JDK-8061577)
+										// Affected by HHH-13266 (JDK-8061577)
 								.add( 1892, 1, 1, 0, 0, 0, 0, ZONE_OSLO )
 								.add( 1900, 1, 1, 0, 9, 20, 0, ZONE_PARIS )
 								.add( 1900, 1, 1, 0, 19, 31, 0, ZONE_AMSTERDAM )
 								.add( 1600, 1, 1, 0, 0, 0, 0, ZONE_AMSTERDAM )
 				)
+						// HHH-13379: DST end (where Timestamp becomes ambiguous, see JDK-4312621)
+						// => This used to work correctly in 5.4.1.Final and earlier
+				.add( 2018, 10, 28, 1, 0, 0, 0, ZONE_PARIS )
+				.add( 2018, 10, 28, 2, 0, 0, 0, ZONE_PARIS )
+				.add( 2018, 10, 28, 3, 0, 0, 0, ZONE_PARIS )
+						// => Also test DST start, just in case
+						// This does not work, but it's unrelated to HHH-13379; see HHH-13515
+						//.add( 2018, 3, 25, 2, 0, 0, 0, ZONE_PARIS )
+				.add( 2018, 3, 25, 3, 0, 0, 0, ZONE_PARIS )
+						// => Also test dates around 1905-01-01, because the code behaves differently before and after 1905
+				.add( 1904, 12, 31, 22, 59, 59, 999_999_999, ZONE_PARIS )
+				.add( 1904, 12, 31, 23, 59, 59, 999_999_999, ZONE_PARIS )
+				.add( 1905, 1, 1, 0, 59, 59, 999_999_999, ZONE_PARIS )
+				.add( 1904, 12, 31, 23, 0, 0, 0, ZONE_PARIS )
+				.add( 1905, 1, 1, 0, 0, 0, 0, ZONE_PARIS )
+				.add( 1905, 1, 1, 1, 0, 0, 0, ZONE_PARIS )
 				.build();
 	}
 
@@ -73,7 +89,7 @@ public class LocalDateTimeTest extends AbstractJavaTimeTypeTest<LocalDateTime, L
 	private final int nanosecond;
 
 	public LocalDateTimeTest(EnvironmentParameters env, int year, int month, int day,
-			int hour, int minute, int second, int nanosecond) {
+							 int hour, int minute, int second, int nanosecond) {
 		super( env );
 		this.year = year;
 		this.month = month;

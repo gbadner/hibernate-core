@@ -110,25 +110,25 @@ abstract class AbstractJavaTimeTypeTest<T, E> extends BaseCoreFunctionalTestCase
 	@Before
 	public void cleanup() {
 		inTransaction( session -> {
-			session.createNativeQuery( "DELETE FROM " + ENTITY_NAME ).executeUpdate();
-		} );
+						   session.createNativeQuery( "DELETE FROM " + ENTITY_NAME ).executeUpdate();
+					   } );
 	}
 
 	@Test
 	@TestForIssue(jiraKey = "HHH-13266")
 	public void writeThenRead() {
 		withDefaultTimeZone( () -> {
-			inTransaction( session -> {
-				session.persist( createEntityForHibernateWrite( 1 ) );
-			} );
-			inTransaction( session -> {
-				T read = getActualPropertyValue( session.find( getEntityType(), 1 ) );
-				assertEquals(
-						"Writing then reading a value should return the original value",
-						getExpectedPropertyValueAfterHibernateRead(), read
-				);
-			} );
-		} );
+								 inTransaction( session -> {
+													session.persist( createEntityForHibernateWrite( 1 ) );
+												} );
+								 inTransaction( session -> {
+													T read = getActualPropertyValue( session.find( getEntityType(), 1 ) );
+													assertEquals(
+															"Writing then reading a value should return the original value",
+															getExpectedPropertyValueAfterHibernateRead(), read
+													);
+												} );
+							 } );
 	}
 
 	@Test
@@ -137,27 +137,27 @@ abstract class AbstractJavaTimeTypeTest<T, E> extends BaseCoreFunctionalTestCase
 		assumeNoJdbcTimeZone();
 
 		withDefaultTimeZone( () -> {
-			inTransaction( session -> {
-				session.persist( createEntityForHibernateWrite( 1 ) );
-			} );
-			inTransaction( session -> {
-				session.doWork( connection -> {
-					final PreparedStatement statement = connection.prepareStatement(
-							"SELECT " + PROPERTY_COLUMN_NAME + " FROM " + ENTITY_NAME + " WHERE " + ID_COLUMN_NAME + " = ?"
-					);
-					statement.setInt( 1, 1 );
-					statement.execute();
-					final ResultSet resultSet = statement.getResultSet();
-					resultSet.next();
-					Object nativeRead = getActualJdbcValue( resultSet, 1 );
-					assertEquals(
-							"Values written by Hibernate ORM should match the original value (same day, hour, ...)",
-							getExpectedJdbcValueAfterHibernateWrite(),
-							nativeRead
-					);
-				} );
-			} );
-		} );
+								 inTransaction( session -> {
+													session.persist( createEntityForHibernateWrite( 1 ) );
+												} );
+								 inTransaction( session -> {
+													session.doWork( connection -> {
+																		final PreparedStatement statement = connection.prepareStatement(
+																				"SELECT " + PROPERTY_COLUMN_NAME + " FROM " + ENTITY_NAME + " WHERE " + ID_COLUMN_NAME + " = ?"
+																		);
+																		statement.setInt( 1, 1 );
+																		statement.execute();
+																		final ResultSet resultSet = statement.getResultSet();
+																		resultSet.next();
+																		Object nativeRead = getActualJdbcValue( resultSet, 1 );
+																		assertEquals(
+																				"Values written by Hibernate ORM should match the original value (same day, hour, ...)",
+																				getExpectedJdbcValueAfterHibernateWrite(),
+																				nativeRead
+																		);
+																	} );
+												} );
+							 } );
 	}
 
 	@Test
@@ -166,25 +166,25 @@ abstract class AbstractJavaTimeTypeTest<T, E> extends BaseCoreFunctionalTestCase
 		assumeNoJdbcTimeZone();
 
 		withDefaultTimeZone( () -> {
-			inTransaction( session -> {
-				session.doWork( connection -> {
-					final PreparedStatement statement = connection.prepareStatement(
-							"INSERT INTO " + ENTITY_NAME + " (" + ID_COLUMN_NAME + ", " + PROPERTY_COLUMN_NAME + ") "
-							+ " VALUES ( ? , ? )"
-					);
-					statement.setInt( 1, 1 );
-					setJdbcValueForNonHibernateWrite( statement, 2 );
-					statement.execute();
-				} );
-			} );
-			inTransaction( session -> {
-				T read = getActualPropertyValue( session.find( getEntityType(), 1 ) );
-				assertEquals(
-						"Values written without Hibernate ORM should be read correctly by Hibernate ORM",
-						getExpectedPropertyValueAfterHibernateRead(), read
-				);
-			} );
-		} );
+								 inTransaction( session -> {
+													session.doWork( connection -> {
+																		final PreparedStatement statement = connection.prepareStatement(
+																				"INSERT INTO " + ENTITY_NAME + " (" + ID_COLUMN_NAME + ", " + PROPERTY_COLUMN_NAME + ") "
+																						+ " VALUES ( ? , ? )"
+																		);
+																		statement.setInt( 1, 1 );
+																		setJdbcValueForNonHibernateWrite( statement, 2 );
+																		statement.execute();
+																	} );
+												} );
+								 inTransaction( session -> {
+													T read = getActualPropertyValue( session.find( getEntityType(), 1 ) );
+													assertEquals(
+															"Values written without Hibernate ORM should be read correctly by Hibernate ORM",
+															getExpectedPropertyValueAfterHibernateRead(), read
+													);
+												} );
+							 } );
 	}
 
 	protected final void withDefaultTimeZone(Runnable runnable) {
@@ -243,6 +243,8 @@ abstract class AbstractJavaTimeTypeTest<T, E> extends BaseCoreFunctionalTestCase
 
 		private final List<Class<? extends AbstractRemappingH2Dialect>> remappingDialectClasses = new ArrayList<>();
 
+		private ZoneId forcedJdbcTimeZone = null;
+
 		protected AbstractParametersBuilder() {
 			dialect = determineDialect();
 			remappingDialectClasses.add( null ); // Always test without remapping
@@ -257,6 +259,18 @@ abstract class AbstractJavaTimeTypeTest<T, E> extends BaseCoreFunctionalTestCase
 			}
 			if ( !skip ) {
 				skippedIfDialectMatchesClasses.accept( thisAsS() );
+			}
+			return thisAsS();
+		}
+
+		public S withForcedJdbcTimezone(String zoneIdString, Consumer<S> contributor) {
+			ZoneId zoneId = ZoneId.of( zoneIdString );
+			this.forcedJdbcTimeZone = zoneId;
+			try {
+				contributor.accept( thisAsS() );
+			}
+			finally {
+				this.forcedJdbcTimeZone = null;
 			}
 			return thisAsS();
 		}
@@ -281,24 +295,26 @@ abstract class AbstractJavaTimeTypeTest<T, E> extends BaseCoreFunctionalTestCase
 				parameters.add(
 						new EnvironmentParameters(
 								defaultJvmTimeZone,
-								null,
+								forcedJdbcTimeZone,
 								remappingDialectClass
 						)
 				);
 				Collections.addAll( parameters, subClassParameters );
 				result.add( parameters.toArray() );
 			}
-			for ( ZoneId hibernateJdbcTimeZone : getHibernateJdbcTimeZonesToTest() ) {
-				List<Object> parameters = new ArrayList<>();
-				parameters.add(
-						new EnvironmentParameters(
-								defaultJvmTimeZone,
-								hibernateJdbcTimeZone,
-								null
-						)
-				);
-				Collections.addAll( parameters, subClassParameters );
-				result.add( parameters.toArray() );
+			if ( forcedJdbcTimeZone == null ) {
+				for ( ZoneId hibernateJdbcTimeZone : getHibernateJdbcTimeZonesToTest() ) {
+					List<Object> parameters = new ArrayList<>();
+					parameters.add(
+							new EnvironmentParameters(
+									defaultJvmTimeZone,
+									hibernateJdbcTimeZone,
+									null
+							)
+					);
+					Collections.addAll( parameters, subClassParameters );
+					result.add( parameters.toArray() );
+				}
 			}
 			return thisAsS();
 		}
@@ -335,7 +351,7 @@ abstract class AbstractJavaTimeTypeTest<T, E> extends BaseCoreFunctionalTestCase
 		private final Class<? extends AbstractRemappingH2Dialect> remappingDialectClass;
 
 		private EnvironmentParameters(ZoneId defaultJvmTimeZone, ZoneId hibernateJdbcTimeZone,
-				Class<? extends AbstractRemappingH2Dialect> remappingDialectClass) {
+									  Class<? extends AbstractRemappingH2Dialect> remappingDialectClass) {
 			this.defaultJvmTimeZone = defaultJvmTimeZone;
 			this.hibernateJdbcTimeZone = hibernateJdbcTimeZone;
 			this.remappingDialectClass = remappingDialectClass;

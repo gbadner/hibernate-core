@@ -44,8 +44,8 @@ public class LocalTimeTest extends AbstractJavaTimeTypeTest<LocalTime, LocalTime
 		}
 
 		public ParametersBuilder addPersistedWithoutHibernate(int yearWhenPersistedWithoutHibernate,
-				int monthWhenPersistedWithoutHibernate, int dayWhenPersistedWithoutHibernate,
-				int hour, int minute, int second, int nanosecond, ZoneId defaultTimeZone) {
+															  int monthWhenPersistedWithoutHibernate, int dayWhenPersistedWithoutHibernate,
+															  int hour, int minute, int second, int nanosecond, ZoneId defaultTimeZone) {
 			if ( !isNanosecondPrecisionSupported() ) {
 				nanosecond = 0;
 			}
@@ -61,7 +61,7 @@ public class LocalTimeTest extends AbstractJavaTimeTypeTest<LocalTime, LocalTime
 	public static List<Object[]> data() {
 		return new ParametersBuilder()
 				.alsoTestRemappingsWithH2( TimeAsTimestampRemappingH2Dialect.class )
-				// None of these values was affected by HHH-13266 (JDK-8061577)
+						// None of these values was affected by HHH-13266 (JDK-8061577)
 				.add( 19, 19, 1, 0, ZONE_UTC_MINUS_8 )
 				.add( 19, 19, 1, 0, ZONE_PARIS )
 				.add( 19, 19, 1, 500, ZONE_PARIS )
@@ -82,6 +82,10 @@ public class LocalTimeTest extends AbstractJavaTimeTypeTest<LocalTime, LocalTime
 								.addPersistedWithoutHibernate( 1900, 1, 1, 0, 19, 31, 0, ZONE_AMSTERDAM )
 								.addPersistedWithoutHibernate( 1600, 1, 1, 0, 0, 0, 0, ZONE_AMSTERDAM )
 				)
+						// HHH-13379: DST end (where Timestamp becomes ambiguous, see JDK-4312621)
+				.add( 1, 0, 0, 0, ZONE_PARIS )
+				.add( 2, 0, 0, 0, ZONE_PARIS )
+				.add( 3, 0, 0, 0, ZONE_PARIS )
 				.build();
 	}
 
@@ -95,7 +99,7 @@ public class LocalTimeTest extends AbstractJavaTimeTypeTest<LocalTime, LocalTime
 	private final int dayWhenPersistedWithoutHibernate;
 
 	public LocalTimeTest(EnvironmentParameters env, int hour, int minute, int second, int nanosecond,
-			int yearWhenPersistedWithoutHibernate, int monthWhenPersistedWithoutHibernate, int dayWhenPersistedWithoutHibernate) {
+						 int yearWhenPersistedWithoutHibernate, int monthWhenPersistedWithoutHibernate, int dayWhenPersistedWithoutHibernate) {
 		super( env );
 		this.hour = hour;
 		this.minute = minute;
