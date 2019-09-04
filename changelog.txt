@@ -3,6 +3,11 @@ Hibernate 5 Changelog
 
 Note: Please refer to JIRA to learn more about each issue.
 
+Changes in 5.3.11.SP1 (September 3rd, 2019)
+------------------------------------------------------------------------------------------------------------------------
+
+** Bug
+    * [HHH-13590 / JBEAP-17488] - TransientObjectException merging a bytecode-enhanced non-proxy association to a proxy
 
 Changes in 5.3.11.Final (August 15th, 2019)
 ------------------------------------------------------------------------------------------------------------------------
