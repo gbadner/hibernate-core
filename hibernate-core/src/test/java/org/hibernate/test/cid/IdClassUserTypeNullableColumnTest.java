@@ -17,6 +17,8 @@ import javax.persistence.NamedNativeQuery;
 
 import org.hibernate.HibernateException;
 import org.hibernate.annotations.Loader;
+import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.SQLUpdate;
 import org.hibernate.annotations.Type;
 import org.hibernate.annotations.TypeDef;
 import org.hibernate.engine.spi.SharedSessionContractImplementor;
@@ -63,6 +65,7 @@ public class IdClassUserTypeNullableColumnTest extends BaseNonConfigCoreFunction
 					assertNotNull( compositeKeyEntity );
 					assertEquals( "abc", compositeKeyEntity.getId1() );
 					assertEquals( LocaleType.DEFAULT, compositeKeyEntity.getId2() );
+					compositeKeyEntity.setName( "aName" );
 				}
 		);
 
@@ -76,6 +79,7 @@ public class IdClassUserTypeNullableColumnTest extends BaseNonConfigCoreFunction
 					assertNotNull( compositeKeyEntity );
 					assertEquals( "abc", compositeKeyEntity.getId1() );
 					assertEquals( LocaleType.DEFAULT, compositeKeyEntity.getId2() );
+					assertEquals( "aName", compositeKeyEntity.getName() );
 				}
 		);
 
@@ -110,6 +114,20 @@ public class IdClassUserTypeNullableColumnTest extends BaseNonConfigCoreFunction
 					assertEquals( LocaleType.DEFAULT, compositeKeyEntity.getId2() );
 				}
 		);
+
+		doInHibernate(
+				this::sessionFactory,
+				session -> {
+					session.delete(
+							session.get(
+									CompositeKeyEntity.class, new CompositeKey(
+											"abc",
+											LocaleType.DEFAULT
+									)
+							)
+					);
+				}
+		);
 	}
 
 	@Override
@@ -133,6 +151,8 @@ public class IdClassUserTypeNullableColumnTest extends BaseNonConfigCoreFunction
 
 	@Entity(name = "CKE")
 	@Loader(namedQuery = "loader")
+	@SQLUpdate(sql = "update CKE set name = ? where id1 = ? and ( id2=? or id2 is null )")
+	@SQLDelete( sql = "delete from CKE where id1 = ? and ( id2=? or id2 is null )" )
 	@NamedNativeQuery(
 		name = "loader",
 			query = "select id1, id2, name from CKE where id1=? and ( id2=? or id2 is null )",
