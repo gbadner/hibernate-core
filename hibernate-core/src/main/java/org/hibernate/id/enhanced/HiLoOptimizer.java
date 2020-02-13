@@ -53,12 +53,37 @@ import org.jboss.logging.Logger;
 public class HiLoOptimizer extends AbstractOptimizer {
 	private static final Logger log = Logger.getLogger( HiLoOptimizer.class );
 
-	private static class GenerationState {
+	protected static class GenerationState {
+		private final int incrementSize;
 		private IntegralDataTypeHolder lastSourceValue;
 		private IntegralDataTypeHolder upperLimit;
 		private IntegralDataTypeHolder value;
-	}
 
+		private GenerationState(int incrementSize) {
+			this.incrementSize = incrementSize;
+		}
+
+		public final boolean isInitialized() {
+			return lastSourceValue != null;
+		}
+
+		public final boolean requiresNewSourceValue() {
+			return ! upperLimit.gt( value );
+		}
+
+		public final Number makeValueThenIncrement() {
+			return value.makeValueThenIncrement();
+		}
+
+		public final void updateFromNewSourceValue(IntegralDataTypeHolder valueFromDatabase) {
+			lastSourceValue = valueFromDatabase.copy();
+
+			// upperLimit defines the upper end of the bucket values
+			upperLimit = lastSourceValue.copy().multiplyBy( incrementSize ).increment();
+			// initialize value to the low end of the bucket
+			value = upperLimit.copy().subtract( incrementSize );
+		}
+	}
 
 	/**
 	 * Constructs a HiLoOptimizer
@@ -80,33 +105,29 @@ public class HiLoOptimizer extends AbstractOptimizer {
 	public synchronized Serializable generate(AccessCallback callback) {
 		final GenerationState generationState = locateGenerationState( callback.getTenantIdentifier() );
 
-		if ( generationState.lastSourceValue == null ) {
+		if ( !generationState.isInitialized() ) {
 			// first call, so initialize ourselves.  we need to read the database
 			// value and set up the 'bucket' boundaries
-			generationState.lastSourceValue = callback.getNextValue();
-			while ( generationState.lastSourceValue.lt( 1 ) ) {
-				generationState.lastSourceValue = callback.getNextValue();
+
+			IntegralDataTypeHolder firstSourceValue = callback.getNextValue();
+			while ( firstSourceValue.lt( 1 ) ) {
+				firstSourceValue = callback.getNextValue();
 			}
-			// upperLimit defines the upper end of the bucket values
-			generationState.upperLimit = generationState.lastSourceValue.copy().multiplyBy( incrementSize ).increment();
-			// initialize value to the low end of the bucket
-			generationState.value = generationState.upperLimit.copy().subtract( incrementSize );
+			generationState.updateFromNewSourceValue( firstSourceValue );
 		}
-		else if ( ! generationState.upperLimit.gt( generationState.value ) ) {
-			generationState.lastSourceValue = callback.getNextValue();
-			generationState.upperLimit = generationState.lastSourceValue.copy().multiplyBy( incrementSize ).increment();
-			generationState.value = generationState.upperLimit.copy().subtract( incrementSize );
+		else if ( generationState.requiresNewSourceValue() ) {
+			generationState.updateFromNewSourceValue( callback.getNextValue() );
 		}
-		return generationState.value.makeValueThenIncrement();
+		return generationState.makeValueThenIncrement();
 	}
 
 	private GenerationState noTenantState;
 	private Map<String,GenerationState> tenantSpecificState;
 
-	private GenerationState locateGenerationState(String tenantIdentifier) {
+	protected GenerationState locateGenerationState(String tenantIdentifier) {
 		if ( tenantIdentifier == null ) {
 			if ( noTenantState == null ) {
-				noTenantState = new GenerationState();
+				noTenantState = new GenerationState( incrementSize );
 			}
 			return noTenantState;
 		}
@@ -114,13 +135,13 @@ public class HiLoOptimizer extends AbstractOptimizer {
 			GenerationState state;
 			if ( tenantSpecificState == null ) {
 				tenantSpecificState = new ConcurrentHashMap<String, GenerationState>();
-				state = new GenerationState();
+				state = new GenerationState( incrementSize );
 				tenantSpecificState.put( tenantIdentifier, state );
 			}
 			else {
 				state = tenantSpecificState.get( tenantIdentifier );
 				if ( state == null ) {
-					state = new GenerationState();
+					state = new GenerationState( incrementSize );
 					tenantSpecificState.put( tenantIdentifier, state );
 				}
 			}
