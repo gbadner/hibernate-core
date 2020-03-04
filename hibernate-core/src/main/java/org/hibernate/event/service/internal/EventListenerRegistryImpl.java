@@ -97,7 +97,7 @@ public class EventListenerRegistryImpl implements EventListenerRegistry, Stoppab
 
 	private final SessionFactoryImplementor sessionFactory;
 	private final CallbackRegistryImplementor callbackRegistry;
-	private final EventListenerGroupImpl[] registeredEventListeners;
+	private EventListenerGroupImpl[] registeredEventListeners;
 	private CallbackBuilder callbackBuilder;
 
 	/**
@@ -160,6 +160,41 @@ public class EventListenerRegistryImpl implements EventListenerRegistry, Stoppab
 		}
 	}
 
+	@SuppressWarnings({ "unchecked", "rawtypes" })
+	public <T> EventListenerGroupImpl<T> getOrCreateEventListenerGroup(EventType<T> eventType) {
+		final int size = this.registeredEventListeners.length;
+		if ( eventType.ordinal() < size ) {
+			return getEventListenerGroup( eventType );
+		}
+		else if ( eventType.ordinal() == size ) {
+
+			// eventType is a custom EventType
+
+			// Allocate a new array to hold the current contents of this.registeredEventListeners
+			// plus the EventListenerGroupImpl for the custom EventType.
+			final EventListenerGroupImpl[] registeredEventListenersNew = new EventListenerGroupImpl[size + 1];
+
+			// first copy the existing listeners
+			System.arraycopy( this.registeredEventListeners, 0, registeredEventListenersNew, 0, size );
+
+			// create a new EventListenerGroupImpl and add it at the index indicated by eventType.ordinal();
+			final EventListenerGroupImpl listenerGroup = new EventListenerGroupImpl( eventType, this );
+			registeredEventListenersNew[eventType.ordinal()] = listenerGroup;
+
+			this.registeredEventListeners = registeredEventListenersNew;
+
+			return listenerGroup;
+		}
+		else {
+			throw new HibernateException(
+					"Could not add custom " + eventType.eventName()
+							+ " EventType with ordinal=" + eventType.ordinal()
+							+ ", because ordinal=" + registeredEventListeners.length
+							+ " was expected. Custom EventType objects must be added in the order they were generated."
+			);
+		}
+	}
+
 	@SuppressWarnings({ "unchecked" })
 	public <T> EventListenerGroupImpl<T> getEventListenerGroup(EventType<T> eventType) {
 		EventListenerGroupImpl<T> listeners = registeredEventListeners[ eventType.ordinal() ];
@@ -218,7 +253,7 @@ public class EventListenerRegistryImpl implements EventListenerRegistry, Stoppab
 	@Override
 	@SafeVarargs
 	public final <T> void setListeners(EventType<T> type, T... listeners) {
-		EventListenerGroupImpl<T> registeredListeners = getEventListenerGroup( type );
+		EventListenerGroupImpl<T> registeredListeners = getOrCreateEventListenerGroup( type );
 		registeredListeners.clear();
 		if ( listeners != null ) {
 			for ( T listener : listeners ) {
@@ -236,7 +271,7 @@ public class EventListenerRegistryImpl implements EventListenerRegistry, Stoppab
 	@Override
 	@SafeVarargs
 	public final <T> void appendListeners(EventType<T> type, T... listeners) {
-		getEventListenerGroup( type ).appendListeners( listeners );
+		getOrCreateEventListenerGroup( type ).appendListeners( listeners );
 	}
 
 	@Override
@@ -248,7 +283,7 @@ public class EventListenerRegistryImpl implements EventListenerRegistry, Stoppab
 	@Override
 	@SafeVarargs
 	public final <T> void prependListeners(EventType<T> type, T... listeners) {
-		getEventListenerGroup( type ).prependListeners( listeners );
+		getOrCreateEventListenerGroup( type ).prependListeners( listeners );
 	}
 
 	private EventListenerGroupImpl[] buildListenerGroups() {

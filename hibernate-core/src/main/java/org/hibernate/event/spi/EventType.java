@@ -76,6 +76,28 @@ public final class EventType<T> {
 	public static final EventType<PostCollectionRemoveEventListener> POST_COLLECTION_REMOVE = create( "post-collection-remove", PostCollectionRemoveEventListener.class );
 	public static final EventType<PostCollectionUpdateEventListener> POST_COLLECTION_UPDATE = create( "post-collection-update", PostCollectionUpdateEventListener.class );
 
+	/**
+	 * Add a new event type.
+	 *
+	 * @param name - name of the custom event
+	 * @param listenerClass - the base listener class or interface associated with the entity type
+	 * @param <T> - listenerClass
+	 * @return the custom {@link EventType}
+	 */
+	public synchronized static <T> EventType<T> addCustomEventType(String name, Class<T> listenerClass) {
+		if ( name == null || listenerClass == null ) {
+			throw new HibernateException( "Custom EventType name and associated class must be non-null." );
+		}
+		final EventType existingEventType = EVENT_TYPE_BY_NAME_MAP.get( name );
+		if ( existingEventType != null ) {
+			throw new HibernateException(
+					"Cannot add a custom EventType with name [" + name + "]. An EventType with that name already exists."
+			);
+		}
+		final EventType<T> eventType = create( name, listenerClass );
+		EVENT_TYPE_BY_NAME_MAP.put( name, eventType );
+		return eventType;
+	}
 
 	private static <T> EventType<T> create(String name, Class<T> listenerClass) {
 		return new EventType<T>( name, listenerClass );
