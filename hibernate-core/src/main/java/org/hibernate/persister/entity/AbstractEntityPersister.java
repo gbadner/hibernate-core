@@ -4850,8 +4850,7 @@ public abstract class AbstractEntityPersister
 		if ( session.getCacheMode().isGetEnabled() && canReadFromCache() ) {
 			final EntityDataAccess cache = getCacheAccessStrategy();
 			final Object ck = cache.generateCacheKey( id, this, session.getFactory(), session.getTenantIdentifier() );
-			final Object ce = CacheHelper.fromSharedCache( session, ck, getCacheAccessStrategy() );
-			if ( ce != null ) {
+			if ( cache.contains( session, ck ) ) {
 				return Boolean.FALSE;
 			}
 		}

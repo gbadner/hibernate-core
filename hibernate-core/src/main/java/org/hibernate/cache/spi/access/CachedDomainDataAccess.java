@@ -59,6 +59,29 @@ public interface CachedDomainDataAccess {
 	Object get(SharedSessionContractImplementor session, Object key);
 
 	/**
+	 * Determine if the cache contains an object that is in a state that
+	 * makes it retrievable. Mainly used to determine whether an entity
+	 * is transient (not retrievable) or detached (possibly retrievable).
+	 * <p/>
+	 * This method differs from {@link #contains(Object)}. {@link #contains(Object)}
+	 * does not take the state of the data into account. For example,
+	 * contains( key ) will return {@code true} if that key corresponds
+	 * to an entity that has been deleted, but the locked cache entry
+	 * has not been removed from the cache yet. This method returns {@false}
+	 * in that case.
+	 *
+	 * @param session Current session.
+	 * @param key The key of the item to be retrieved.
+	 *
+	 * @return true, if the cache contains th retrievable; false, otherwise.
+	 *
+	 * @throws CacheException Propagated from underlying cache provider
+	 */
+	default boolean contains(SharedSessionContractImplementor session, Object key) {
+		return get( session, key ) != null;
+	}
+
+	/**
 	 * Attempt to cache an object, afterQuery loading from the database.
 	 *
 	 * @param session Current session.
