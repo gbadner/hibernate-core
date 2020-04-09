@@ -121,6 +121,15 @@ public interface SharedSessionContractImplementor
 	UUID getSessionIdentifier();
 
 	/**
+	 * A "token" that is unique to this Session.
+	 *
+	 * @return The token
+	 */
+	default Object getSessionToken() {
+		return this;
+	}
+
+	/**
 	 * Checks whether the session is closed.  Provided separately from
 	 * {@link #isOpen()} as this method does not attempt any JTA synchronization
 	 * registration, whereas {@link #isOpen()} does; which makes this one

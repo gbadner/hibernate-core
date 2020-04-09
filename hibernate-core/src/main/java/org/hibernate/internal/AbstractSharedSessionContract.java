@@ -118,6 +118,7 @@ public abstract class AbstractSharedSessionContract implements SharedSessionCont
 	private final String tenantIdentifier;
 	protected transient FastSessionServices fastSessionServices;
 	private UUID sessionIdentifier;
+	private Object sessionToken;
 
 	private transient JdbcConnectionAccess jdbcConnectionAccess;
 	private transient JdbcSessionContext jdbcSessionContext;
@@ -290,6 +291,14 @@ public abstract class AbstractSharedSessionContract implements SharedSessionCont
 			this.sessionIdentifier = StandardRandomStrategy.INSTANCE.generateUUID( null );
 		}
 		return sessionIdentifier;
+	}
+
+	@Override
+	public Object getSessionToken() {
+		if ( sessionToken == null ) {
+			sessionToken = new Object();
+		}
+		return sessionToken;
 	}
 
 	@Override
