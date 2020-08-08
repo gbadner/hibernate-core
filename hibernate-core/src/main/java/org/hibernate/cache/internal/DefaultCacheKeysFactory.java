@@ -6,11 +6,16 @@
  */
 package org.hibernate.cache.internal;
 
+import org.hibernate.EntityMode;
 import org.hibernate.cache.spi.CacheKeysFactory;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.engine.spi.SharedSessionContractImplementor;
 import org.hibernate.persister.collection.CollectionPersister;
 import org.hibernate.persister.entity.EntityPersister;
+import org.hibernate.tuple.IdentifierProperty;
+import org.hibernate.type.CompositeType;
+import org.hibernate.type.EntityType;
+import org.hibernate.type.Type;
 
 /**
  * Second level cache providers now have the option to use custom key implementations.
@@ -47,7 +52,49 @@ public class DefaultCacheKeysFactory implements CacheKeysFactory {
 	}
 
 	public static Object staticCreateEntityKey(Object id, EntityPersister persister, SessionFactoryImplementor factory, String tenantIdentifier) {
-		return new CacheKeyImplementation( id, persister.getIdentifierType(), persister.getRootEntityName(), tenantIdentifier, factory );
+		return new CacheKeyImplementation(
+				maybeDisassembleId( id, persister, factory ),
+				persister.getIdentifierType(),
+				persister.getRootEntityName(),
+				tenantIdentifier,
+				factory
+		);
+	}
+
+	private static Object maybeDisassembleId(Object id, EntityPersister persister, SessionFactoryImplementor factory) {
+		final IdentifierProperty identifierProperty = persister.getEntityMetamodel().getIdentifierProperty();
+		final Type identifierType = persister.getIdentifierType();
+		if ( identifierType.isComponentType() && identifierProperty.hasEntityAssociation() ) {
+			return disassembleCompositeValue( id, (CompositeType) identifierType, factory, persister.getEntityMode() );
+		}
+		else {
+			return id;
+		}
+	}
+
+	private static Object disassembleCompositeValue(
+			Object compositeValue,
+			CompositeType compositeType,
+			SessionFactoryImplementor factory,
+			EntityMode entityMode) {
+		final Object[] values = compositeType.getPropertyValues( compositeValue, entityMode );
+		final Type[] subtypes = compositeType.getSubtypes();
+		for ( int i = 0; i < subtypes.length; i++ ) {
+			if ( subtypes[i].isEntityType() ) {
+				final EntityType associatedEntityType = (EntityType) subtypes[i];
+				final EntityPersister associatedEntityPersister =
+						factory.getMetamodel().entityPersister( associatedEntityType.getAssociatedEntityName() );
+				values[i] = maybeDisassembleId(
+						associatedEntityPersister.getEntityTuplizer().getIdentifier( values[i], null ),
+						associatedEntityPersister,
+						factory
+				);
+			}
+			else if ( subtypes[i].isComponentType() ) {
+				values[i] = disassembleCompositeValue( values[i], (CompositeType) subtypes[i], factory, entityMode );
+			}
+		}
+		return values;
 	}
 
 	public static Object staticCreateNaturalIdKey(Object[] naturalIdValues, EntityPersister persister, SharedSessionContractImplementor session) {
