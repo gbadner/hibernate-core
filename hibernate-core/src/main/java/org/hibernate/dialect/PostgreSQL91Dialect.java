@@ -6,6 +6,9 @@
  */
 package org.hibernate.dialect;
 
+import org.hibernate.tool.schema.extract.internal.SequenceInformationExtractorPostgresSQLDatabaseImpl;
+import org.hibernate.tool.schema.extract.spi.SequenceInformationExtractor;
+
 /**
  * An SQL dialect for Postgres 9.1 and later, adds support for PARTITION BY as a keyword.
  * 
@@ -21,5 +24,9 @@ public class PostgreSQL91Dialect extends PostgreSQL9Dialect {
 	@Override
 	public boolean supportsNonQueryWithCTE() {
 		return true;
+	}
+
+	public SequenceInformationExtractor getSequenceInformationExtractor() {
+		return SequenceInformationExtractorPostgresSQLDatabaseImpl.INSTANCE;
 	}
 }

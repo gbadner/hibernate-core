@@ -17,6 +17,7 @@ import org.hibernate.boot.spi.MetadataImplementor;
 import org.hibernate.cfg.Environment;
 import org.hibernate.engine.jdbc.connections.spi.ConnectionProvider;
 import org.hibernate.engine.jdbc.env.internal.JdbcEnvironmentInitiator;
+import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment;
 import org.hibernate.engine.jdbc.spi.JdbcServices;
 import org.hibernate.resource.transaction.spi.DdlTransactionIsolator;
 import org.hibernate.tool.schema.extract.internal.DatabaseInformationImpl;
@@ -24,6 +25,7 @@ import org.hibernate.tool.schema.extract.internal.ExtractionContextImpl;
 import org.hibernate.tool.schema.extract.internal.InformationExtractorJdbcDatabaseMetaDataImpl;
 import org.hibernate.tool.schema.extract.spi.DatabaseInformation;
 import org.hibernate.tool.schema.extract.spi.ExtractionContext;
+import org.hibernate.tool.schema.internal.exec.ImprovedExtractionContextImpl;
 import org.hibernate.tool.schema.internal.exec.JdbcContext;
 
 import org.junit.After;
@@ -92,14 +94,25 @@ public class TestExtraPhysicalTableTypes {
 
 		final ConnectionProvider connectionProvider = ssr.getService( ConnectionProvider.class );
 		DatabaseInformation dbInfo = new DatabaseInformationImpl(
-				ssr,
 				database.getJdbcEnvironment(),
-				new DdlTransactionIsolatorTestingImpl( ssr,
-													   new JdbcEnvironmentInitiator.ConnectionProviderJdbcConnectionAccess(
-															   connectionProvider )
-				),
-				database.getDefaultNamespace().getName()
+				database.getDefaultNamespace().getName(),
+				(name, databaseObjectAccess) ->
+						new ImprovedExtractionContextImpl(
+								ssr,
+								ssr.getService( JdbcEnvironment.class ),
+								new DdlTransactionIsolatorTestingImpl(
+										ssr,
+										new JdbcEnvironmentInitiator.ConnectionProviderJdbcConnectionAccess(
+												connectionProvider
+										)
+								),
+								database.getDefaultNamespace().getName().getCatalog(),
+								database.getDefaultNamespace().getName().getSchema(),
+								databaseObjectAccess
+						),
+				InformationExtractorJdbcDatabaseMetaDataImpl::new
 		);
+
 		ExtractionContextImpl extractionContext = new ExtractionContextImpl(
 				ssr,
 				database.getJdbcEnvironment(),

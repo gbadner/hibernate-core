@@ -34,9 +34,10 @@ ext {
                 pgsql : [
                         'db.dialect' : 'org.hibernate.dialect.PostgreSQL95Dialect',
                         'jdbc.driver': 'org.postgresql.Driver',
-                        'jdbc.user'  : 'hibernate_orm_test',
-                        'jdbc.pass'  : 'hibernate_orm_test',
-                        'jdbc.url'   : 'jdbc:postgresql:hibernate_orm_test'
+                        'jdbc.user'  : 'hreact',
+                        'jdbc.pass'  : 'hreact',
+                        // Disable prepared statement caching due to https://www.postgresql.org/message-id/CAEcMXhmmRd4-%2BNQbnjDT26XNdUoXdmntV9zdr8%3DTu8PL9aVCYg%40mail.gmail.com
+                        'jdbc.url'   : 'jdbc:postgresql://' + dbHost + '/hreact?preparedStatementCacheQueries=0'
                 ],
                 pgsql_docker : [
                         'db.dialect' : 'org.hibernate.dialect.PostgreSQL10Dialect',

@@ -12,6 +12,8 @@ import java.io.Writer;
 import java.net.URL;
 import java.sql.SQLException;
 import java.util.Map;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 
 import org.hibernate.boot.model.relational.Namespace;
 import org.hibernate.boot.registry.classloading.spi.ClassLoaderService;
@@ -20,10 +22,11 @@ import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment;
 import org.hibernate.internal.CoreLogging;
 import org.hibernate.internal.CoreMessageLogger;
 import org.hibernate.internal.util.config.ConfigurationHelper;
-import org.hibernate.resource.transaction.spi.DdlTransactionIsolator;
 import org.hibernate.service.ServiceRegistry;
 import org.hibernate.tool.schema.extract.spi.DatabaseInformation;
 import org.hibernate.tool.schema.extract.internal.DatabaseInformationImpl;
+import org.hibernate.tool.schema.extract.spi.ExtractionContext;
+import org.hibernate.tool.schema.extract.spi.InformationExtractor;
 import org.hibernate.tool.schema.internal.exec.ScriptSourceInputFromFile;
 import org.hibernate.tool.schema.internal.exec.ScriptSourceInputFromReader;
 import org.hibernate.tool.schema.internal.exec.ScriptSourceInputFromUrl;
@@ -148,15 +151,17 @@ public class Helper {
 
 	public static DatabaseInformation buildDatabaseInformation(
 			ServiceRegistry serviceRegistry,
-			DdlTransactionIsolator ddlTransactionIsolator,
-			Namespace.Name defaultNamespace) {
+			Namespace.Name name,
+			BiFunction<Namespace.Name, ExtractionContext.DatabaseObjectAccess, ExtractionContext> extractionContextFunction,
+			Function<ExtractionContext, InformationExtractor> informationExtractorFunction) {
 		final JdbcEnvironment jdbcEnvironment = serviceRegistry.getService( JdbcEnvironment.class );
+
 		try {
 			return new DatabaseInformationImpl(
-					serviceRegistry,
 					jdbcEnvironment,
-					ddlTransactionIsolator,
-					defaultNamespace
+					name,
+					extractionContextFunction,
+					informationExtractorFunction
 			);
 		}
 		catch (SQLException e) {

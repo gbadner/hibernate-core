@@ -9,6 +9,8 @@ package org.hibernate.tool.schema.extract.internal;
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 
 import org.hibernate.boot.model.naming.Identifier;
 import org.hibernate.boot.model.relational.Namespace;
@@ -31,29 +33,21 @@ import org.hibernate.tool.schema.internal.exec.ImprovedExtractionContextImpl;
 public class DatabaseInformationImpl
 		implements DatabaseInformation, ExtractionContext.DatabaseObjectAccess {
 	private final JdbcEnvironment jdbcEnvironment;
-	private final ImprovedExtractionContextImpl extractionContext;
+	private final ExtractionContext extractionContext;
 	private final InformationExtractor extractor;
 
 	private final Map<QualifiedSequenceName, SequenceInformation> sequenceInformationMap = new HashMap<QualifiedSequenceName, SequenceInformation>();
 
 	public DatabaseInformationImpl(
-			ServiceRegistry serviceRegistry,
 			JdbcEnvironment jdbcEnvironment,
-			DdlTransactionIsolator ddlTransactionIsolator,
-			Namespace.Name defaultNamespace) throws SQLException {
+			Namespace.Name name,
+			BiFunction<Namespace.Name, ExtractionContext.DatabaseObjectAccess, ExtractionContext> extractionContextFunction,
+			Function<ExtractionContext, InformationExtractor> informationExtractorFunction) throws SQLException {
 		this.jdbcEnvironment = jdbcEnvironment;
-
-		this.extractionContext = new ImprovedExtractionContextImpl(
-				serviceRegistry,
-				jdbcEnvironment,
-				ddlTransactionIsolator,
-				defaultNamespace.getCatalog(),
-				defaultNamespace.getSchema(),
-				this
-		);
+		this.extractionContext = extractionContextFunction.apply( name, this );
 
 		// todo : make this pluggable
-		this.extractor = new InformationExtractorJdbcDatabaseMetaDataImpl( extractionContext );
+		this.extractor = informationExtractorFunction.apply( extractionContext );
 
 		// because we do not have defined a way to locate sequence info by name
 		initializeSequences();
