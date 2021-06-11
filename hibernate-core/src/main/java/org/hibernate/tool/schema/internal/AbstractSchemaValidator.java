@@ -8,20 +8,27 @@ package org.hibernate.tool.schema.internal;
 
 import java.util.Iterator;
 import java.util.Locale;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 
 import org.hibernate.boot.Metadata;
 import org.hibernate.boot.model.naming.Identifier;
 import org.hibernate.boot.model.relational.Namespace;
 import org.hibernate.boot.model.relational.Sequence;
 import org.hibernate.dialect.Dialect;
+import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment;
 import org.hibernate.mapping.Column;
 import org.hibernate.mapping.Selectable;
 import org.hibernate.mapping.Table;
 import org.hibernate.resource.transaction.spi.DdlTransactionIsolator;
+import org.hibernate.tool.schema.extract.internal.InformationExtractorJdbcDatabaseMetaDataImpl;
 import org.hibernate.tool.schema.extract.spi.ColumnInformation;
 import org.hibernate.tool.schema.extract.spi.DatabaseInformation;
+import org.hibernate.tool.schema.extract.spi.ExtractionContext;
+import org.hibernate.tool.schema.extract.spi.InformationExtractor;
 import org.hibernate.tool.schema.extract.spi.SequenceInformation;
 import org.hibernate.tool.schema.extract.spi.TableInformation;
+import org.hibernate.tool.schema.internal.exec.ImprovedExtractionContextImpl;
 import org.hibernate.tool.schema.internal.exec.JdbcContext;
 import org.hibernate.tool.schema.spi.ExecutionOptions;
 import org.hibernate.tool.schema.spi.SchemaFilter;
@@ -57,11 +64,30 @@ public abstract class AbstractSchemaValidator implements SchemaValidator {
 		final JdbcContext jdbcContext = tool.resolveJdbcContext( options.getConfigurationValues() );
 
 		final DdlTransactionIsolator isolator = tool.getDdlTransactionIsolator( jdbcContext );
-
+		final Namespace.Name name = metadata.getDatabase().getDefaultNamespace().getName();
+		BiFunction<Namespace.Name, ExtractionContext.DatabaseObjectAccess, ExtractionContext> extractionContextFunction =
+				tool.getCustomExtractionContextFunction();
+		if ( extractionContextFunction == null ) {
+			extractionContextFunction = (nameArg, databaseObjectAccess) ->
+					new ImprovedExtractionContextImpl(
+							tool.getServiceRegistry(),
+							tool.getServiceRegistry().getService( JdbcEnvironment.class ),
+							isolator,
+							name.getCatalog(),
+							name.getSchema(),
+							databaseObjectAccess
+					);
+		}
+		Function<ExtractionContext, InformationExtractor> informationExtractorFunction =
+				tool.getCustomInformationExtractorFunction();
+		if ( informationExtractorFunction == null ) {
+			informationExtractorFunction = InformationExtractorJdbcDatabaseMetaDataImpl::new;
+		}
 		final DatabaseInformation databaseInformation = Helper.buildDatabaseInformation(
 				tool.getServiceRegistry(),
-				isolator,
-				metadata.getDatabase().getDefaultNamespace().getName()
+				name,
+				extractionContextFunction,
+				informationExtractorFunction
 		);
 
 		try {

@@ -7,9 +7,14 @@
 package org.hibernate.tool.schema.spi;
 
 import java.util.Map;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 
 import org.hibernate.Incubating;
+import org.hibernate.boot.model.relational.Namespace;
 import org.hibernate.service.Service;
+import org.hibernate.tool.schema.extract.spi.ExtractionContext;
+import org.hibernate.tool.schema.extract.spi.InformationExtractor;
 import org.hibernate.tool.schema.internal.exec.GenerationTarget;
 
 /**
@@ -32,4 +37,8 @@ public interface SchemaManagementTool extends Service {
 	 * @param generationTarget the custom instance to use.
 	 */
 	void setCustomDatabaseGenerationTarget(GenerationTarget generationTarget);
+
+	void setCustomExtractionContextFunction(BiFunction<Namespace.Name, ExtractionContext.DatabaseObjectAccess, ExtractionContext> extractionContextFunction);
+	void setCustomInformationExtractorFunction(Function<ExtractionContext, InformationExtractor> informationExtractorFunction);
+
 }

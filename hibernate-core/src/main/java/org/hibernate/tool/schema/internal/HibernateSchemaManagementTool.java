@@ -8,7 +8,12 @@ package org.hibernate.tool.schema.internal;
 
 import java.sql.Connection;
 import java.util.Map;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 
+import javax.sound.sampled.Line;
+
+import org.hibernate.boot.model.relational.Namespace;
 import org.hibernate.boot.registry.selector.spi.StrategySelector;
 import org.hibernate.cfg.AvailableSettings;
 import org.hibernate.dialect.Dialect;
@@ -27,6 +32,8 @@ import org.hibernate.service.spi.ServiceRegistryAwareService;
 import org.hibernate.service.spi.ServiceRegistryImplementor;
 import org.hibernate.tool.schema.JdbcMetadaAccessStrategy;
 import org.hibernate.tool.schema.TargetType;
+import org.hibernate.tool.schema.extract.spi.ExtractionContext;
+import org.hibernate.tool.schema.extract.spi.InformationExtractor;
 import org.hibernate.tool.schema.internal.exec.GenerationTarget;
 import org.hibernate.tool.schema.internal.exec.GenerationTargetToDatabase;
 import org.hibernate.tool.schema.internal.exec.GenerationTargetToScript;
@@ -58,6 +65,8 @@ public class HibernateSchemaManagementTool implements SchemaManagementTool, Serv
 
 	private ServiceRegistry serviceRegistry;
 	private GenerationTarget customTarget;
+	private BiFunction<Namespace.Name, ExtractionContext.DatabaseObjectAccess, ExtractionContext> customExtractionContextFunction;
+	private Function<ExtractionContext, InformationExtractor> customInformationExtractorFunction;
 
 	@Override
 	public void injectServices(ServiceRegistryImplementor serviceRegistry) {
@@ -176,10 +185,31 @@ public class HibernateSchemaManagementTool implements SchemaManagementTool, Serv
 		}
 
 		if ( targetDescriptor.getTargetTypes().contains( TargetType.DATABASE ) ) {
-			targets[index] = new GenerationTargetToDatabase( ddlTransactionIsolator, false );
+			targets[index] = customTarget == null
+					? new GenerationTargetToDatabase( ddlTransactionIsolator, false )
+					: customTarget;
+			index++;
 		}
 
 		return targets;
+	}
+
+	@Override
+	public void setCustomExtractionContextFunction(BiFunction<Namespace.Name, ExtractionContext.DatabaseObjectAccess, ExtractionContext> extractionContextFunction) {
+		this.customExtractionContextFunction = extractionContextFunction;
+	}
+
+	BiFunction<Namespace.Name, ExtractionContext.DatabaseObjectAccess, ExtractionContext> getCustomExtractionContextFunction() {
+		return this.customExtractionContextFunction;
+	}
+
+	@Override
+	public void setCustomInformationExtractorFunction(Function<ExtractionContext, InformationExtractor> informationExtractorFunction) {
+		this.customInformationExtractorFunction = informationExtractorFunction;
+	}
+
+	Function<ExtractionContext, InformationExtractor> getCustomInformationExtractorFunction() {
+		return customInformationExtractorFunction;
 	}
 
 	public DdlTransactionIsolator getDdlTransactionIsolator(JdbcContext jdbcContext) {

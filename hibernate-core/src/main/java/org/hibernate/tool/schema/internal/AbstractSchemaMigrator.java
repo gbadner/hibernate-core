@@ -11,6 +11,8 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
@@ -26,6 +28,7 @@ import org.hibernate.boot.spi.MetadataImplementor;
 import org.hibernate.dialect.Dialect;
 import org.hibernate.engine.config.spi.ConfigurationService;
 import org.hibernate.engine.config.spi.StandardConverters;
+import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment;
 import org.hibernate.engine.jdbc.internal.FormatStyle;
 import org.hibernate.engine.jdbc.internal.Formatter;
 import org.hibernate.internal.util.StringHelper;
@@ -36,14 +39,18 @@ import org.hibernate.mapping.Table;
 import org.hibernate.mapping.UniqueKey;
 import org.hibernate.resource.transaction.spi.DdlTransactionIsolator;
 import org.hibernate.tool.hbm2ddl.UniqueConstraintSchemaUpdateStrategy;
+import org.hibernate.tool.schema.extract.internal.InformationExtractorJdbcDatabaseMetaDataImpl;
 import org.hibernate.tool.schema.extract.spi.DatabaseInformation;
+import org.hibernate.tool.schema.extract.spi.ExtractionContext;
 import org.hibernate.tool.schema.extract.spi.ForeignKeyInformation;
 import org.hibernate.tool.schema.extract.spi.ForeignKeyInformation.ColumnReferenceMapping;
 import org.hibernate.tool.schema.extract.spi.IndexInformation;
+import org.hibernate.tool.schema.extract.spi.InformationExtractor;
 import org.hibernate.tool.schema.extract.spi.NameSpaceTablesInformation;
 import org.hibernate.tool.schema.extract.spi.SequenceInformation;
 import org.hibernate.tool.schema.extract.spi.TableInformation;
 import org.hibernate.tool.schema.internal.exec.GenerationTarget;
+import org.hibernate.tool.schema.internal.exec.ImprovedExtractionContextImpl;
 import org.hibernate.tool.schema.internal.exec.JdbcContext;
 import org.hibernate.tool.schema.spi.CommandAcceptanceException;
 import org.hibernate.tool.schema.spi.ExecutionOptions;
@@ -92,11 +99,31 @@ public abstract class AbstractSchemaMigrator implements SchemaMigrator {
 		if ( !targetDescriptor.getTargetTypes().isEmpty() ) {
 			final JdbcContext jdbcContext = tool.resolveJdbcContext( options.getConfigurationValues() );
 			final DdlTransactionIsolator ddlTransactionIsolator = tool.getDdlTransactionIsolator( jdbcContext );
+			final Namespace.Name name = metadata.getDatabase().getDefaultNamespace().getName();
+			BiFunction<Namespace.Name, ExtractionContext.DatabaseObjectAccess, ExtractionContext> extractionContextFunction =
+					tool.getCustomExtractionContextFunction();
+			if ( extractionContextFunction == null ) {
+				extractionContextFunction = (nameArg, databaseObjectAccess) ->
+					new ImprovedExtractionContextImpl(
+							tool.getServiceRegistry(),
+							tool.getServiceRegistry().getService( JdbcEnvironment.class ),
+							ddlTransactionIsolator,
+							name.getCatalog(),
+							name.getSchema(),
+							databaseObjectAccess
+					);
+			}
+			Function<ExtractionContext, InformationExtractor> informationExtractorFunction =
+					tool.getCustomInformationExtractorFunction();
+			if ( informationExtractorFunction == null ) {
+				informationExtractorFunction = InformationExtractorJdbcDatabaseMetaDataImpl::new;
+			}
 			try {
 				final DatabaseInformation databaseInformation = Helper.buildDatabaseInformation(
 						tool.getServiceRegistry(),
-						ddlTransactionIsolator,
-						metadata.getDatabase().getDefaultNamespace().getName()
+						name,
+						extractionContextFunction,
+						informationExtractorFunction
 				);
 
 				final GenerationTarget[] targets = tool.buildGenerationTargets(
